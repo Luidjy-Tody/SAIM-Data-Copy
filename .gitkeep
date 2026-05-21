@@ -1,0 +1,7 @@
+type nul > SaimDataCopy\Controllers\.gitkeep
+type nul > SaimDataCopy\DataAccess\.gitkeep
+type nul > SaimDataCopy\Models\.gitkeep
+type nul > SaimDataCopy\Resources\.gitkeep
+type nul > SaimDataCopy\Services\.gitkeep
+type nul > SaimDataCopy\SQL\.gitkeep
+type nul > SaimDataCopy\UserControls\.gitkeep
