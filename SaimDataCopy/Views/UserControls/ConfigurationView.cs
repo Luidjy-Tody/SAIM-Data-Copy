@@ -1,24 +1,42 @@
-﻿using SaimDataCopy.Helpers;
+﻿using FontAwesome.Sharp;
+using SaimDataCopy.Helpers;
+using SaimDataCopy.Models;
+using SaimDataCopy.Views.Interfaces;
 using System.Drawing;
 using System.Windows.Forms;
-using FontAwesome.Sharp;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
-namespace SaimDataCopy.UserControls
+namespace SaimDataCopy.Views.UserControls
 {
-    // Page des paramètres de configuration.
-    // Elle sera affichée dans panelMain depuis MainForm.
-
-    public class ConfigurationControl : UserControl
+    // View de la page Configuration.
+    // Elle affiche l'interface et récupère les valeurs saisies.
+    // Elle ne contient pas la logique métier.
+    public class ConfigurationView : UserControl, IConfigurationView
     {
-        public ConfigurationControl()
+        // Champs du serveur source.
+        private TextBox txtSourceNomServeur = new TextBox();
+        private TextBox txtSourceChaineConnexion = new TextBox();
+        private TextBox txtSourceIdentifiant = new TextBox();
+        private TextBox txtSourceMotDePasse = new TextBox();
+        private TextBox txtSourcePort = new TextBox();
+
+        // Champs du serveur cible.
+        private TextBox txtCibleNomServeur = new TextBox();
+        private TextBox txtCibleChaineConnexion = new TextBox();
+        private TextBox txtCibleIdentifiant = new TextBox();
+        private TextBox txtCibleMotDePasse = new TextBox();
+        private TextBox txtCiblePort = new TextBox();
+
+        // Listes déroulantes.
+        private ComboBox cmbModeCopie = new ComboBox();
+        private ComboBox cmbErreur = new ComboBox();
+        private ComboBox cmbTentatives = new ComboBox();
+
+        // Événement envoyé au Controller quand l'utilisateur veut enregistrer.
+        public event EventHandler? EnregistrerConfigurationDemande;
+
+        public ConfigurationView()
         {
-            // Fond blanc de la page
             this.BackColor = Color.White;
-
-            //Le scroll est seulement dans cette page
-            //Le menu gauche et la barre restent fixes
-
             this.AutoScroll = true;
 
             CreerInterface();
@@ -26,7 +44,6 @@ namespace SaimDataCopy.UserControls
 
         private void CreerInterface()
         {
-            //Panel principal qui contient tous les champs.
             Panel panelContenu = new Panel();
 
             panelContenu.Dock = DockStyle.Top;
@@ -35,7 +52,6 @@ namespace SaimDataCopy.UserControls
 
             this.Controls.Add(panelContenu);
 
-            //Titre principal.
             Label lblTitre = new Label();
             lblTitre.Text = "Paramètres de configuration";
             lblTitre.Location = new Point(25, 25);
@@ -43,7 +59,6 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerTitre(lblTitre);
             panelContenu.Controls.Add(lblTitre);
 
-            //Section serveur source.
             CreerSectionServeurSource(
                 panelContenu,
                 "Serveur source (production)",
@@ -51,7 +66,6 @@ namespace SaimDataCopy.UserControls
                 85
             );
 
-            //Section serveur cible.
             CreerSectionServeurCible(
                 panelContenu,
                 "Serveur cible (staging)",
@@ -59,12 +73,8 @@ namespace SaimDataCopy.UserControls
                 365
             );
 
-            // Section comportement en cas d'erreur.
-            CreerSectionErreur(panelContenu, 650
-                );
-
+            CreerSectionErreur(panelContenu, 650);
         }
-
 
         private void CreerSectionServeurSource(Panel parent, string titre, int x, int y)
         {
@@ -75,28 +85,21 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerSousTitre(lblSection);
             parent.Controls.Add(lblSection);
 
-            // Ligne 1 : Nom serveur + chaîne de connexion.
             AjouterLabelChamp(parent, "Nom du serveur", x, y + 45, true);
-            AjouterTextBox(parent, "PROD-SRV-01", x, y + 70, 475);
+            txtSourceNomServeur = AjouterTextBox(parent, "PROD-SRV-01", x, y + 70, 475);
 
             AjouterLabelChamp(parent, "Chaîne de connexion", x + 500, y + 45, false);
-            AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
+            txtSourceChaineConnexion = AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
 
-
-            //Ligne 2 : Identifiant + mot de passe.
             AjouterLabelChamp(parent, "Identifiant", x, y + 130, false);
-            AjouterTextBox(parent, "sa", x, y + 155, 475);
+            txtSourceIdentifiant = AjouterTextBox(parent, "sa", x, y + 155, 475);
 
             AjouterLabelChamp(parent, "Mot de passe", x + 500, y + 130, false);
-            AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
-
-            //Ligne 2 : Port
+            txtSourceMotDePasse = AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
 
             AjouterLabelChamp(parent, "Port", x, y + 215, false);
-            AjouterTextBox(parent, "1433", x, y + 240, 475);
+            txtSourcePort = AjouterTextBox(parent, "1433", x, y + 240, 475);
         }
-
-
 
         private void CreerSectionServeurCible(Panel parent, string titre, int x, int y)
         {
@@ -107,29 +110,24 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerSousTitre(lblSection);
             parent.Controls.Add(lblSection);
 
-            // Ligne 1 : Nom serveur + chaîne de connexion.
             AjouterLabelChamp(parent, "Nom du serveur", x, y + 45, true);
-            AjouterTextBox(parent, "STAGING-SRV-01", x, y + 70, 475);
+            txtCibleNomServeur = AjouterTextBox(parent, "STAGING-SRV-01", x, y + 70, 475);
 
             AjouterLabelChamp(parent, "Chaîne de connexion", x + 500, y + 45, false);
-            AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
+            txtCibleChaineConnexion = AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
 
-
-            //Ligne 2 : Identifiant + mot de passe.
             AjouterLabelChamp(parent, "Identifiant", x, y + 130, false);
-            AjouterTextBox(parent, "sa", x, y + 155, 475);
+            txtCibleIdentifiant = AjouterTextBox(parent, "sa", x, y + 155, 475);
 
             AjouterLabelChamp(parent, "Mot de passe", x + 500, y + 130, false);
-            AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
-
-            //Ligne 2 : Port
+            txtCibleMotDePasse = AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
 
             AjouterLabelChamp(parent, "Port", x, y + 215, false);
-            AjouterTextBox(parent, "1433", x, y + 240, 475);
+            txtCiblePort = AjouterTextBox(parent, "1433", x, y + 240, 475);
 
             AjouterLabelChamp(parent, "Mode de copie", x + 500, y + 215, false);
 
-            ComboBox cmbModeCopie = new ComboBox();
+            cmbModeCopie = new ComboBox();
             cmbModeCopie.Location = new Point(x + 500, y + 240);
             cmbModeCopie.Width = 475;
 
@@ -141,8 +139,6 @@ namespace SaimDataCopy.UserControls
             parent.Controls.Add(cmbModeCopie);
         }
 
-
-
         private void CreerSectionErreur(Panel parent, int y)
         {
             Label lblSection = new Label();
@@ -152,10 +148,9 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerSousTitre(lblSection);
             parent.Controls.Add(lblSection);
 
-            // ComboBox : action si une base échoue.
             AjouterLabelChamp(parent, "Si une base échoue", 25, y + 45, false);
 
-            ComboBox cmbErreur = new ComboBox();
+            cmbErreur = new ComboBox();
             cmbErreur.Location = new Point(25, y + 70);
             cmbErreur.Width = 475;
 
@@ -166,10 +161,9 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerComboBox(cmbErreur);
             parent.Controls.Add(cmbErreur);
 
-            // ComboBox : nombre de tentatives.
             AjouterLabelChamp(parent, "Tentatives de reprise", 525, y + 45, false);
 
-            ComboBox cmbTentatives = new ComboBox();
+            cmbTentatives = new ComboBox();
             cmbTentatives.Location = new Point(525, y + 70);
             cmbTentatives.Width = 475;
 
@@ -181,20 +175,12 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerComboBox(cmbTentatives);
             parent.Controls.Add(cmbTentatives);
 
-            // Si l'utilisateur choisit "Arrêter tous les traitements",
-            // alors les tentatives de reprise ne sont plus utiles.
             cmbErreur.SelectedIndexChanged += (sender, e) =>
             {
-                if (cmbErreur.SelectedItem?.ToString() == "Arrêter tous les traitements")
-                {
-                    cmbTentatives.Enabled = false;
-                    cmbTentatives.Cursor = Cursors.No;
-                }
-                else
-                {
-                    cmbTentatives.Enabled = true;
-                    cmbTentatives.Cursor = Cursors.Default;
-                }
+                bool arreterTraitements = cmbErreur.SelectedItem?.ToString() == "Arrêter tous les traitements";
+
+                cmbTentatives.Enabled = !arreterTraitements;
+                cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
             };
         }
 
@@ -208,27 +194,25 @@ namespace SaimDataCopy.UserControls
             PageFormStyle.AppliquerLabelChamp(label);
             parent.Controls.Add(label);
 
-            // Si le champ est obligatoire, on ajoute le badge "requis".
             if (requis)
             {
                 Label badge = PageFormStyle.CreerBadgeRequis();
 
-                // On place le badge à côté du label.
                 badge.Location = new Point(x + label.Width + 10, y - 2);
 
                 parent.Controls.Add(badge);
             }
         }
 
-        private TextBox AjouterTextBox(Panel parent, string texte, int x, int y, int largeur)
+        private TextBox AjouterTextBox(Panel parent, string textePlaceholder, int x, int y, int largeur)
         {
             TextBox textBox = new TextBox();
 
-            textBox.Text = texte;
             textBox.Location = new Point(x, y);
             textBox.Width = largeur;
 
-            textBox.PlaceholderText = texte;
+            // Le texte est seulement un exemple pour guider l'utilisateur.
+            textBox.PlaceholderText = textePlaceholder;
             textBox.Text = "";
 
             PageFormStyle.AppliquerTextBox(textBox);
@@ -238,14 +222,8 @@ namespace SaimDataCopy.UserControls
             return textBox;
         }
 
-        private void InitializeComponent()
+        private TextBox AjouterPasswordBox(Panel parent, string textePlaceholder, int x, int y, int largeur)
         {
-
-        }
-
-        private void AjouterPasswordBox(Panel parent, string texte, int x, int y, int largeur)
-        {
-            // Panel utilisé pour mettre le TextBox et l'icône œil ensemble.
             Panel panelPassword = new Panel();
 
             panelPassword.Location = new Point(x, y);
@@ -257,9 +235,10 @@ namespace SaimDataCopy.UserControls
             parent.Controls.Add(panelPassword);
 
             TextBox txtPassword = new TextBox();
-            txtPassword.PlaceholderText = texte;
-            txtPassword.Text = texte;
-            txtPassword.UseSystemPasswordChar = true;
+
+            txtPassword.PlaceholderText = textePlaceholder;
+            txtPassword.Text = "";
+            txtPassword.UseSystemPasswordChar = false;
             txtPassword.BorderStyle = BorderStyle.None;
             txtPassword.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             txtPassword.Location = new Point(10, 9);
@@ -272,33 +251,117 @@ namespace SaimDataCopy.UserControls
             btnVoirPassword.IconChar = IconChar.Eye;
             btnVoirPassword.IconSize = 18;
             btnVoirPassword.IconColor = Color.FromArgb(80, 80, 80);
-
             btnVoirPassword.FlatStyle = FlatStyle.Flat;
             btnVoirPassword.FlatAppearance.BorderSize = 0;
-
             btnVoirPassword.BackColor = Color.White;
             btnVoirPassword.Width = 40;
             btnVoirPassword.Height = 34;
             btnVoirPassword.Location = new Point(largeur - 43, 1);
 
-            btnVoirPassword.Click += (sender, e) =>
+            bool motDePasseVisible = false;
+
+            txtPassword.TextChanged += (sender, e) =>
             {
-                // Si le mot de passe est caché, on l'affiche.
-                if (txtPassword.UseSystemPasswordChar)
+                if (string.IsNullOrWhiteSpace(txtPassword.Text))
                 {
                     txtPassword.UseSystemPasswordChar = false;
-                    btnVoirPassword.IconChar = IconChar.EyeSlash;
                 }
                 else
                 {
-                    txtPassword.UseSystemPasswordChar = true;
-                    btnVoirPassword.IconChar = IconChar.Eye;
+                    txtPassword.UseSystemPasswordChar = !motDePasseVisible;
                 }
+            };
+
+            btnVoirPassword.Click += (sender, e) =>
+            {
+                motDePasseVisible = !motDePasseVisible;
+
+                if (!string.IsNullOrWhiteSpace(txtPassword.Text))
+                {
+                    txtPassword.UseSystemPasswordChar = !motDePasseVisible;
+                }
+
+                btnVoirPassword.IconChar = motDePasseVisible ? IconChar.EyeSlash : IconChar.Eye;
             };
 
             panelPassword.Controls.Add(btnVoirPassword);
 
+            return txtPassword;
+        }
 
+        public ConfigurationModel RecupererConfiguration()
+        {
+            ConfigurationModel configuration = new ConfigurationModel();
+
+            configuration.ServeurSource = new ServeurConfigModel
+            {
+                NomServeur = txtSourceNomServeur.Text.Trim(),
+                ChaineConnexion = txtSourceChaineConnexion.Text.Trim(),
+                Identifiant = txtSourceIdentifiant.Text.Trim(),
+                MotDePasse = txtSourceMotDePasse.Text.Trim(),
+                Port = ConvertirPort(txtSourcePort.Text)
+            };
+
+            configuration.ServeurCible = new ServeurConfigModel
+            {
+                NomServeur = txtCibleNomServeur.Text.Trim(),
+                ChaineConnexion = txtCibleChaineConnexion.Text.Trim(),
+                Identifiant = txtCibleIdentifiant.Text.Trim(),
+                MotDePasse = txtCibleMotDePasse.Text.Trim(),
+                Port = ConvertirPort(txtCiblePort.Text)
+            };
+
+            configuration.ModeCopie = cmbModeCopie.SelectedItem?.ToString() ?? string.Empty;
+            configuration.ComportementErreur = cmbErreur.SelectedItem?.ToString() ?? string.Empty;
+            configuration.TentativesReprise = ConvertirTentatives(cmbTentatives.SelectedItem?.ToString());
+
+            return configuration;
+        }
+
+        public void DemanderEnregistrement()
+        {
+            EnregistrerConfigurationDemande?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void AfficherMessageSucces(string message)
+        {
+            MessageBox.Show(
+                message,
+                "Succès",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+
+        public void AfficherMessageErreur(string message)
+        {
+            MessageBox.Show(
+                message,
+                "Erreur",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+
+        private int ConvertirPort(string valeur)
+        {
+            if (int.TryParse(valeur, out int port))
+            {
+                return port;
+            }
+
+            return 0;
+        }
+
+        private int ConvertirTentatives(string? valeur)
+        {
+            return valeur switch
+            {
+                "1 tentative" => 1,
+                "2 tentatives" => 2,
+                "3 tentatives" => 3,
+                _ => 0
+            };
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace SaimDataCopy.Forms
+﻿namespace SaimDataCopy.Views.Forms
 {
     partial class MainForm
     {

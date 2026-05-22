@@ -16,12 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Models\" />
     <Folder Include="DataAccess\" />
     <Folder Include="SQL\" />
     <Folder Include="Resources\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>
