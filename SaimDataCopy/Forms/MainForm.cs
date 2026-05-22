@@ -1,5 +1,6 @@
 using FontAwesome.Sharp;
 using SaimDataCopy.Helpers;
+using SaimDataCopy.UserControls;
 
 namespace SaimDataCopy.Forms
 {
@@ -11,6 +12,9 @@ namespace SaimDataCopy.Forms
             CreerMenu();
             CreerBarreBas();
 
+            // Page affichée au démarrage de l'application.
+            AfficherPage(new PageSimpleControl("Configuration"));
+
         }
 
 
@@ -18,18 +22,20 @@ namespace SaimDataCopy.Forms
         // Le design des boutons se trouve dans Helpers/MenuButtonStyle.cs
         private void CreerMenu()
         {
-            AjouterBoutonMenu("Historique", IconChar.Clock);
-            AjouterBoutonMenu("Exécution", IconChar.Play); 
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt);
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope);
-            AjouterBoutonMenu("Bases à copier", IconChar.Database);
-            AjouterBoutonMenu("Configuration", IconChar.Cog);
+            AjouterBoutonMenu("Historique", IconChar.Clock, "Historique");
+            AjouterBoutonMenu("Exécution", IconChar.Play, "Exécution"); 
+            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, "Paramètres Logs");
+            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, "Paramètres Email");
+            AjouterBoutonMenu("Bases à copier", IconChar.Database, "Bases à copier");
+            AjouterBoutonMenu("Configuration", IconChar.Cog, "Configuration");
 
         }
         // Crée un bouton du menu.
         // texte = texte affiché sur le bouton.
         // icone = icône FontAwesome affichée à gauche.
-        private void AjouterBoutonMenu(string texte, IconChar icone)
+        // titrePage = titre de la page à afficher dans panelMain.
+
+        private void AjouterBoutonMenu(string texte, IconChar icone, string titrePage)
         {
             IconButton bouton= new IconButton();
 
@@ -39,12 +45,29 @@ namespace SaimDataCopy.Forms
             // On applique le style depuis le dossier Helpers/MenuButtonStyle.cs
 
             MenuButtonStyle.Appliquer(bouton);
+            // Quand on clique sur le bouton,
+            // on change seulement le contenu de panelMain.
+            bouton.Click += (sender, e) =>
+            {
+                AfficherPage(new PageSimpleControl(titrePage));
+            };
 
             // On ajoute le bouton dans le menu gauche.
-
+        
             panelMenu.Controls.Add(bouton);
         }
+        // Affiche une page dans panelMain.
 
+        // Le menu gauche et le bottom ne sont pas touchés.
+        
+        private void AfficherPage(UserControl Page)
+        {
+            // On supprime seulement le contenu central.
+            panelMain.Controls.Clear();
+
+            // La page prend toute la place disponible dans panelMain.
+            panelMain.Controls.Add(Page);
+        }
         private void CreerBarreBas()
         {
             Label lblStatus = new Label();
