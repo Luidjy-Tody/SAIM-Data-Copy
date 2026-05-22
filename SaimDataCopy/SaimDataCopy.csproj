@@ -21,7 +21,6 @@
     <Folder Include="DataAccess\" />
     <Folder Include="SQL\" />
     <Folder Include="Resources\" />
-    <Folder Include="UserControls\" />
     <Folder Include="Services\" />
   </ItemGroup>
 

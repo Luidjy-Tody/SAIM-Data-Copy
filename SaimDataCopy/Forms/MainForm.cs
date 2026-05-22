@@ -13,7 +13,7 @@ namespace SaimDataCopy.Forms
             CreerBarreBas();
 
             // Page affichée au démarrage de l'application.
-            AfficherPage(new PageSimpleControl("Configuration"));
+            AfficherPage(new ConfigurationControl());
 
         }
 
@@ -22,12 +22,14 @@ namespace SaimDataCopy.Forms
         // Le design des boutons se trouve dans Helpers/MenuButtonStyle.cs
         private void CreerMenu()
         {
-            AjouterBoutonMenu("Historique", IconChar.Clock, "Historique");
-            AjouterBoutonMenu("Exécution", IconChar.Play, "Exécution"); 
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, "Paramètres Logs");
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, "Paramètres Email");
-            AjouterBoutonMenu("Bases à copier", IconChar.Database, "Bases à copier");
-            AjouterBoutonMenu("Configuration", IconChar.Cog, "Configuration");
+            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleControl("Historique"));
+            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleControl("Exécution"));
+            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleControl("Paramètres Logs"));
+            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleControl("Paramètres Email"));
+            AjouterBoutonMenu("Bases à copier", IconChar.Database, () => new PageSimpleControl("Bases à copier"));
+
+            // Ici on appelle la vraie page ConfigurationControl.
+            AjouterBoutonMenu("Configuration", IconChar.Cog, () => new ConfigurationControl());
 
         }
         // Crée un bouton du menu.
@@ -35,7 +37,11 @@ namespace SaimDataCopy.Forms
         // icone = icône FontAwesome affichée à gauche.
         // titrePage = titre de la page à afficher dans panelMain.
 
-        private void AjouterBoutonMenu(string texte, IconChar icone, string titrePage)
+        private void AjouterBoutonMenu(string texte, IconChar icone, Func<UserControl> creerPage)
+            /* On appelle AjouterBoutonMenu avec () => new PageSimpleControl(...);
+            donc ce n’est pas un simple texte string;
+            c’est une fonction qui crée une page;
+            donc le paramètre doit être Func<UserControl>.*/
         {
             IconButton bouton= new IconButton();
 
@@ -49,7 +55,7 @@ namespace SaimDataCopy.Forms
             // on change seulement le contenu de panelMain.
             bouton.Click += (sender, e) =>
             {
-                AfficherPage(new PageSimpleControl(titrePage));
+                AfficherPage(creerPage());
             };
 
             // On ajoute le bouton dans le menu gauche.
@@ -60,13 +66,17 @@ namespace SaimDataCopy.Forms
 
         // Le menu gauche et le bottom ne sont pas touchés.
         
-        private void AfficherPage(UserControl Page)
+        private void AfficherPage(UserControl page)
         {
             // On supprime seulement le contenu central.
             panelMain.Controls.Clear();
 
+            // Très important :
+            // la page doit prendre toute la place dans panelMain.
+            page.Dock = DockStyle.Fill;
+
             // La page prend toute la place disponible dans panelMain.
-            panelMain.Controls.Add(Page);
+            panelMain.Controls.Add(page);
         }
         private void CreerBarreBas()
         {
