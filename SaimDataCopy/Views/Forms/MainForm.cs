@@ -1,10 +1,9 @@
 using FontAwesome.Sharp;
 using SaimDataCopy.Controllers;
 using SaimDataCopy.Helpers;
-using SaimDataCopy.Views.Interfaces;
-using SaimDataCopy.Views.UserControls;
-using System.Drawing;
-using System.Windows.Forms;
+using SaimDataCopy.Views.Interfaces.BasesCopier;
+using SaimDataCopy.Views.Interfaces.Commun;
+using SaimDataCopy.Views.Interfaces.Configuration;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -13,9 +12,14 @@ namespace SaimDataCopy.Views.Forms
         // Page actuellement affichée dans panelMain.
         private UserControl? pageActuelle;
 
+        // Page Configuration gardée en mémoire.
+        private ConfigurationView? configurationView;
+
         // Controller de la page Configuration.
-        // On le garde en mémoire pour respecter MVC.
         private ConfigurationController? configurationController;
+
+        // Page Bases à copier gardée en mémoire.
+        private BasesCopierView? basesCopierView;
 
         public MainForm()
         {
@@ -24,26 +28,26 @@ namespace SaimDataCopy.Views.Forms
             CreerMenu();
             CreerBarreBas();
 
-            // Au démarrage, on affiche directement la vraie View MVC de configuration.
+            // Au démarrage, on affiche directement la vraie page Configuration.
             AfficherPage(CreerConfigurationView());
         }
 
         // Crée tous les boutons du menu gauche.
-        // Le design des boutons se trouve dans Helpers/MenuButtonStyle.cs
         private void CreerMenu()
         {
-            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleControl(""));
-            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleControl(""));
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleControl(""));
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleControl(""));
-            AjouterBoutonMenu("Bases à copier", IconChar.Database, () => new PageSimpleControl(""));
+            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView(""));
+            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView(""));
+            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleView(""));
+            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleView(""));
+
+            // Ici on appelle la vraie page Bases à copier en MVC.
+            AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
 
             // Ici on appelle la vraie page Configuration en MVC.
             AjouterBoutonMenu("Configuration", IconChar.Cog, () => CreerConfigurationView());
         }
 
         // Crée un bouton du menu.
-        // creerPage permet de créer la page à afficher quand on clique.
         private void AjouterBoutonMenu(string texte, IconChar icone, Func<UserControl> creerPage)
         {
             IconButton bouton = new IconButton();
@@ -51,29 +55,38 @@ namespace SaimDataCopy.Views.Forms
             bouton.Text = texte;
             bouton.IconChar = icone;
 
-            // Style du bouton depuis Helpers.
+            // Style du bouton depuis Helpers/MenuButtonStyle.cs
             MenuButtonStyle.Appliquer(bouton);
 
             bouton.Click += (sender, e) =>
             {
-                // Quand on clique, on affiche la page demandée dans panelMain.
                 AfficherPage(creerPage());
             };
 
             panelMenu.Controls.Add(bouton);
         }
 
-        // Crée la View Configuration et son Controller.
-        // C'est ici qu'on relie View + Controller.
+        // Crée la View Configuration et son Controller une seule fois.
         private UserControl CreerConfigurationView()
         {
-            ConfigurationView configurationView = new ConfigurationView();
-
-            // Le Controller reçoit la View.
-            // Il écoutera les actions de cette View.
-            configurationController = new ConfigurationController(configurationView);
+            if (configurationView == null)
+            {
+                configurationView = new ConfigurationView();
+                configurationController = new ConfigurationController(configurationView);
+            }
 
             return configurationView;
+        }
+
+        // Crée la View Bases à copier une seule fois.
+        private UserControl CreerBasesCopierView()
+        {
+            if (basesCopierView == null)
+            {
+                basesCopierView = new BasesCopierView();
+            }
+
+            return basesCopierView;
         }
 
         // Affiche une page dans panelMain.
@@ -83,7 +96,6 @@ namespace SaimDataCopy.Views.Forms
             panelMain.Controls.Clear();
 
             page.Dock = DockStyle.Fill;
-
             panelMain.Controls.Add(page);
 
             // On garde en mémoire la page affichée.
@@ -104,27 +116,33 @@ namespace SaimDataCopy.Views.Forms
             // Style du bouton dans Helpers.
             MenuButtonStyle.Appliquer(btnEnregistrerParametres);
 
-            btnEnregistrerParametres.Click += (sender, e) =>
+            btnEnregistrerParametres.Click += BtnEnregistrerParametres_Click;
+
+            panelBottom.Controls.Add(btnEnregistrerParametres);
+            panelBottom.Controls.Add(lblStatus);
+        }
+
+        private void BtnEnregistrerParametres_Click(object? sender, EventArgs e)
+        {
+            switch (pageActuelle)
             {
-                // Si la page actuelle est une View de configuration,
-                // on demande l'enregistrement au Controller via l'interface.
-                if (pageActuelle is IConfigurationView configurationView)
-                {
+                case IConfigurationView configurationView:
                     configurationView.DemanderEnregistrement();
-                }
-                else
-                {
+                    break;
+
+                case IBasesCopierView basesCopierView:
+                    basesCopierView.DemanderEnregistrement();
+                    break;
+
+                default:
                     MessageBox.Show(
                         "Cette page n'a pas encore de paramètres à enregistrer.",
                         "Information",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
                     );
-                }
-            };
-
-            panelBottom.Controls.Add(btnEnregistrerParametres);
-            panelBottom.Controls.Add(lblStatus);
+                    break;
+            }
         }
     }
 }

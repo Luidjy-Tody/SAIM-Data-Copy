@@ -1,11 +1,10 @@
 ﻿using FontAwesome.Sharp;
 using SaimDataCopy.Helpers;
 using SaimDataCopy.Models;
-using SaimDataCopy.Views.Interfaces;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SaimDataCopy.Views.UserControls
+namespace SaimDataCopy.Views.Interfaces.Configuration
 {
     // View de la page Configuration.
     // Elle affiche l'interface et récupère les valeurs saisies.
@@ -36,8 +35,8 @@ namespace SaimDataCopy.Views.UserControls
 
         public ConfigurationView()
         {
-            this.BackColor = Color.White;
-            this.AutoScroll = true;
+            BackColor = Color.White;
+            AutoScroll = true;
 
             CreerInterface();
         }
@@ -47,10 +46,10 @@ namespace SaimDataCopy.Views.UserControls
             Panel panelContenu = new Panel();
 
             panelContenu.Dock = DockStyle.Top;
-            panelContenu.Height = 900;
+            panelContenu.Height = 850;
             panelContenu.BackColor = Color.White;
 
-            this.Controls.Add(panelContenu);
+            Controls.Add(panelContenu);
 
             Label lblTitre = new Label();
             lblTitre.Text = "Paramètres de configuration";

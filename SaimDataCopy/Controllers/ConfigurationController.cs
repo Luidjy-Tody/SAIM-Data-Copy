@@ -1,6 +1,6 @@
 ﻿using SaimDataCopy.Models;
 using SaimDataCopy.Services;
-using SaimDataCopy.Views.Interfaces;
+using SaimDataCopy.Views.Interfaces.Configuration;
 using System;
 
 namespace SaimDataCopy.Controllers

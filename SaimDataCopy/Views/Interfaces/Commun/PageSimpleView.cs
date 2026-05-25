@@ -2,13 +2,13 @@
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SaimDataCopy.Views.UserControls
+namespace SaimDataCopy.Views.Interfaces.Commun
 {
     // View simple utilisée temporairement pour les pages pas encore développées.
     // Exemple : Historique, Exécution, Paramètres Email, etc.
-    public class PageSimpleControl : UserControl
+    public class PageSimpleView : UserControl
     {
-        public PageSimpleControl(string titrePage)
+        public PageSimpleView(string titrePage)
         {
             // Fond blanc de la page.
             this.BackColor = Color.White;
@@ -16,7 +16,7 @@ namespace SaimDataCopy.Views.UserControls
             // Le scroll reste seulement dans la page centrale.
             this.AutoScroll = true;
 
-            // Titre affiché au centre de la page.
+            // Titre affiché dans la page.
             Label lblTitre = new Label();
 
             lblTitre.Text = titrePage;

@@ -1,6 +1,6 @@
 ﻿using SaimDataCopy.Models;
 
-namespace SaimDataCopy.Views.Interfaces
+namespace SaimDataCopy.Views.Interfaces.Configuration
 {
     // Interface entre la View et le Controller.
     // Le Controller utilise cette interface au lieu de toucher directement aux TextBox.
