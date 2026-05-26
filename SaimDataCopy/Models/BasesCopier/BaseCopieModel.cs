@@ -1,5 +1,4 @@
-﻿
-namespace SaimDataCopy.Models
+﻿namespace SaimDataCopy.Models.BasesCopier
 {
     public class BaseCopieModel
     {

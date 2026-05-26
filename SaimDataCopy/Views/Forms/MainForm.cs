@@ -1,9 +1,10 @@
 using FontAwesome.Sharp;
-using SaimDataCopy.Controllers;
+using SaimDataCopy.Controllers.BasesCopier;
+using SaimDataCopy.Controllers.Configuration;
 using SaimDataCopy.Helpers;
-using SaimDataCopy.Views.Interfaces.BasesCopier;
-using SaimDataCopy.Views.Interfaces.Commun;
-using SaimDataCopy.Views.Interfaces.Configuration;
+using SaimDataCopy.Views.BasesCopier;
+using SaimDataCopy.Views.Configuration;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -21,6 +22,9 @@ namespace SaimDataCopy.Views.Forms
         // Page Bases à copier gardée en mémoire.
         private BasesCopierView? basesCopierView;
 
+        // Controller de la page Bases à copier.
+        private BasesCopierController? basesCopierController;
+
         public MainForm()
         {
             InitializeComponent();
@@ -35,10 +39,10 @@ namespace SaimDataCopy.Views.Forms
         // Crée tous les boutons du menu gauche.
         private void CreerMenu()
         {
-            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView(""));
-            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView(""));
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleView(""));
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleView(""));
+            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView("Historique"));
+            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView("Exécution"));
+            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleView("Paramètres Logs"));
+            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleView("Paramètres Email"));
 
             // Ici on appelle la vraie page Bases à copier en MVC.
             AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
@@ -72,18 +76,23 @@ namespace SaimDataCopy.Views.Forms
             if (configurationView == null)
             {
                 configurationView = new ConfigurationView();
+
+                // Le Controller reçoit la View Configuration.
                 configurationController = new ConfigurationController(configurationView);
             }
 
             return configurationView;
         }
 
-        // Crée la View Bases à copier une seule fois.
+        // Crée la View Bases à copier et son Controller une seule fois.
         private UserControl CreerBasesCopierView()
         {
             if (basesCopierView == null)
             {
                 basesCopierView = new BasesCopierView();
+
+                // Le Controller reçoit la View Bases à copier.
+                basesCopierController = new BasesCopierController(basesCopierView);
             }
 
             return basesCopierView;
@@ -116,6 +125,7 @@ namespace SaimDataCopy.Views.Forms
             // Style du bouton dans Helpers.
             MenuButtonStyle.Appliquer(btnEnregistrerParametres);
 
+            // Quand on clique sur Enregistrer, on vérifie la page actuelle.
             btnEnregistrerParametres.Click += BtnEnregistrerParametres_Click;
 
             panelBottom.Controls.Add(btnEnregistrerParametres);
@@ -126,14 +136,19 @@ namespace SaimDataCopy.Views.Forms
         {
             switch (pageActuelle)
             {
-                case IConfigurationView configurationView:
+                // Si la page actuelle est Configuration,
+                // on demande à la View de déclencher l'enregistrement.
+                case ConfigurationView configurationView:
                     configurationView.DemanderEnregistrement();
                     break;
 
-                case IBasesCopierView basesCopierView:
-                    basesCopierView.DemanderEnregistrement();
+                // Si la page actuelle est Bases à copier,
+                // on appelle directement le Controller de cette page.
+                case BasesCopierView:
+                    basesCopierController?.Enregistrer();
                     break;
 
+                // Pour les pages temporaires qui n'ont pas encore d'enregistrement.
                 default:
                     MessageBox.Show(
                         "Cette page n'a pas encore de paramètres à enregistrer.",

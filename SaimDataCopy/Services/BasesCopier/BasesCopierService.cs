@@ -1,60 +1,38 @@
-﻿using SaimDataCopy.Models;
+﻿using SaimDataCopy.DataProviders.BasesCopier;
+using SaimDataCopy.Models.BasesCopier;
 
-namespace SaimDataCopy.Services
+namespace SaimDataCopy.Services.BasesCopier
 {
-    public class BasesCopierService
+    // Service de la page Bases à copier.
+    // Il contient la logique métier : validation, ajout, suppression, etc.
+    public class BasesCopierService : IBasesCopierService
     {
+        // Le Service utilise le DataProvider pour charger ou enregistrer les données.
+        private readonly IBasesCopierDataProvider _basesCopierDataProvider;
+
+        // Constructeur simple.
+        // Il crée directement le DataProvider.
+        public BasesCopierService()
+        {
+            _basesCopierDataProvider = new BasesCopierDataProvider();
+        }
+
+        // Constructeur utile plus tard pour les tests ou pour changer la source de données.
+        public BasesCopierService(IBasesCopierDataProvider basesCopierDataProvider)
+        {
+            _basesCopierDataProvider = basesCopierDataProvider;
+        }
+
         public List<BaseCopieModel> ChargerBasesDemo()
         {
-            // Données temporaires pour afficher la page.
-            // Plus tard, ces données viendront de SQL Server.
-            return new List<BaseCopieModel>
-            {
-                new BaseCopieModel
-                {
-                    Inclure = true,
-                    NomBase = "DB_Ventes",
-                    OrdreTraitement = 1,
-                    ModeCopie = "Écraser",
-                    Statut = "Prête",
-                    DerniereCopie = new DateTime(2025, 5, 14, 2, 0, 0)
-                },
-
-                new BaseCopieModel
-                {
-                    Inclure = true,
-                    NomBase = "DB_RH",
-                    OrdreTraitement = 2,
-                    ModeCopie = "Écraser",
-                    Statut = "Prête",
-                    DerniereCopie = new DateTime(2025, 5, 14, 2, 3, 0)
-                },
-
-                new BaseCopieModel
-                {
-                    Inclure = true,
-                    NomBase = "DB_Comptabilite",
-                    OrdreTraitement = 3,
-                    ModeCopie = "Mise à jour",
-                    Statut = "Avertissement",
-                    DerniereCopie = new DateTime(2025, 5, 14, 2, 6, 0)
-                },
-
-                new BaseCopieModel
-                {
-                    Inclure = false,
-                    NomBase = "DB_Archive",
-                    OrdreTraitement = 4,
-                    ModeCopie = "Écraser",
-                    Statut = "Non sélectionnée",
-                    DerniereCopie = null
-                }
-            };
+            // Le Service ne crée plus les données lui-même.
+            // Il demande au DataProvider de charger les bases.
+            return _basesCopierDataProvider.ChargerBases();
         }
 
         public List<string> ObtenirModesCopie()
         {
-            // Les choix qui seront affichés dans la ComboBox du tableau.
+            // Les choix affichés dans la ComboBox du tableau.
             return new List<string>
             {
                 "Écraser",
@@ -62,7 +40,7 @@ namespace SaimDataCopy.Services
             };
         }
 
-        public BaseCopieModel CreerNouvelleBase(List<BaseCopieModel> basesExistantes,string nomBase)
+        public BaseCopieModel CreerNouvelleBase(List<BaseCopieModel> basesExistantes, string nomBase)
         {
             int prochainOrdre = basesExistantes.Count == 0
                 ? 1
@@ -129,6 +107,7 @@ namespace SaimDataCopy.Services
                         break;
                 }
             }
+
             var nomsDoublons = bases
                 .Where(b => !string.IsNullOrWhiteSpace(b.NomBase))
                 .GroupBy(b => b.NomBase.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -155,8 +134,17 @@ namespace SaimDataCopy.Services
 
         public bool EnregistrerBases(List<BaseCopieModel> bases)
         {
-            // Pour l'instant, on simule l'enregistrement.
-            // Plus tard, on appellera une classe dans DataAccess.
+            List<string> erreurs = ValiderBases(bases);
+
+            if (erreurs.Count > 0)
+            {
+                return false;
+            }
+
+            // Le Service ne sauvegarde pas directement.
+            // Il demande au DataProvider de le faire.
+            _basesCopierDataProvider.EnregistrerBases(bases);
+
             return true;
         }
     }

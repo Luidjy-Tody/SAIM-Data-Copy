@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <Folder Include="DataAccess\" />
-    <Folder Include="SQL\" />
+    <Folder Include="Services\SQL\" />
     <Folder Include="Resources\" />
   </ItemGroup>
 

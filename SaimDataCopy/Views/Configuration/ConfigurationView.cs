@@ -1,15 +1,15 @@
 ﻿using FontAwesome.Sharp;
 using SaimDataCopy.Helpers;
-using SaimDataCopy.Models;
+using SaimDataCopy.Models.Configuration;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SaimDataCopy.Views.Interfaces.Configuration
+namespace SaimDataCopy.Views.Configuration
 {
     // View de la page Configuration.
     // Elle affiche l'interface et récupère les valeurs saisies.
     // Elle ne contient pas la logique métier.
-    public class ConfigurationView : UserControl, IConfigurationView
+    public class ConfigurationView : UserControl
     {
         // Champs du serveur source.
         private TextBox txtSourceNomServeur = new TextBox();
@@ -288,6 +288,8 @@ namespace SaimDataCopy.Views.Interfaces.Configuration
             return txtPassword;
         }
 
+        // Cette méthode transforme les champs de l'interface en Model.
+        // La View récupère seulement les valeurs, puis le Controller les donne au Service.
         public ConfigurationModel RecupererConfiguration()
         {
             ConfigurationModel configuration = new ConfigurationModel();
@@ -317,6 +319,8 @@ namespace SaimDataCopy.Views.Interfaces.Configuration
             return configuration;
         }
 
+        // MainForm appelle cette méthode quand l'utilisateur clique
+        // sur le bouton "Enregistrer les paramètres".
         public void DemanderEnregistrement()
         {
             EnregistrerConfigurationDemande?.Invoke(this, EventArgs.Empty);

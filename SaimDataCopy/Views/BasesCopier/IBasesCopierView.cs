@@ -1,6 +1,6 @@
-﻿using SaimDataCopy.Models;
+﻿using SaimDataCopy.Models.BasesCopier;
 
-namespace SaimDataCopy.Views.Interfaces.BasesCopier
+namespace SaimDataCopy.Views.BasesCopier
 {
     public interface IBasesCopierView
     {
@@ -27,7 +27,6 @@ namespace SaimDataCopy.Views.Interfaces.BasesCopier
         // Affiche un message à l'utilisateur
         void AfficherMessage(string titre, string message, MessageBoxIcon icon);
 
-        // Méthode appelée par MainForm quand on clique sur le bouton Enregistrer
-        void DemanderEnregistrement();
+       
     }
 }

@@ -1,16 +1,14 @@
-﻿using SaimDataCopy.Controllers;
-using SaimDataCopy.Helpers;
-using SaimDataCopy.Models;
+﻿using SaimDataCopy.Helpers;
+using SaimDataCopy.Models.BasesCopier;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SaimDataCopy.Views.Interfaces.BasesCopier
+namespace SaimDataCopy.Views.BasesCopier
 {
     public class BasesCopierView : UserControl, IBasesCopierView
     {
-        private readonly BasesCopierController _controller;
 
         private readonly Label lblTitre = new Label();
         private readonly Panel panelInfo = new Panel();
@@ -35,7 +33,6 @@ namespace SaimDataCopy.Views.Interfaces.BasesCopier
 
             // Le Controller reçoit cette View.
             // Ensuite il charge les données et écoute les boutons.
-            _controller = new BasesCopierController(this);
         }
 
         private void InitialiserInterface()
@@ -358,10 +355,7 @@ namespace SaimDataCopy.Views.Interfaces.BasesCopier
             return noms;
         }
 
-        public void DemanderEnregistrement()
-        {
-            _controller.Enregistrer();
-        }
+        
 
         public void AfficherMessage(string titre, string message, MessageBoxIcon icon)
         {

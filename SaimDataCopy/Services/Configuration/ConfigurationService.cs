@@ -1,13 +1,31 @@
-﻿using SaimDataCopy.Models;
+﻿using SaimDataCopy.DataProviders.Configuration;
+using SaimDataCopy.Models.Configuration;
 
-namespace SaimDataCopy.Services
+namespace SaimDataCopy.Services.Configuration
 {
     // Service de configuration.
     // Son rôle est de contenir la logique métier liée aux paramètres.
-    public class ConfigurationService
+    public class ConfigurationService : IConfigurationService
     {
+        // Le Service utilise le DataProvider pour enregistrer ou charger les données.
+        private readonly IConfigurationDataProvider _configurationDataProvider;
+
+        // Constructeur simple.
+        // Il crée directement le DataProvider de configuration.
+        public ConfigurationService()
+        {
+            _configurationDataProvider = new ConfigurationDataProvider();
+        }
+
+        // Constructeur utile si plus tard on veut injecter un autre DataProvider.
+        // Exemple : pour les tests ou pour changer la source des données.
+        public ConfigurationService(IConfigurationDataProvider configurationDataProvider)
+        {
+            _configurationDataProvider = configurationDataProvider;
+        }
+
         // Vérifie si la configuration saisie est correcte.
-        // Cette logique n'est pas dans la View pour respecter MVC.
+        // Cette méthode contient la logique métier de validation.
         public bool ValiderConfiguration(ConfigurationModel configuration, out string message)
         {
             // Vérification du serveur source.
@@ -61,6 +79,8 @@ namespace SaimDataCopy.Services
                     break;
 
                 case "Arrêter tous les traitements":
+                    // Si on arrête tous les traitements,
+                    // les tentatives de reprise ne sont pas obligatoires.
                     break;
 
                 default:
@@ -69,6 +89,24 @@ namespace SaimDataCopy.Services
             }
 
             message = "Configuration valide.";
+            return true;
+        }
+
+        // Valide les données puis demande au DataProvider de les enregistrer.
+        public bool EnregistrerConfiguration(ConfigurationModel configuration, out string message)
+        {
+            bool estValide = ValiderConfiguration(configuration, out message);
+
+            if (!estValide)
+            {
+                return false;
+            }
+
+            // Le Service ne sauvegarde pas directement.
+            // Il demande au DataProvider de faire l'enregistrement.
+            _configurationDataProvider.EnregistrerConfiguration(configuration);
+
+            message = "Les paramètres de configuration ont été enregistrés.";
             return true;
         }
     }

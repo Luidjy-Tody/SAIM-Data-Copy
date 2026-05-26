@@ -1,4 +1,4 @@
-﻿namespace SaimDataCopy.Models
+﻿namespace SaimDataCopy.Models.Configuration
 {
     // Model qui représente les informations d'un serveur SQL Server.
     // Il ne contient pas de design, seulement des données.

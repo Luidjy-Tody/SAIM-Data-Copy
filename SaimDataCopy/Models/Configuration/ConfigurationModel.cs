@@ -1,4 +1,4 @@
-﻿namespace SaimDataCopy.Models
+﻿namespace SaimDataCopy.Models.Configuration
 {
     // Model principal pour la page Configuration.
     // Il regroupe les paramètres du serveur source, du serveur cible,
