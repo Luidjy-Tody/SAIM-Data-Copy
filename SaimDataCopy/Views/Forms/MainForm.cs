@@ -1,10 +1,14 @@
 using FontAwesome.Sharp;
 using SaimDataCopy.Controllers.BasesCopier;
 using SaimDataCopy.Controllers.Configuration;
-using SaimDataCopy.Helpers;
+using SaimDataCopy.Controllers.Email;
+using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.Services.Email;
 using SaimDataCopy.Views.BasesCopier;
 using SaimDataCopy.Views.Configuration;
+using SaimDataCopy.Views.Email;
 using SaimDataCopy.Views.Commun;
+using SaimDataCopy.Styles;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -25,6 +29,12 @@ namespace SaimDataCopy.Views.Forms
         // Controller de la page Bases à copier.
         private BasesCopierController? basesCopierController;
 
+        // Page Paramètres Email gardée en mémoire.
+        private EmailView? emailView;
+
+        // Controller de la page Paramètres Email.
+        private EmailController? emailController;
+
         public MainForm()
         {
             InitializeComponent();
@@ -42,7 +52,9 @@ namespace SaimDataCopy.Views.Forms
             AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView("Historique"));
             AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView("Exécution"));
             AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleView("Paramètres Logs"));
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => new PageSimpleView("Paramètres Email"));
+
+            // Ici on appelle la vraie page Paramètres Email en MVC.
+            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => CreerEmailView());
 
             // Ici on appelle la vraie page Bases à copier en MVC.
             AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
@@ -59,7 +71,7 @@ namespace SaimDataCopy.Views.Forms
             bouton.Text = texte;
             bouton.IconChar = icone;
 
-            // Style du bouton depuis Helpers/MenuButtonStyle.cs
+            // Style du bouton depuis Helpers/MenuButtonStyle.cs.
             MenuButtonStyle.Appliquer(bouton);
 
             bouton.Click += (sender, e) =>
@@ -96,6 +108,26 @@ namespace SaimDataCopy.Views.Forms
             }
 
             return basesCopierView;
+        }
+
+        // Crée la View Paramètres Email et son Controller une seule fois.
+        private UserControl CreerEmailView()
+        {
+            if (emailView == null)
+            {
+                emailView = new EmailView();
+
+                // Le DataProvider s'occupe de charger et sauvegarder les données.
+                EmailDataProvider emailDataProvider = new EmailDataProvider();
+
+                // Le Service contient la logique métier.
+                EmailService emailService = new EmailService(emailDataProvider);
+
+                // Le Controller reçoit la View et le Service.
+                emailController = new EmailController(emailView, emailService);
+            }
+
+            return emailView;
         }
 
         // Affiche une page dans panelMain.
@@ -146,6 +178,12 @@ namespace SaimDataCopy.Views.Forms
                 // on appelle directement le Controller de cette page.
                 case BasesCopierView:
                     basesCopierController?.Enregistrer();
+                    break;
+
+                // Si la page actuelle est Paramètres Email,
+                // on demande à la View de déclencher l'enregistrement.
+                case EmailView emailView:
+                    emailView.DemanderEnregistrement();
                     break;
 
                 // Pour les pages temporaires qui n'ont pas encore d'enregistrement.

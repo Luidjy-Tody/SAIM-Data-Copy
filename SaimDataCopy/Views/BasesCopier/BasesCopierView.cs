@@ -1,5 +1,5 @@
-﻿using SaimDataCopy.Helpers;
-using SaimDataCopy.Models.BasesCopier;
+﻿using SaimDataCopy.Models.BasesCopier;
+using SaimDataCopy.Styles;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,7 +9,6 @@ namespace SaimDataCopy.Views.BasesCopier
 {
     public class BasesCopierView : UserControl, IBasesCopierView
     {
-
         private readonly Label lblTitre = new Label();
         private readonly Panel panelInfo = new Panel();
         private readonly Label lblInfo = new Label();
@@ -17,7 +16,6 @@ namespace SaimDataCopy.Views.BasesCopier
         private readonly DataGridView grilleBases = new DataGridView();
 
         private readonly Panel panelBoutons = new Panel();
-
 
         private readonly Button btnAjouter = new Button();
         private readonly Button btnSupprimer = new Button();
@@ -30,9 +28,6 @@ namespace SaimDataCopy.Views.BasesCopier
         public BasesCopierView()
         {
             InitialiserInterface();
-
-            // Le Controller reçoit cette View.
-            // Ensuite il charge les données et écoute les boutons.
         }
 
         private void InitialiserInterface()
@@ -68,6 +63,7 @@ namespace SaimDataCopy.Views.BasesCopier
 
             CreerGrille();
             panelContenu.Controls.Add(grilleBases);
+
             panelBoutons.Location = new Point(24, 445);
             panelBoutons.Size = new Size(460, 45);
             panelBoutons.BackColor = Color.White;
@@ -79,6 +75,7 @@ namespace SaimDataCopy.Views.BasesCopier
             btnAjouter.Location = new Point(0, 0);
             btnAjouter.FlatStyle = FlatStyle.Flat;
             btnAjouter.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnAjouter.FlatAppearance.BorderSize = 1;
             btnAjouter.BackColor = Color.White;
             btnAjouter.Cursor = Cursors.Hand;
             btnAjouter.Click += BtnAjouter_Click;
@@ -90,6 +87,7 @@ namespace SaimDataCopy.Views.BasesCopier
             btnSupprimer.Location = new Point(198, 0);
             btnSupprimer.FlatStyle = FlatStyle.Flat;
             btnSupprimer.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnSupprimer.FlatAppearance.BorderSize = 1;
             btnSupprimer.BackColor = Color.White;
             btnSupprimer.Cursor = Cursors.Hand;
             btnSupprimer.Click += BtnSupprimer_Click;
@@ -113,31 +111,30 @@ namespace SaimDataCopy.Views.BasesCopier
             DataGridViewCheckBoxColumn colInclure = new DataGridViewCheckBoxColumn();
             colInclure.Name = "colInclure";
             colInclure.HeaderText = "Inclure";
-            colInclure.FillWeight = 70;
+            colInclure.FillWeight = 90;
+            colInclure.MinimumWidth = 90;
 
             DataGridViewTextBoxColumn colNomBase = new DataGridViewTextBoxColumn();
             colNomBase.Name = "colNomBase";
             colNomBase.HeaderText = "Nom de la base";
-            // Le nom reste modifiable si l'utilisateur s'est trompé.
             colNomBase.ReadOnly = false;
-            colNomBase.FillWeight = 150;
+            colNomBase.FillWeight = 170;
 
             DataGridViewTextBoxColumn colOrdre = new DataGridViewTextBoxColumn();
             colOrdre.Name = "colOrdre";
             colOrdre.HeaderText = "Ordre de traitement";
-            colOrdre.FillWeight = 140;
+            colOrdre.FillWeight = 180;
 
             DataGridViewComboBoxColumn colMode = new DataGridViewComboBoxColumn();
             colMode.Name = "colMode";
             colMode.HeaderText = "Mode de copie";
-            colMode.FillWeight = 150;
+            colMode.FillWeight = 170;
 
-            // Style plus proche de la maquette.
-            colMode.DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox;
+            // Affiche la flèche du mode de copie.
+            colMode.DisplayStyle = DataGridViewComboBoxDisplayStyle.DropDownButton;
             colMode.DisplayStyleForCurrentCellOnly = false;
             colMode.FlatStyle = FlatStyle.Flat;
 
-            // Évite l'effet bleu trop grand quand on clique sur la cellule.
             colMode.DefaultCellStyle.BackColor = Color.White;
             colMode.DefaultCellStyle.ForeColor = Color.Black;
             colMode.DefaultCellStyle.SelectionBackColor = Color.White;
@@ -147,13 +144,13 @@ namespace SaimDataCopy.Views.BasesCopier
             colStatut.Name = "colStatut";
             colStatut.HeaderText = "Statut";
             colStatut.ReadOnly = true;
-            colStatut.FillWeight = 160;
+            colStatut.FillWeight = 200;
 
             DataGridViewTextBoxColumn colDerniereCopie = new DataGridViewTextBoxColumn();
             colDerniereCopie.Name = "colDerniereCopie";
             colDerniereCopie.HeaderText = "Dernière copie";
             colDerniereCopie.ReadOnly = true;
-            colDerniereCopie.FillWeight = 180;
+            colDerniereCopie.FillWeight = 165;
 
             grilleBases.Columns.AddRange(
                 colInclure,
@@ -167,6 +164,10 @@ namespace SaimDataCopy.Views.BasesCopier
             TableGridStyle.DesactiverTriColonnes(grilleBases);
 
             grilleBases.CellFormatting += GrilleBases_CellFormatting;
+
+            // Dessine les cellules spéciales : ordre + statut.
+            grilleBases.CellPainting += GrilleBases_CellPainting;
+
             grilleBases.CurrentCellDirtyStateChanged += GrilleBases_CurrentCellDirtyStateChanged;
             grilleBases.CellValueChanged += GrilleBases_CellValueChanged;
 
@@ -216,9 +217,35 @@ namespace SaimDataCopy.Views.BasesCopier
                 );
 
                 grilleBases.Rows[index].Tag = baseCopie;
+
+                // Applique le fond blanc/gris et évite l'effet bleu.
+                AppliquerStyleLigne(index);
             }
 
             AjusterHauteurTableau();
+
+            // Évite qu'une cellule soit sélectionnée au chargement.
+            grilleBases.ClearSelection();
+        }
+
+        private void AppliquerStyleLigne(int index)
+        {
+            DataGridViewRow row = grilleBases.Rows[index];
+
+            Color couleurLigne = index % 2 == 0
+                ? Color.White
+                : Color.FromArgb(248, 248, 248);
+
+            row.DefaultCellStyle.BackColor = couleurLigne;
+            row.DefaultCellStyle.SelectionBackColor = couleurLigne;
+            row.DefaultCellStyle.SelectionForeColor = Color.FromArgb(35, 35, 35);
+
+            row.Cells["colInclure"].Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            row.Cells["colNomBase"].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            row.Cells["colOrdre"].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            row.Cells["colMode"].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            row.Cells["colStatut"].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            row.Cells["colDerniereCopie"].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
         }
 
         private void AjusterHauteurTableau()
@@ -234,7 +261,6 @@ namespace SaimDataCopy.Views.BasesCopier
             // Position commune pour les deux boutons.
             int positionBoutonsY = grilleBases.Bottom + 18;
 
-            // Hauteur fixe pour éviter une différence visuelle.
             int hauteurBouton = 38;
 
             panelBoutons.Location = new Point(24, positionBoutonsY);
@@ -335,6 +361,7 @@ namespace SaimDataCopy.Views.BasesCopier
         public List<string> RecupererNomsBasesCochees()
         {
             List<string> noms = new List<string>();
+
             foreach (DataGridViewRow row in grilleBases.Rows)
             {
                 bool estCoche = Convert.ToBoolean(row.Cells["colInclure"].Value);
@@ -354,8 +381,6 @@ namespace SaimDataCopy.Views.BasesCopier
 
             return noms;
         }
-
-        
 
         public void AfficherMessage(string titre, string message, MessageBoxIcon icon)
         {
@@ -401,6 +426,12 @@ namespace SaimDataCopy.Views.BasesCopier
             }
         }
 
+        private void GrilleBases_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Dessine les cellules spéciales : ordre + statut.
+            TableGridStyle.DessinerCellulesSpeciales(grilleBases, e);
+        }
+
         private void GrilleBases_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
         {
             if (grilleBases.IsCurrentCellDirty)
@@ -432,6 +463,8 @@ namespace SaimDataCopy.Views.BasesCopier
             {
                 row.Cells["colStatut"].Value = "✓ Prête";
             }
+
+            grilleBases.Invalidate();
         }
 
         private void GrilleBases_CellValidating(object? sender, DataGridViewCellValidatingEventArgs e)
@@ -462,8 +495,8 @@ namespace SaimDataCopy.Views.BasesCopier
         }
 
         private void GrilleBases_EditingControlShowing(
-    object? sender,
-    DataGridViewEditingControlShowingEventArgs e)
+            object? sender,
+            DataGridViewEditingControlShowingEventArgs e)
         {
             if (grilleBases.CurrentCell == null)
             {
@@ -481,6 +514,7 @@ namespace SaimDataCopy.Views.BasesCopier
                 comboBox.FlatStyle = FlatStyle.Flat;
                 comboBox.BackColor = Color.White;
                 comboBox.ForeColor = Color.Black;
+                comboBox.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             }
         }
 
@@ -510,6 +544,5 @@ namespace SaimDataCopy.Views.BasesCopier
                 comboBox.DroppedDown = true;
             }
         }
-
     }
 }

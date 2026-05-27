@@ -1,6 +1,6 @@
 ﻿using FontAwesome.Sharp;
-using SaimDataCopy.Helpers;
 using SaimDataCopy.Models.Configuration;
+using SaimDataCopy.Styles;
 using System.Drawing;
 using System.Windows.Forms;
 

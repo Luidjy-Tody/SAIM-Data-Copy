@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SaimDataCopy.Helpers
+namespace SaimDataCopy.Styles
 {
     // Classe séparée pour gérer le style des boutons du menu gauche.
     public static class MenuButtonStyle

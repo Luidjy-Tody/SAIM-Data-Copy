@@ -2,7 +2,7 @@
 using System.Windows.Forms;
 
 
-namespace SaimDataCopy.Helpers
+namespace SaimDataCopy.Styles
 {
     // Cette classe contient le design des éléments utilisés dans les pages.
     // Exemple : titre, label, TextBox, ComboBox, badge "requis".
@@ -26,10 +26,10 @@ namespace SaimDataCopy.Helpers
             label.ForeColor = Color.Black;
         }
 
-    // Style des titres de section
-    //Exemple : serveur source, serveur cible
+        // Style des titres de section
+        //Exemple : serveur source, serveur cible
 
-    public static void AppliquerSousTitre(Label label)
+        public static void AppliquerSousTitre(Label label)
         {
             label.AutoSize = true;
             label.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
@@ -38,15 +38,15 @@ namespace SaimDataCopy.Helpers
 
         //Style des petits labels au dessus des champs.
 
-        public static void AppliquerLabelChamp(Label label) 
+        public static void AppliquerLabelChamp(Label label)
         {
             label.AutoSize = true;
             label.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             label.ForeColor = TexteNormal;
         }
 
-    // Style des textBox.
-    public static void AppliquerTextBox(TextBox textBox)
+        // Style des textBox.
+        public static void AppliquerTextBox(TextBox textBox)
         {
             textBox.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
             textBox.BackColor = FondChamp;
@@ -61,8 +61,8 @@ namespace SaimDataCopy.Helpers
             comboBox.BackColor = FondChamp;
         }
 
-    // Cree un petit badge rouge clair avec le text "requis".
-    public static Label CreerBadgeRequis()
+        // Cree un petit badge rouge clair avec le text "requis".
+        public static Label CreerBadgeRequis()
         {
             Label badge = new Label();
 
@@ -79,9 +79,9 @@ namespace SaimDataCopy.Helpers
             return badge;
         }
 
-    //Stylr simple pour un bouton bleu.
-    //On pourra l'utiliser plus tard pour tester connexion, enregistrer, etc.
-    public static void AppliquerBoutonBleu(Button bouton)
+        //Stylr simple pour un bouton bleu.
+        //On pourra l'utiliser plus tard pour tester connexion, enregistrer, etc.
+        public static void AppliquerBoutonBleu(Button bouton)
         {
             bouton.BackColor = BleuPrincipal;
             bouton.ForeColor = Color.White;
@@ -90,6 +90,6 @@ namespace SaimDataCopy.Helpers
             bouton.FlatStyle = FlatStyle.Flat;
             bouton.FlatAppearance.BorderSize = 0;
         }
-        
+
     }
 }
