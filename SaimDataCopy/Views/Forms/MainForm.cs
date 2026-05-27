@@ -2,11 +2,15 @@ using FontAwesome.Sharp;
 using SaimDataCopy.Controllers.BasesCopier;
 using SaimDataCopy.Controllers.Configuration;
 using SaimDataCopy.Controllers.Email;
+using SaimDataCopy.Controllers.Logs;
 using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.DataProviders.Logs;
 using SaimDataCopy.Services.Email;
+using SaimDataCopy.Services.Logs;
 using SaimDataCopy.Views.BasesCopier;
 using SaimDataCopy.Views.Configuration;
 using SaimDataCopy.Views.Email;
+using SaimDataCopy.Views.Logs;
 using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Styles;
 
@@ -35,6 +39,12 @@ namespace SaimDataCopy.Views.Forms
         // Controller de la page Paramètres Email.
         private EmailController? emailController;
 
+        // Page Paramètres Logs gardée en mémoire.
+        private LogsView? logsView;
+
+        // Controller de la page Paramètres Logs.
+        private LogsController? logsController;
+
         public MainForm()
         {
             InitializeComponent();
@@ -51,7 +61,9 @@ namespace SaimDataCopy.Views.Forms
         {
             AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView("Historique"));
             AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView("Exécution"));
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => new PageSimpleView("Paramètres Logs"));
+
+            // Ici on appelle la vraie page Paramètres Logs en MVC.
+            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => CreerLogsView());
 
             // Ici on appelle la vraie page Paramètres Email en MVC.
             AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => CreerEmailView());
@@ -71,7 +83,7 @@ namespace SaimDataCopy.Views.Forms
             bouton.Text = texte;
             bouton.IconChar = icone;
 
-            // Style du bouton depuis Helpers/MenuButtonStyle.cs.
+            // Style du bouton depuis Styles/MenuButtonStyle.cs.
             MenuButtonStyle.Appliquer(bouton);
 
             bouton.Click += (sender, e) =>
@@ -130,6 +142,29 @@ namespace SaimDataCopy.Views.Forms
             return emailView;
         }
 
+        // Crée la View Paramètres Logs et son Controller une seule fois.
+        private UserControl CreerLogsView()
+        {
+            if (logsView == null)
+            {
+                logsView = new LogsView();
+
+                // Le DataProvider s'occupe de charger et sauvegarder les données.
+                LogsDataProvider logsDataProvider = new LogsDataProvider();
+
+                // Le Service contient la logique métier et les validations.
+                LogsService logsService = new LogsService(logsDataProvider);
+
+                // Le Controller reçoit la View et le Service.
+                logsController = new LogsController(logsView, logsService);
+
+                // On charge les valeurs enregistrées ou les valeurs par défaut.
+                logsController.ChargerPage();
+            }
+
+            return logsView;
+        }
+
         // Affiche une page dans panelMain.
         // Le menu gauche et le bottom ne sont pas supprimés.
         private void AfficherPage(UserControl page)
@@ -148,13 +183,13 @@ namespace SaimDataCopy.Views.Forms
             Label lblStatus = new Label();
             lblStatus.Text = "Prêt";
 
-            // Style du label dans Helpers.
+            // Style du label dans Styles.
             MenuLabelStyle.Appliquer(lblStatus);
 
             Button btnEnregistrerParametres = new Button();
             btnEnregistrerParametres.Text = "Enregistrer les paramètres";
 
-            // Style du bouton dans Helpers.
+            // Style du bouton dans Styles.
             MenuButtonStyle.Appliquer(btnEnregistrerParametres);
 
             // Quand on clique sur Enregistrer, on vérifie la page actuelle.
@@ -184,6 +219,12 @@ namespace SaimDataCopy.Views.Forms
                 // on demande à la View de déclencher l'enregistrement.
                 case EmailView emailView:
                     emailView.DemanderEnregistrement();
+                    break;
+
+                // Si la page actuelle est Paramètres Logs,
+                // on appelle le Controller pour enregistrer.
+                case LogsView:
+                    logsController?.DemanderEnregistrement();
                     break;
 
                 // Pour les pages temporaires qui n'ont pas encore d'enregistrement.

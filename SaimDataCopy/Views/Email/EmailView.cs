@@ -83,7 +83,7 @@ namespace SaimDataCopy.Views.Email
             iconeInfo.IconColor = EmailFormStyle.CouleurBleu;
             iconeInfo.IconSize = 18;
             iconeInfo.Size = new Size(22, 22);
-            iconeInfo.Location = new Point(16, 13);
+            iconeInfo.Location = new Point(16, 15);
             iconeInfo.BackColor = EmailFormStyle.CouleurFondInfo;
 
             Label lblInfo = new Label();
@@ -161,8 +161,8 @@ namespace SaimDataCopy.Views.Email
             iconeAlerte.BackColor = Color.FromArgb(255, 245, 225);
 
             Label lblAlerte = new Label();
-            lblAlerte.Text = "⚠ Alerte en cas d'échec — disponible dans une version ultérieure";
-            lblAlerte.Location = new Point(50, 15);
+            lblAlerte.Text = "Alerte en cas d'échec — disponible dans une version ultérieure";
+            lblAlerte.Location = new Point(45, 15);
             lblAlerte.AutoSize = true;
             lblAlerte.Font = new Font("Segoe UI", 9, FontStyle.Regular);
             lblAlerte.ForeColor = Color.FromArgb(20, 20, 20);
