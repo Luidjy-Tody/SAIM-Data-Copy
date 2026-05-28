@@ -11,12 +11,15 @@ using SaimDataCopy.Views.BasesCopier;
 using SaimDataCopy.Views.Configuration;
 using SaimDataCopy.Views.Email;
 using SaimDataCopy.Views.Logs;
-using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Styles;
 using SaimDataCopy.Controllers.Execution;
 using SaimDataCopy.Views.Execution;
 using SaimDataCopy.DataProviders.Execution;
 using SaimDataCopy.Services.Execution;
+using SaimDataCopy.Controllers.Historique;
+using SaimDataCopy.DataProviders.Historique;
+using SaimDataCopy.Services.Historique;
+using SaimDataCopy.Views.Historique;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -54,6 +57,8 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Exécution.
         private ExecutionController? executionController;
+        private HistoriqueView? historiqueView;
+        private HistoriqueController? historiqueController;
 
         public MainForm()
         {
@@ -69,7 +74,7 @@ namespace SaimDataCopy.Views.Forms
         // Crée tous les boutons du menu gauche.
         private void CreerMenu()
         {
-            AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView("Historique"));
+            AjouterBoutonMenu("Historique", IconChar.Clock, () => CreerHistoriqueView());
             AjouterBoutonMenu("Exécution", IconChar.Play, () => CreerExecutionView());
 
             // Ici on appelle la vraie page Paramètres Logs en MVC.
@@ -198,6 +203,26 @@ namespace SaimDataCopy.Views.Forms
             return executionView;
         }
 
+        // Crée la View Historique et son Controller une seule fois.
+        private UserControl CreerHistoriqueView()
+        {
+            if (historiqueView == null)
+            {
+                historiqueView = new HistoriqueView();
+
+                // Le DataProvider récupère les exécutions enregistrées.
+                HistoriqueDataProvider historiqueDataProvider = new HistoriqueDataProvider();
+
+                // Le Service contient la logique métier de l'historique.
+                HistoriqueService historiqueService = new HistoriqueService(historiqueDataProvider);
+
+                // Le Controller reçoit la View et le Service.
+                historiqueController = new HistoriqueController(historiqueView, historiqueService);
+            }
+
+            return historiqueView;
+        }
+
 
         // Affiche une page dans panelMain.
         // Le menu gauche et le bottom ne sont pas supprimés.
@@ -265,6 +290,16 @@ namespace SaimDataCopy.Views.Forms
                 case ExecutionView:
                     MessageBox.Show(
                         "La page Exécution ne possède pas de paramètres à enregistrer. Utilisez le bouton Lancer la copie.",
+                        "Information",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                    break;
+
+                // La page Historique n'a pas de paramètres à enregistrer.
+                case HistoriqueView:
+                    MessageBox.Show(
+                        "La page Historique ne possède pas de paramètres à enregistrer.",
                         "Information",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
