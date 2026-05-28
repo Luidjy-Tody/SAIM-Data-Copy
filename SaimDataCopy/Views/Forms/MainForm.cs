@@ -13,6 +13,10 @@ using SaimDataCopy.Views.Email;
 using SaimDataCopy.Views.Logs;
 using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Styles;
+using SaimDataCopy.Controllers.Execution;
+using SaimDataCopy.Views.Execution;
+using SaimDataCopy.DataProviders.Execution;
+using SaimDataCopy.Services.Execution;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -45,6 +49,12 @@ namespace SaimDataCopy.Views.Forms
         // Controller de la page Paramètres Logs.
         private LogsController? logsController;
 
+        // Page Exécution gardée en mémoire.
+        private ExecutionView? executionView;
+
+        // Controller de la page Exécution.
+        private ExecutionController? executionController;
+
         public MainForm()
         {
             InitializeComponent();
@@ -60,7 +70,7 @@ namespace SaimDataCopy.Views.Forms
         private void CreerMenu()
         {
             AjouterBoutonMenu("Historique", IconChar.Clock, () => new PageSimpleView("Historique"));
-            AjouterBoutonMenu("Exécution", IconChar.Play, () => new PageSimpleView("Exécution"));
+            AjouterBoutonMenu("Exécution", IconChar.Play, () => CreerExecutionView());
 
             // Ici on appelle la vraie page Paramètres Logs en MVC.
             AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => CreerLogsView());
@@ -107,6 +117,8 @@ namespace SaimDataCopy.Views.Forms
 
             return configurationView;
         }
+
+
 
         // Crée la View Bases à copier et son Controller une seule fois.
         private UserControl CreerBasesCopierView()
@@ -164,6 +176,28 @@ namespace SaimDataCopy.Views.Forms
 
             return logsView;
         }
+
+        // Crée la View Exécution et son Controller une seule fois.
+        private UserControl CreerExecutionView()
+        {
+            if (executionView == null)
+            {
+                executionView = new ExecutionView();
+
+                // Le DataProvider charge les bases sélectionnées
+                // et sauvegarde la dernière exécution.
+                ExecutionDataProvider executionDataProvider = new ExecutionDataProvider();
+
+                // Le Service contient la logique métier de l'exécution.
+                ExecutionService executionService = new ExecutionService(executionDataProvider);
+
+                // Le Controller reçoit la View et le Service.
+                executionController = new ExecutionController(executionView, executionService);
+            }
+
+            return executionView;
+        }
+
 
         // Affiche une page dans panelMain.
         // Le menu gauche et le bottom ne sont pas supprimés.
@@ -226,6 +260,17 @@ namespace SaimDataCopy.Views.Forms
                 case LogsView:
                     logsController?.DemanderEnregistrement();
                     break;
+
+                // La page Exécution n'a pas de paramètres à enregistrer.
+                case ExecutionView:
+                    MessageBox.Show(
+                        "La page Exécution ne possède pas de paramètres à enregistrer. Utilisez le bouton Lancer la copie.",
+                        "Information",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                    break;
+
 
                 // Pour les pages temporaires qui n'ont pas encore d'enregistrement.
                 default:

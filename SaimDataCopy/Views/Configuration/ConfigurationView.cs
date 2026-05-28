@@ -97,7 +97,7 @@ namespace SaimDataCopy.Views.Configuration
             txtSourceMotDePasse = AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
 
             AjouterLabelChamp(parent, "Port", x, y + 215, false);
-            txtSourcePort = AjouterTextBox(parent, "1433", x, y + 240, 475);
+            txtSourcePort = AjouterTextBox(parent, "1433", x, y + 240, 980);
         }
 
         private void CreerSectionServeurCible(Panel parent, string titre, int x, int y)
