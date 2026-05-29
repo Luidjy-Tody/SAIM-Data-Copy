@@ -4,7 +4,7 @@ using SaimDataCopy.Models.BasesCopier;
 namespace SaimDataCopy.Services.BasesCopier
 {
     // Service de la page Bases à copier.
-    // Il contient la logique métier : validation, ajout, suppression, etc.
+    // Il contient la logique métier : chargement, sélection, validation, sauvegarde.
     public class BasesCopierService : IBasesCopierService
     {
         // Le Service utilise le DataProvider pour charger ou enregistrer les données.
@@ -23,11 +23,11 @@ namespace SaimDataCopy.Services.BasesCopier
             _basesCopierDataProvider = basesCopierDataProvider;
         }
 
-        public List<BaseCopieModel> ChargerBasesDemo()
+        public List<BaseCopieModel> ChargerBases()
         {
-            // Le Service ne crée plus les données lui-même.
-            // Il demande au DataProvider de charger les bases.
-            return _basesCopierDataProvider.ChargerBases();
+            // On charge les bases avec le dernier état sauvegardé.
+            // Si aucune sauvegarde n'existe, le DataProvider retourne les bases cochées par défaut.
+            return _basesCopierDataProvider.ChargerBasesSauvegardees();
         }
 
         public List<string> ObtenirModesCopie()
@@ -40,30 +40,44 @@ namespace SaimDataCopy.Services.BasesCopier
             };
         }
 
-        public BaseCopieModel CreerNouvelleBase(List<BaseCopieModel> basesExistantes, string nomBase)
+        public List<BaseCopieModel> CocherToutesBases(List<BaseCopieModel> bases)
         {
-            int prochainOrdre = basesExistantes.Count == 0
-                ? 1
-                : basesExistantes.Max(b => b.OrdreTraitement) + 1;
-
-            return new BaseCopieModel
+            foreach (BaseCopieModel baseCopie in bases)
             {
-                Inclure = false,
-                NomBase = nomBase.Trim(),
-                OrdreTraitement = prochainOrdre,
-                ModeCopie = "Écraser",
-                Statut = "Non sélectionnée",
-                DerniereCopie = null
-            };
+                baseCopie.Inclure = true;
+
+                // Si une base était décochée, on remet un statut normal.
+                if (baseCopie.Statut == "Non sélectionnée")
+                {
+                    baseCopie.Statut = "Prête";
+                }
+            }
+
+            return bases;
         }
 
-        public List<BaseCopieModel> SupprimerBases(
+        public List<BaseCopieModel> DecocherBases(
             List<BaseCopieModel> bases,
             List<string> nomsBasesSelectionnees)
         {
-            return bases
-                .Where(b => !nomsBasesSelectionnees.Contains(b.NomBase))
-                .ToList();
+            foreach (BaseCopieModel baseCopie in bases)
+            {
+                bool doitEtreDecochee = nomsBasesSelectionnees
+                    .Any(nom =>
+                        nom.Equals(
+                            baseCopie.NomBase,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    );
+
+                if (doitEtreDecochee)
+                {
+                    baseCopie.Inclure = false;
+                    baseCopie.Statut = "Non sélectionnée";
+                }
+            }
+
+            return bases;
         }
 
         public List<string> ValiderBases(List<BaseCopieModel> bases)
@@ -76,7 +90,7 @@ namespace SaimDataCopy.Services.BasesCopier
 
             if (bases.Count == 0)
             {
-                erreurs.Add("Vous devez ajouter une base puis la cocher pour enregistrer.");
+                erreurs.Add("Aucune base n'a été trouvée sur le serveur source.");
             }
             else if (basesIncluses.Count == 0)
             {
@@ -96,7 +110,7 @@ namespace SaimDataCopy.Services.BasesCopier
                 }
 
                 // L'encadreur préfère switch quand il y a plusieurs choix métier.
-                switch (baseCopie.ModeCopie)
+                switch (NormaliserModeCopie(baseCopie.ModeCopie))
                 {
                     case "Écraser":
                     case "Mise à jour":
@@ -134,7 +148,10 @@ namespace SaimDataCopy.Services.BasesCopier
 
         public bool EnregistrerBases(List<BaseCopieModel> bases)
         {
-            List<string> erreurs = ValiderBases(bases);
+            // Avant d'enregistrer, on remet les statuts propres.
+            List<BaseCopieModel> basesPreparees = PreparerBasesPourEnregistrement(bases);
+
+            List<string> erreurs = ValiderBases(basesPreparees);
 
             if (erreurs.Count > 0)
             {
@@ -142,10 +159,54 @@ namespace SaimDataCopy.Services.BasesCopier
             }
 
             // Le Service ne sauvegarde pas directement.
-            // Il demande au DataProvider de le faire.
-            _basesCopierDataProvider.EnregistrerBases(bases);
+            // Il demande au DataProvider de faire l'enregistrement.
+            _basesCopierDataProvider.EnregistrerBases(basesPreparees);
 
             return true;
+        }
+
+        public void AppliquerModeCopieGlobal(string modeCopieGlobal)
+        {
+            // Cette méthode sera appelée quand la page Configuration est enregistrée.
+            _basesCopierDataProvider.AppliquerModeCopieGlobal(
+                NormaliserModeCopie(modeCopieGlobal)
+            );
+        }
+
+        private List<BaseCopieModel> PreparerBasesPourEnregistrement(List<BaseCopieModel> bases)
+        {
+            foreach (BaseCopieModel baseCopie in bases)
+            {
+                baseCopie.NomBase = baseCopie.NomBase.Trim();
+                baseCopie.ModeCopie = NormaliserModeCopie(baseCopie.ModeCopie);
+                baseCopie.NomModifiable = false;
+                baseCopie.ExisteSurServeurSource = true;
+
+                if (!baseCopie.Inclure)
+                {
+                    baseCopie.Statut = "Non sélectionnée";
+                }
+                else if (baseCopie.Statut == "Non sélectionnée")
+                {
+                    baseCopie.Statut = "Prête";
+                }
+            }
+
+            return bases;
+        }
+
+        private string NormaliserModeCopie(string modeCopie)
+        {
+            // Dans ton projet, Configuration utilise actuellement "Mettre à jour",
+            // alors que Bases à copier utilise "Mise à jour".
+            // On normalise pour éviter les erreurs de validation.
+            return modeCopie switch
+            {
+                "Mettre à jour" => "Mise à jour",
+                "Mise à jour" => "Mise à jour",
+                "Écraser" => "Écraser",
+                _ => "Écraser"
+            };
         }
     }
 }

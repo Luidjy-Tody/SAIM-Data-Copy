@@ -131,7 +131,7 @@ namespace SaimDataCopy.Views.Configuration
             cmbModeCopie.Width = 475;
 
             cmbModeCopie.Items.Add("Écraser");
-            cmbModeCopie.Items.Add("Mettre à jour");
+            cmbModeCopie.Items.Add("Mise à jour");
             cmbModeCopie.SelectedIndex = 0;
 
             PageFormStyle.AppliquerComboBox(cmbModeCopie);
@@ -176,7 +176,8 @@ namespace SaimDataCopy.Views.Configuration
 
             cmbErreur.SelectedIndexChanged += (sender, e) =>
             {
-                bool arreterTraitements = cmbErreur.SelectedItem?.ToString() == "Arrêter tous les traitements";
+                bool arreterTraitements =
+                    cmbErreur.SelectedItem?.ToString() == "Arrêter tous les traitements";
 
                 cmbTentatives.Enabled = !arreterTraitements;
                 cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
@@ -288,6 +289,50 @@ namespace SaimDataCopy.Views.Configuration
             return txtPassword;
         }
 
+        // Affiche une configuration sauvegardée dans l'interface.
+        public void AfficherConfiguration(ConfigurationModel configuration)
+        {
+            txtSourceNomServeur.Text = configuration.ServeurSource.NomServeur;
+            txtSourceChaineConnexion.Text = configuration.ServeurSource.ChaineConnexion;
+            txtSourceIdentifiant.Text = configuration.ServeurSource.Identifiant;
+            txtSourceMotDePasse.Text = configuration.ServeurSource.MotDePasse;
+            txtSourcePort.Text = configuration.ServeurSource.Port > 0
+                ? configuration.ServeurSource.Port.ToString()
+                : "";
+
+            txtCibleNomServeur.Text = configuration.ServeurCible.NomServeur;
+            txtCibleChaineConnexion.Text = configuration.ServeurCible.ChaineConnexion;
+            txtCibleIdentifiant.Text = configuration.ServeurCible.Identifiant;
+            txtCibleMotDePasse.Text = configuration.ServeurCible.MotDePasse;
+            txtCiblePort.Text = configuration.ServeurCible.Port > 0
+                ? configuration.ServeurCible.Port.ToString()
+                : "";
+
+            SelectionnerComboBox(
+                cmbModeCopie,
+                NormaliserModeCopie(configuration.ModeCopie),
+                "Écraser"
+            );
+
+            SelectionnerComboBox(
+                cmbErreur,
+                configuration.ComportementErreur,
+                "Continuer avec les autres"
+            );
+
+            SelectionnerComboBox(
+                cmbTentatives,
+                ConvertirTentativesEnTexte(configuration.TentativesReprise),
+                "1 tentative"
+            );
+
+            bool arreterTraitements =
+                cmbErreur.SelectedItem?.ToString() == "Arrêter tous les traitements";
+
+            cmbTentatives.Enabled = !arreterTraitements;
+            cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
+        }
+
         // Cette méthode transforme les champs de l'interface en Model.
         // La View récupère seulement les valeurs, puis le Controller les donne au Service.
         public ConfigurationModel RecupererConfiguration()
@@ -312,9 +357,14 @@ namespace SaimDataCopy.Views.Configuration
                 Port = ConvertirPort(txtCiblePort.Text)
             };
 
-            configuration.ModeCopie = cmbModeCopie.SelectedItem?.ToString() ?? string.Empty;
-            configuration.ComportementErreur = cmbErreur.SelectedItem?.ToString() ?? string.Empty;
-            configuration.TentativesReprise = ConvertirTentatives(cmbTentatives.SelectedItem?.ToString());
+            configuration.ModeCopie =
+                NormaliserModeCopie(cmbModeCopie.SelectedItem?.ToString() ?? string.Empty);
+
+            configuration.ComportementErreur =
+                cmbErreur.SelectedItem?.ToString() ?? string.Empty;
+
+            configuration.TentativesReprise =
+                ConvertirTentatives(cmbTentatives.SelectedItem?.ToString());
 
             return configuration;
         }
@@ -346,6 +396,26 @@ namespace SaimDataCopy.Views.Configuration
             );
         }
 
+        private void SelectionnerComboBox(ComboBox comboBox, string valeur, string valeurDefaut)
+        {
+            if (!string.IsNullOrWhiteSpace(valeur) && comboBox.Items.Contains(valeur))
+            {
+                comboBox.SelectedItem = valeur;
+                return;
+            }
+
+            if (comboBox.Items.Contains(valeurDefaut))
+            {
+                comboBox.SelectedItem = valeurDefaut;
+                return;
+            }
+
+            if (comboBox.Items.Count > 0)
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
         private int ConvertirPort(string valeur)
         {
             if (int.TryParse(valeur, out int port))
@@ -364,6 +434,28 @@ namespace SaimDataCopy.Views.Configuration
                 "2 tentatives" => 2,
                 "3 tentatives" => 3,
                 _ => 0
+            };
+        }
+
+        private string ConvertirTentativesEnTexte(int tentatives)
+        {
+            return tentatives switch
+            {
+                1 => "1 tentative",
+                2 => "2 tentatives",
+                3 => "3 tentatives",
+                _ => "1 tentative"
+            };
+        }
+
+        private string NormaliserModeCopie(string modeCopie)
+        {
+            return modeCopie switch
+            {
+                "Mettre à jour" => "Mise à jour",
+                "Mise à jour" => "Mise à jour",
+                "Écraser" => "Écraser",
+                _ => "Écraser"
             };
         }
     }

@@ -18,17 +18,23 @@ namespace SaimDataCopy.Services.Configuration
         }
 
         // Constructeur utile si plus tard on veut injecter un autre DataProvider.
-        // Exemple : pour les tests ou pour changer la source des données.
         public ConfigurationService(IConfigurationDataProvider configurationDataProvider)
         {
             _configurationDataProvider = configurationDataProvider;
         }
 
-        // Vérifie si la configuration saisie est correcte.
-        // Cette méthode contient la logique métier de validation.
+        public ConfigurationModel ChargerConfiguration()
+        {
+            // On demande au DataProvider de charger la dernière configuration.
+            ConfigurationModel? configuration =
+                _configurationDataProvider.ChargerConfiguration();
+
+            // Si rien n'est encore sauvegardé, on retourne une configuration vide.
+            return configuration ?? new ConfigurationModel();
+        }
+
         public bool ValiderConfiguration(ConfigurationModel configuration, out string message)
         {
-            // Vérification du serveur source.
             if (string.IsNullOrWhiteSpace(configuration.ServeurSource.NomServeur))
             {
                 message = "Le nom du serveur source est obligatoire.";
@@ -41,7 +47,6 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            // Vérification du serveur cible.
             if (string.IsNullOrWhiteSpace(configuration.ServeurCible.NomServeur))
             {
                 message = "Le nom du serveur cible est obligatoire.";
@@ -54,12 +59,10 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            // Vérification du mode de copie.
-            // On utilise switch parce qu'il y a plusieurs choix possibles.
-            switch (configuration.ModeCopie)
+            switch (NormaliserModeCopie(configuration.ModeCopie))
             {
                 case "Écraser":
-                case "Mettre à jour":
+                case "Mise à jour":
                     break;
 
                 default:
@@ -67,7 +70,6 @@ namespace SaimDataCopy.Services.Configuration
                     return false;
             }
 
-            // Vérification du comportement en cas d'erreur.
             switch (configuration.ComportementErreur)
             {
                 case "Continuer avec les autres":
@@ -79,8 +81,6 @@ namespace SaimDataCopy.Services.Configuration
                     break;
 
                 case "Arrêter tous les traitements":
-                    // Si on arrête tous les traitements,
-                    // les tentatives de reprise ne sont pas obligatoires.
                     break;
 
                 default:
@@ -92,9 +92,11 @@ namespace SaimDataCopy.Services.Configuration
             return true;
         }
 
-        // Valide les données puis demande au DataProvider de les enregistrer.
         public bool EnregistrerConfiguration(ConfigurationModel configuration, out string message)
         {
+            // On normalise avant validation et sauvegarde.
+            configuration.ModeCopie = NormaliserModeCopie(configuration.ModeCopie);
+
             bool estValide = ValiderConfiguration(configuration, out message);
 
             if (!estValide)
@@ -102,12 +104,21 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            // Le Service ne sauvegarde pas directement.
-            // Il demande au DataProvider de faire l'enregistrement.
             _configurationDataProvider.EnregistrerConfiguration(configuration);
 
             message = "Les paramètres de configuration ont été enregistrés.";
             return true;
+        }
+
+        private string NormaliserModeCopie(string modeCopie)
+        {
+            return modeCopie switch
+            {
+                "Mettre à jour" => "Mise à jour",
+                "Mise à jour" => "Mise à jour",
+                "Écraser" => "Écraser",
+                _ => string.Empty
+            };
         }
     }
 }

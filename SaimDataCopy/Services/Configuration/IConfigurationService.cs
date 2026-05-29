@@ -6,6 +6,9 @@ namespace SaimDataCopy.Services.Configuration
     // Elle définit les actions disponibles pour la configuration.
     public interface IConfigurationService
     {
+        // Charge la dernière configuration sauvegardée.
+        ConfigurationModel ChargerConfiguration();
+
         // Vérifie si la configuration est correcte.
         bool ValiderConfiguration(ConfigurationModel configuration, out string message);
 

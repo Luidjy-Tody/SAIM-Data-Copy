@@ -3,21 +3,36 @@
 namespace SaimDataCopy.Services.BasesCopier
 {
     // Interface du service Bases à copier.
-    // Elle définit les méthodes que le service doit fournir.
+    // Le service contient la logique métier de cette page.
     public interface IBasesCopierService
     {
-        List<BaseCopieModel> ChargerBasesDemo();
+        // Charge les bases à afficher dans la page.
+        // Le service va demander au DataProvider :
+        // - les bases disponibles sur le serveur source
+        // - le dernier état sauvegardé
+        List<BaseCopieModel> ChargerBases();
 
+        // Retourne les modes de copie disponibles dans le tableau.
         List<string> ObtenirModesCopie();
 
-        BaseCopieModel CreerNouvelleBase(List<BaseCopieModel> basesExistantes, string nomBase);
+        // Coche toutes les bases disponibles.
+        List<BaseCopieModel> CocherToutesBases(List<BaseCopieModel> bases);
 
-        List<BaseCopieModel> SupprimerBases(
+        // Décoche les bases sélectionnées au lieu de les supprimer.
+        List<BaseCopieModel> DecocherBases(
             List<BaseCopieModel> bases,
-            List<string> nomsBasesSelectionnees);
+            List<string> nomsBasesSelectionnees
+        );
 
+        // Vérifie si les bases sont valides avant enregistrement.
         List<string> ValiderBases(List<BaseCopieModel> bases);
 
+        // Enregistre le dernier état de la page Bases à copier.
         bool EnregistrerBases(List<BaseCopieModel> bases);
+
+        // Applique le mode global venant de la page Configuration.
+        // Exemple : si Configuration = "Mise à jour",
+        // toutes les bases prennent ce mode.
+        void AppliquerModeCopieGlobal(string modeCopieGlobal);
     }
 }

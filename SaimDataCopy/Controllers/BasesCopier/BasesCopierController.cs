@@ -1,6 +1,7 @@
 ﻿using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Views.BasesCopier;
+using System.Windows.Forms;
 
 namespace SaimDataCopy.Controllers.BasesCopier
 {
@@ -21,7 +22,6 @@ namespace SaimDataCopy.Controllers.BasesCopier
             _service = new BasesCopierService();
 
             BrancherEvenements();
-
             ChargerPage();
         }
 
@@ -33,14 +33,14 @@ namespace SaimDataCopy.Controllers.BasesCopier
             _service = service;
 
             BrancherEvenements();
-
             ChargerPage();
         }
 
         private void BrancherEvenements()
         {
-            // Le Controller écoute les actions demandées par la View.
-            _view.AjouterBaseDemandee += AjouterBase;
+            // La View déclenche ces événements.
+            // Le Controller décide ensuite quelle action faire.
+            _view.CocherToutesBasesDemandee += CocherToutesBases;
             _view.SupprimerSelectionDemandee += SupprimerSelection;
         }
 
@@ -49,36 +49,25 @@ namespace SaimDataCopy.Controllers.BasesCopier
             // On récupère les modes de copie depuis le Service.
             List<string> modesCopie = _service.ObtenirModesCopie();
 
-            // On donne ces choix à la View pour remplir le ComboBox du tableau.
+            // On donne ces choix à la View pour remplir la ComboBox du tableau.
             _view.AfficherModesCopie(modesCopie);
 
-            // On charge les bases depuis le Service.
-            // Le Service demande maintenant au DataProvider de fournir les données.
-            _bases = _service.ChargerBasesDemo();
+            // On charge les bases.
+            // Le Service récupère le dernier état sauvegardé.
+            // Si aucune sauvegarde n'existe, les bases sont cochées par défaut.
+            _bases = _service.ChargerBases();
 
-            // On demande à la View d’afficher les bases dans le tableau.
+            // On demande à la View d'afficher les bases dans le tableau.
             _view.AfficherBases(_bases);
         }
 
-        private void AjouterBase(object? sender, EventArgs e)
+        private void CocherToutesBases(object? sender, EventArgs e)
         {
-            // On demande le nom de la nouvelle base à l'utilisateur.
-            string? nomBase = _view.DemanderNomNouvelleBase();
-
-            // Si l'utilisateur annule ou laisse vide, on n'ajoute rien.
-            if (string.IsNullOrWhiteSpace(nomBase))
-            {
-                return;
-            }
-
-            // On récupère l’état actuel du tableau.
+            // On récupère l'état actuel du tableau.
             _bases = _view.RecupererBases();
 
-            // Le Service crée la nouvelle base.
-            BaseCopieModel nouvelleBase = _service.CreerNouvelleBase(_bases, nomBase);
-
-            // On ajoute la nouvelle base dans la liste.
-            _bases.Add(nouvelleBase);
+            // Le Service coche toutes les bases.
+            _bases = _service.CocherToutesBases(_bases);
 
             // On recharge le tableau.
             _view.AfficherBases(_bases);
@@ -86,25 +75,26 @@ namespace SaimDataCopy.Controllers.BasesCopier
 
         private void SupprimerSelection(object? sender, EventArgs e)
         {
-            // On récupère seulement les bases cochées.
+            // Dans la nouvelle logique, "Supprimer la sélection"
+            // veut dire décocher les bases cochées.
             List<string> nomsSelectionnes = _view.RecupererNomsBasesCochees();
 
             if (nomsSelectionnes.Count == 0)
             {
                 _view.AfficherMessage(
-                    "Suppression",
-                    "Veuillez sélectionner une ligne à supprimer.",
+                    "Sélection",
+                    "Veuillez cocher au moins une base à décocher.",
                     MessageBoxIcon.Information
                 );
 
                 return;
             }
 
-            // On récupère l’état actuel du tableau.
+            // On récupère l'état actuel du tableau.
             _bases = _view.RecupererBases();
 
-            // Le Service supprime seulement les bases sélectionnées.
-            _bases = _service.SupprimerBases(_bases, nomsSelectionnes);
+            // Le Service décoche les bases sélectionnées.
+            _bases = _service.DecocherBases(_bases, nomsSelectionnes);
 
             // On recharge le tableau.
             _view.AfficherBases(_bases);
@@ -137,6 +127,17 @@ namespace SaimDataCopy.Controllers.BasesCopier
                     MessageBoxIcon.Warning
                 );
             }
+        }
+
+        public void AppliquerModeCopieGlobal(string modeCopieGlobal)
+        {
+            // Cette méthode sera appelée plus tard depuis Configuration.
+            // Elle applique le mode global à toutes les bases sauvegardées.
+            _service.AppliquerModeCopieGlobal(modeCopieGlobal);
+
+            // Si la page Bases à copier est déjà ouverte,
+            // on recharge directement l'affichage.
+            ChargerPage();
         }
     }
 }

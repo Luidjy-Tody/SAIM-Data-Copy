@@ -1,26 +1,58 @@
-﻿using SaimDataCopy.Models.Configuration;
+﻿using Newtonsoft.Json;
+using SaimDataCopy.Models.Configuration;
 
 namespace SaimDataCopy.DataProviders.Configuration
 {
     // DataProvider de configuration.
-    // Son rôle est de gérer l'accès aux données.
-    // Plus tard, ici on pourra utiliser SQL Server, JSON, ou un fichier de configuration.
+    // Il s'occupe seulement de charger et sauvegarder les données.
     public class ConfigurationDataProvider : IConfigurationDataProvider
     {
-        // Pour l'instant, on prépare la méthode.
-        // Plus tard, elle sauvegardera la configuration.
-        public void EnregistrerConfiguration(ConfigurationModel configuration)
+        private readonly string _cheminFichier;
+
+        public ConfigurationDataProvider()
         {
-            // TODO : sauvegarder la configuration plus tard.
-            // Exemple futur : SQL Server, fichier JSON, etc.
+            // Le fichier JSON sera stocké dans le dossier Data.
+            string dossierData = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Data"
+            );
+
+            if (!Directory.Exists(dossierData))
+            {
+                Directory.CreateDirectory(dossierData);
+            }
+
+            _cheminFichier = Path.Combine(dossierData, "configuration_config.json");
         }
 
-        // Pour l'instant, on retourne null.
-        // Plus tard, cette méthode chargera la configuration sauvegardée.
+        public void EnregistrerConfiguration(ConfigurationModel configuration)
+        {
+            string contenuJson = JsonConvert.SerializeObject(
+                configuration,
+                Formatting.Indented
+            );
+
+            File.WriteAllText(_cheminFichier, contenuJson);
+        }
+
         public ConfigurationModel? ChargerConfiguration()
         {
-            // TODO : charger la configuration plus tard.
-            return null;
+            if (!File.Exists(_cheminFichier))
+            {
+                return null;
+            }
+
+            string contenuJson = File.ReadAllText(_cheminFichier);
+
+            if (string.IsNullOrWhiteSpace(contenuJson))
+            {
+                return null;
+            }
+
+            ConfigurationModel? configuration =
+                JsonConvert.DeserializeObject<ConfigurationModel>(contenuJson);
+
+            return configuration;
         }
     }
 }

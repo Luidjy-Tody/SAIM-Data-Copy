@@ -34,11 +34,10 @@ namespace SaimDataCopy.DataProviders.Execution
 
         public List<BaseCopieModel> ChargerBasesSelectionnees()
         {
-            // On récupère les bases depuis la page Bases à copier.
-            // Pour l'instant, cette source est encore temporaire.
-            // Plus tard, elle pourra venir de EF Core / SQL Server.
+            // On récupère les bases sauvegardées dans la page Bases à copier.
+            // Cela respecte le dernier état enregistré par l'utilisateur.
             return _basesCopierDataProvider
-                .ChargerBases()
+                .ChargerBasesSauvegardees()
                 .Where(b => b.Inclure)
                 .OrderBy(b => b.OrdreTraitement)
                 .ToList();

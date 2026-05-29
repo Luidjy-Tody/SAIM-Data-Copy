@@ -26,7 +26,6 @@
     <Folder Include="DataAccess\" />
     <Folder Include="Helpers\" />
     <Folder Include="Services\SQL\" />
-    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

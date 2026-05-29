@@ -1,7 +1,6 @@
-﻿using SaimDataCopy.Models.BasesCopier;
+﻿using FontAwesome.Sharp;
+using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Styles;
-using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -11,18 +10,19 @@ namespace SaimDataCopy.Views.BasesCopier
     {
         private readonly Label lblTitre = new Label();
         private readonly Panel panelInfo = new Panel();
+        private readonly IconPictureBox iconeInfo = new IconPictureBox();
         private readonly Label lblInfo = new Label();
 
         private readonly DataGridView grilleBases = new DataGridView();
 
         private readonly Panel panelBoutons = new Panel();
 
-        private readonly Button btnAjouter = new Button();
-        private readonly Button btnSupprimer = new Button();
+        private readonly IconButton btnCocherTout = new IconButton();
+        private readonly IconButton btnSupprimer = new IconButton();
 
         private List<string> _modesCopie = new List<string>();
 
-        public event EventHandler? AjouterBaseDemandee;
+        public event EventHandler? CocherToutesBasesDemandee;
         public event EventHandler? SupprimerSelectionDemandee;
 
         public BasesCopierView()
@@ -54,37 +54,58 @@ namespace SaimDataCopy.Views.BasesCopier
             panelInfo.BackColor = Color.FromArgb(235, 242, 255);
             panelContenu.Controls.Add(panelInfo);
 
-            lblInfo.Text = "ⓘ   Cochez les bases à inclure. L'ordre de traitement peut être modifié.";
+            iconeInfo.IconChar = IconChar.CircleInfo;
+            iconeInfo.IconColor = Color.FromArgb(30, 96, 190);
+            iconeInfo.IconSize = 18;
+            iconeInfo.Size = new Size(22, 22);
+            iconeInfo.Location = new Point(16, 14);
+            iconeInfo.BackColor = panelInfo.BackColor;
+            panelInfo.Controls.Add(iconeInfo);
+
+            lblInfo.Text = "Les bases sont chargées depuis le serveur source. Cochez seulement celles à copier.";
             lblInfo.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             lblInfo.ForeColor = Color.Black;
             lblInfo.AutoSize = true;
-            lblInfo.Location = new Point(16, 14);
+            lblInfo.Location = new Point(48, 14);
+            lblInfo.BackColor = panelInfo.BackColor;
             panelInfo.Controls.Add(lblInfo);
 
             CreerGrille();
             panelContenu.Controls.Add(grilleBases);
 
             panelBoutons.Location = new Point(24, 445);
-            panelBoutons.Size = new Size(460, 45);
+            panelBoutons.Size = new Size(500, 45);
             panelBoutons.BackColor = Color.White;
             panelContenu.Controls.Add(panelBoutons);
 
-            btnAjouter.Text = "+  Ajouter une base";
-            btnAjouter.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            btnAjouter.Size = new Size(185, 38);
-            btnAjouter.Location = new Point(0, 0);
-            btnAjouter.FlatStyle = FlatStyle.Flat;
-            btnAjouter.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
-            btnAjouter.FlatAppearance.BorderSize = 1;
-            btnAjouter.BackColor = Color.White;
-            btnAjouter.Cursor = Cursors.Hand;
-            btnAjouter.Click += BtnAjouter_Click;
-            panelBoutons.Controls.Add(btnAjouter);
+            btnCocherTout.Text = " Cocher toutes les bases";
+            btnCocherTout.IconChar = IconChar.CheckDouble;
+            btnCocherTout.IconSize = 18;
+            btnCocherTout.IconColor = Color.FromArgb(40, 40, 40);
+            btnCocherTout.TextImageRelation = TextImageRelation.ImageBeforeText;
+            btnCocherTout.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+            btnCocherTout.Size = new Size(260, 38);
+            btnCocherTout.Location = new Point(0, 0);
+            btnCocherTout.TextAlign = ContentAlignment.MiddleCenter;
+            btnCocherTout.ImageAlign = ContentAlignment.MiddleLeft;
+            btnCocherTout.FlatStyle = FlatStyle.Flat;
+            btnCocherTout.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnCocherTout.FlatAppearance.BorderSize = 1;
+            btnCocherTout.BackColor = Color.White;
+            btnCocherTout.Cursor = Cursors.Hand;
+            btnCocherTout.Click += BtnCocherTout_Click;
+            panelBoutons.Controls.Add(btnCocherTout);
 
-            btnSupprimer.Text = "Supprimer la sélection";
+            btnSupprimer.Text = " Supprimer la sélection";
+            btnSupprimer.IconChar = IconChar.Trash;
+            btnSupprimer.IconSize = 18;
+            btnSupprimer.IconColor = Color.FromArgb(40, 40, 40);
+            btnSupprimer.TextImageRelation = TextImageRelation.ImageBeforeText;
             btnSupprimer.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            btnSupprimer.Size = new Size(225, 38);
-            btnSupprimer.Location = new Point(198, 0);
+            btnSupprimer.Size = new Size(240, 38);
+            btnSupprimer.Location = new Point(275, 0);
+            btnSupprimer.TextAlign = ContentAlignment.MiddleCenter;
+            btnSupprimer.ImageAlign = ContentAlignment.MiddleLeft;
             btnSupprimer.FlatStyle = FlatStyle.Flat;
             btnSupprimer.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
             btnSupprimer.FlatAppearance.BorderSize = 1;
@@ -98,12 +119,7 @@ namespace SaimDataCopy.Views.BasesCopier
         {
             grilleBases.Location = new Point(24, 145);
             grilleBases.Width = 995;
-
-            // On enlève le scroll interne du tableau.
-            // Si le tableau devient grand, c'est le panel principal qui va scroller.
             grilleBases.ScrollBars = ScrollBars.None;
-
-            // Permet d'entrer directement en édition avec un seul clic.
             grilleBases.EditMode = DataGridViewEditMode.EditOnEnter;
 
             TableGridStyle.AppliquerStyle(grilleBases);
@@ -117,7 +133,7 @@ namespace SaimDataCopy.Views.BasesCopier
             DataGridViewTextBoxColumn colNomBase = new DataGridViewTextBoxColumn();
             colNomBase.Name = "colNomBase";
             colNomBase.HeaderText = "Nom de la base";
-            colNomBase.ReadOnly = false;
+            colNomBase.ReadOnly = true;
             colNomBase.FillWeight = 170;
 
             DataGridViewTextBoxColumn colOrdre = new DataGridViewTextBoxColumn();
@@ -129,8 +145,6 @@ namespace SaimDataCopy.Views.BasesCopier
             colMode.Name = "colMode";
             colMode.HeaderText = "Mode de copie";
             colMode.FillWeight = 170;
-
-            // Affiche la flèche du mode de copie.
             colMode.DisplayStyle = DataGridViewComboBoxDisplayStyle.DropDownButton;
             colMode.DisplayStyleForCurrentCellOnly = false;
             colMode.FlatStyle = FlatStyle.Flat;
@@ -164,23 +178,13 @@ namespace SaimDataCopy.Views.BasesCopier
             TableGridStyle.DesactiverTriColonnes(grilleBases);
 
             grilleBases.CellFormatting += GrilleBases_CellFormatting;
-
-            // Dessine les cellules spéciales : ordre + statut.
             grilleBases.CellPainting += GrilleBases_CellPainting;
-
             grilleBases.CurrentCellDirtyStateChanged += GrilleBases_CurrentCellDirtyStateChanged;
             grilleBases.CellValueChanged += GrilleBases_CellValueChanged;
-
-            // Vérifie que l'ordre de traitement est bien un nombre.
             grilleBases.CellValidating += GrilleBases_CellValidating;
-
-            // Améliore l'affichage de la ComboBox du mode de copie.
             grilleBases.EditingControlShowing += GrilleBases_EditingControlShowing;
-
-            // Permet d'ouvrir directement la liste du mode de copie avec un seul clic.
             grilleBases.CellClick += GrilleBases_CellClick;
 
-            // Évite les erreurs si une valeur ComboBox n'est pas encore prête.
             grilleBases.DataError += (s, e) => e.ThrowException = false;
         }
 
@@ -218,13 +222,10 @@ namespace SaimDataCopy.Views.BasesCopier
 
                 grilleBases.Rows[index].Tag = baseCopie;
 
-                // Applique le fond blanc/gris et évite l'effet bleu.
                 AppliquerStyleLigne(index);
             }
 
             AjusterHauteurTableau();
-
-            // Évite qu'une cellule soit sélectionnée au chargement.
             grilleBases.ClearSelection();
         }
 
@@ -252,74 +253,18 @@ namespace SaimDataCopy.Views.BasesCopier
         {
             int hauteurEntete = grilleBases.ColumnHeadersHeight;
             int hauteurLignes = grilleBases.Rows.Count * grilleBases.RowTemplate.Height;
-
-            // Petite marge pour éviter que la dernière ligne soit coupée.
             int margeTableau = 3;
 
             grilleBases.Height = hauteurEntete + hauteurLignes + margeTableau;
 
-            // Position commune pour les deux boutons.
             int positionBoutonsY = grilleBases.Bottom + 18;
-
             int hauteurBouton = 38;
 
             panelBoutons.Location = new Point(24, positionBoutonsY);
-            panelBoutons.Size = new Size(460, 45);
+            panelBoutons.Size = new Size(530, 45);
 
-            btnAjouter.SetBounds(0, 0, 185, hauteurBouton);
-            btnSupprimer.SetBounds(198, 0, 225, hauteurBouton);
-        }
-
-        public string? DemanderNomNouvelleBase()
-        {
-            Form fenetre = new Form();
-            fenetre.Text = "Ajouter une base";
-            fenetre.StartPosition = FormStartPosition.CenterScreen;
-            fenetre.FormBorderStyle = FormBorderStyle.FixedDialog;
-            fenetre.MaximizeBox = false;
-            fenetre.MinimizeBox = false;
-            fenetre.ClientSize = new Size(380, 150);
-            fenetre.BackColor = Color.White;
-
-            Label lblNom = new Label();
-            lblNom.Text = "Nom de la base :";
-            lblNom.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            lblNom.Location = new Point(20, 20);
-            lblNom.AutoSize = true;
-
-            TextBox txtNom = new TextBox();
-            txtNom.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            txtNom.Location = new Point(20, 50);
-            txtNom.Width = 330;
-
-            Button btnOk = new Button();
-            btnOk.Text = "Ajouter";
-            btnOk.Size = new Size(100, 32);
-            btnOk.Location = new Point(145, 95);
-            btnOk.DialogResult = DialogResult.OK;
-
-            Button btnAnnuler = new Button();
-            btnAnnuler.Text = "Annuler";
-            btnAnnuler.Size = new Size(100, 32);
-            btnAnnuler.Location = new Point(250, 95);
-            btnAnnuler.DialogResult = DialogResult.Cancel;
-
-            fenetre.Controls.Add(lblNom);
-            fenetre.Controls.Add(txtNom);
-            fenetre.Controls.Add(btnOk);
-            fenetre.Controls.Add(btnAnnuler);
-
-            fenetre.AcceptButton = btnOk;
-            fenetre.CancelButton = btnAnnuler;
-
-            DialogResult resultat = fenetre.ShowDialog();
-
-            if (resultat != DialogResult.OK)
-            {
-                return null;
-            }
-
-            return txtNom.Text.Trim();
+            btnCocherTout.SetBounds(0, 0, 260, hauteurBouton);
+            btnSupprimer.SetBounds(275, 0, 240, hauteurBouton);
         }
 
         public List<BaseCopieModel> RecupererBases()
@@ -349,7 +294,9 @@ namespace SaimDataCopy.Views.BasesCopier
                     OrdreTraitement = ordreTraitement,
                     ModeCopie = modeCopie,
                     Statut = inclure ? ancienneBase.Statut : "Non sélectionnée",
-                    DerniereCopie = ancienneBase.DerniereCopie
+                    DerniereCopie = ancienneBase.DerniereCopie,
+                    ExisteSurServeurSource = ancienneBase.ExisteSurServeurSource,
+                    NomModifiable = false
                 };
 
                 bases.Add(baseCopie);
@@ -403,9 +350,9 @@ namespace SaimDataCopy.Views.BasesCopier
             };
         }
 
-        private void BtnAjouter_Click(object? sender, EventArgs e)
+        private void BtnCocherTout_Click(object? sender, EventArgs e)
         {
-            AjouterBaseDemandee?.Invoke(this, EventArgs.Empty);
+            CocherToutesBasesDemandee?.Invoke(this, EventArgs.Empty);
         }
 
         private void BtnSupprimer_Click(object? sender, EventArgs e)
@@ -428,7 +375,6 @@ namespace SaimDataCopy.Views.BasesCopier
 
         private void GrilleBases_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
-            // Dessine les cellules spéciales : ordre + statut.
             TableGridStyle.DessinerCellulesSpeciales(grilleBases, e);
         }
 
@@ -532,13 +478,9 @@ namespace SaimDataCopy.Views.BasesCopier
                 return;
             }
 
-            // On force la cellule cliquée à devenir la cellule active.
             grilleBases.CurrentCell = grilleBases.Rows[e.RowIndex].Cells[e.ColumnIndex];
-
-            // On lance l'édition directement.
             grilleBases.BeginEdit(true);
 
-            // Si la cellule est une ComboBox, on ouvre directement la liste.
             if (grilleBases.EditingControl is ComboBox comboBox)
             {
                 comboBox.DroppedDown = true;

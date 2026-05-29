@@ -2,24 +2,24 @@ using FontAwesome.Sharp;
 using SaimDataCopy.Controllers.BasesCopier;
 using SaimDataCopy.Controllers.Configuration;
 using SaimDataCopy.Controllers.Email;
+using SaimDataCopy.Controllers.Execution;
+using SaimDataCopy.Controllers.Historique;
 using SaimDataCopy.Controllers.Logs;
 using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.DataProviders.Execution;
+using SaimDataCopy.DataProviders.Historique;
 using SaimDataCopy.DataProviders.Logs;
 using SaimDataCopy.Services.Email;
+using SaimDataCopy.Services.Execution;
+using SaimDataCopy.Services.Historique;
 using SaimDataCopy.Services.Logs;
+using SaimDataCopy.Styles;
 using SaimDataCopy.Views.BasesCopier;
 using SaimDataCopy.Views.Configuration;
 using SaimDataCopy.Views.Email;
-using SaimDataCopy.Views.Logs;
-using SaimDataCopy.Styles;
-using SaimDataCopy.Controllers.Execution;
 using SaimDataCopy.Views.Execution;
-using SaimDataCopy.DataProviders.Execution;
-using SaimDataCopy.Services.Execution;
-using SaimDataCopy.Controllers.Historique;
-using SaimDataCopy.DataProviders.Historique;
-using SaimDataCopy.Services.Historique;
 using SaimDataCopy.Views.Historique;
+using SaimDataCopy.Views.Logs;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -57,7 +57,11 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Exécution.
         private ExecutionController? executionController;
+
+        // Page Historique gardée en mémoire.
         private HistoriqueView? historiqueView;
+
+        // Controller de la page Historique.
         private HistoriqueController? historiqueController;
 
         public MainForm()
@@ -76,17 +80,9 @@ namespace SaimDataCopy.Views.Forms
         {
             AjouterBoutonMenu("Historique", IconChar.Clock, () => CreerHistoriqueView());
             AjouterBoutonMenu("Exécution", IconChar.Play, () => CreerExecutionView());
-
-            // Ici on appelle la vraie page Paramètres Logs en MVC.
             AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => CreerLogsView());
-
-            // Ici on appelle la vraie page Paramètres Email en MVC.
             AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => CreerEmailView());
-
-            // Ici on appelle la vraie page Bases à copier en MVC.
             AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
-
-            // Ici on appelle la vraie page Configuration en MVC.
             AjouterBoutonMenu("Configuration", IconChar.Cog, () => CreerConfigurationView());
         }
 
@@ -118,12 +114,26 @@ namespace SaimDataCopy.Views.Forms
 
                 // Le Controller reçoit la View Configuration.
                 configurationController = new ConfigurationController(configurationView);
+
+                // Quand Configuration applique un mode global,
+                // MainForm peut rafraîchir Bases à copier si cette page existe déjà.
+                configurationController.ModeCopieGlobalModifie += ConfigurationController_ModeCopieGlobalModifie;
             }
 
             return configurationView;
         }
 
+        // Quand le mode global change dans Configuration,
+        // on met à jour la page Bases à copier si elle a déjà été créée.
+        private void ConfigurationController_ModeCopieGlobalModifie(string modeCopieGlobal)
+        {
+            if (basesCopierController == null)
+            {
+                return;
+            }
 
+            basesCopierController.AppliquerModeCopieGlobal(modeCopieGlobal);
+        }
 
         // Crée la View Bases à copier et son Controller une seule fois.
         private UserControl CreerBasesCopierView()
@@ -223,7 +233,6 @@ namespace SaimDataCopy.Views.Forms
             return historiqueView;
         }
 
-
         // Affiche une page dans panelMain.
         // Le menu gauche et le bottom ne sont pas supprimés.
         private void AfficherPage(UserControl page)
@@ -305,7 +314,6 @@ namespace SaimDataCopy.Views.Forms
                         MessageBoxIcon.Information
                     );
                     break;
-
 
                 // Pour les pages temporaires qui n'ont pas encore d'enregistrement.
                 default:
