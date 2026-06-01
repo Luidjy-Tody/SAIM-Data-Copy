@@ -10,6 +10,19 @@ namespace SaimDataCopy.DataProviders.Execution
         // Charge les bases cochées dans la configuration des bases à copier.
         List<BaseCopieModel> ChargerBasesSelectionnees();
 
+        // Charge les tables d'une base source.
+        // Exemple : DB_TestRH peut retourner dbo.EmployesTest.
+        List<string> ChargerTablesBaseSource(string nomBase);
+
+        // Compte le nombre de lignes dans une table d'une base source.
+        // Exemple : DB_TestRH + dbo.EmployesTest retourne 2.
+        int CompterLignesTableSource(string nomBase, string nomTable);
+
+        // Vérifie si une base existe sur le serveur cible.
+        // Si elle n'existe pas, elle est créée.
+        // Retourne true si la base a été créée, false si elle existait déjà.
+        bool VerifierOuCreerBaseCible(string nomBase);
+
         // Charge le tableau de bord de la dernière exécution.
         ExecutionTableauBordModel ChargerDernierTableauBord();
 

@@ -26,6 +26,39 @@ namespace SaimDataCopy.Services.Execution
             return _executionDataProvider.ChargerDerniersResultats();
         }
 
+        public List<string> ChargerTablesBaseSource(string nomBase)
+        {
+            if (string.IsNullOrWhiteSpace(nomBase))
+            {
+                return new List<string>();
+            }
+
+            return _executionDataProvider.ChargerTablesBaseSource(nomBase);
+        }
+
+        public int CompterLignesTableSource(string nomBase, string nomTable)
+        {
+            if (string.IsNullOrWhiteSpace(nomBase) ||
+                string.IsNullOrWhiteSpace(nomTable))
+            {
+                return 0;
+            }
+
+            return _executionDataProvider.CompterLignesTableSource(nomBase, nomTable);
+        }
+
+        public bool VerifierOuCreerBaseCible(string nomBase)
+        {
+            // Le Service vérifie seulement que le nom de la base est correct.
+            // Ensuite, il demande au DataProvider de vérifier ou créer la base cible.
+            if (string.IsNullOrWhiteSpace(nomBase))
+            {
+                return false;
+            }
+
+            return _executionDataProvider.VerifierOuCreerBaseCible(nomBase);
+        }
+
         public async Task<bool> TesterConnexionAsync(
             IProgress<ExecutionProgressionModel> progression,
             CancellationToken cancellationToken)
@@ -131,8 +164,8 @@ namespace SaimDataCopy.Services.Execution
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 0,
-                MessageProgression = $"Progression : 0 base sur {totalBases} copiée",
-                Log = CreerLog("Démarrage de la copie des bases.", "Info"),
+                MessageProgression = $"Progression : 0 base sur {totalBases} traitée",
+                Log = CreerLog("Démarrage de la lecture réelle des bases source.", "Info"),
                 TableauBord = new ExecutionTableauBordModel
                 {
                     NombreBasesSelectionnees = totalBases,
@@ -150,33 +183,51 @@ namespace SaimDataCopy.Services.Execution
                 progression.Report(new ExecutionProgressionModel
                 {
                     Pourcentage = CalculerPourcentage(i, totalBases),
-                    MessageProgression = $"Copie en cours : {baseCopie.NomBase}",
-                    Log = CreerLog($"Copie de {baseCopie.NomBase} en cours...", "Info")
+                    MessageProgression = $"Lecture en cours : {baseCopie.NomBase}",
+                    Log = CreerLog($"Lecture de {baseCopie.NomBase} en cours...", "Info")
                 });
 
-                // Simulation temporaire.
-                // Plus tard, cette partie sera remplacée par la vraie copie SQL Server / EF Core.
-                await Task.Delay(900, cancellationToken);
+                ExecutionResultatBaseModel resultat;
 
-                ExecutionResultatBaseModel resultat =
-                    CreerResultatSimulation(baseCopie, i);
+                try
+                {
+                    // On lance la lecture SQL dans une tâche séparée pour éviter de bloquer l'interface.
+                    resultat = await Task.Run(
+                        () => CreerResultatLectureReelle(baseCopie, cancellationToken),
+                        cancellationToken
+                    );
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    resultat = new ExecutionResultatBaseModel
+                    {
+                        NomBase = baseCopie.NomBase,
+                        LignesAvant = 0,
+                        LignesApres = 0,
+                        Resultat = "Erreur",
+                        Message = $"Erreur pendant la lecture : {ex.Message}"
+                    };
+                }
 
                 resultats.Add(resultat);
 
-                // Ici on calcule les lignes vraiment copiées.
-                int lignesCopieesPourCetteBase =
+                int lignesPourCetteBase =
                     Math.Max(0, resultat.LignesApres - resultat.LignesAvant);
 
-                totalLignesCopiees += lignesCopieesPourCetteBase;
+                totalLignesCopiees += lignesPourCetteBase;
 
-                int basesDejaCopiees = i + 1;
-                int pourcentage = CalculerPourcentage(basesDejaCopiees, totalBases);
+                int basesDejaTraitees = i + 1;
+                int pourcentage = CalculerPourcentage(basesDejaTraitees, totalBases);
 
                 progression.Report(new ExecutionProgressionModel
                 {
                     Pourcentage = pourcentage,
                     MessageProgression =
-                        $"Progression : {basesDejaCopiees} base(s) sur {totalBases} copiée(s)",
+                        $"Progression : {basesDejaTraitees} base(s) sur {totalBases} traitée(s)",
                     Log = CreerLog(
                         $"{baseCopie.NomBase} : {resultat.Resultat} - {resultat.Message}",
                         ObtenirTypeLogDepuisResultat(resultat.Resultat)),
@@ -198,6 +249,7 @@ namespace SaimDataCopy.Services.Execution
                 DureeDerniereExecution = FormaterDuree(chronometre.Elapsed)
             };
 
+            // On remplace l'ancien JSON par les nouveaux résultats réels.
             _executionDataProvider.EnregistrerDerniereExecution(
                 tableauBordFinal,
                 resultats
@@ -206,53 +258,64 @@ namespace SaimDataCopy.Services.Execution
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 100,
-                MessageProgression = "Copie terminée.",
-                Log = CreerLog("Copie terminée avec succès.", "Succes"),
+                MessageProgression = "Lecture terminée.",
+                Log = CreerLog("Lecture réelle des bases terminée.", "Succes"),
                 TableauBord = tableauBordFinal
             });
 
             return resultats;
         }
 
-        private ExecutionResultatBaseModel CreerResultatSimulation(
+        private ExecutionResultatBaseModel CreerResultatLectureReelle(
             BaseCopieModel baseCopie,
-            int index)
+            CancellationToken cancellationToken)
         {
-            int lignesAvant = 1000 + (index * 350);
-            int lignesApres = lignesAvant + 120;
+            // Avant de lire les tables, on vérifie si la base existe côté cible.
+            // Si elle n'existe pas, elle sera créée.
+            bool baseCibleCreee =
+                _executionDataProvider.VerifierOuCreerBaseCible(baseCopie.NomBase);
 
-            string resultat = ObtenirResultatDepuisStatut(baseCopie.Statut);
-            string message = ObtenirMessageDepuisResultat(resultat, baseCopie.ModeCopie);
+            string messageBaseCible = baseCibleCreee
+                ? "Base cible créée."
+                : "Base cible déjà existante.";
+
+            List<string> tables =
+                _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
+
+            if (tables.Count == 0)
+            {
+                return new ExecutionResultatBaseModel
+                {
+                    NomBase = baseCopie.NomBase,
+                    LignesAvant = 0,
+                    LignesApres = 0,
+                    Resultat = "Avertissement",
+                    Message = $"{messageBaseCible} Aucune table trouvée dans cette base."
+                };
+            }
+
+            int totalLignes = 0;
+
+            foreach (string table in tables)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                int lignesTable =
+                    _executionDataProvider.CompterLignesTableSource(
+                        baseCopie.NomBase,
+                        table
+                    );
+
+                totalLignes += lignesTable;
+            }
 
             return new ExecutionResultatBaseModel
             {
                 NomBase = baseCopie.NomBase,
-                LignesAvant = lignesAvant,
-                LignesApres = lignesApres,
-                Resultat = resultat,
-                Message = message
-            };
-        }
-
-        private string ObtenirResultatDepuisStatut(string statut)
-        {
-            return statut switch
-            {
-                "Prête" => "Succès",
-                "Avertissement" => "Avertissement",
-                "Non sélectionnée" => "Avertissement",
-                _ => "Avertissement"
-            };
-        }
-
-        private string ObtenirMessageDepuisResultat(string resultat, string modeCopie)
-        {
-            return resultat switch
-            {
-                "Succès" => $"Copie terminée en mode {modeCopie}.",
-                "Avertissement" => $"Copie terminée avec avertissement en mode {modeCopie}.",
-                "Erreur" => "Erreur pendant la copie.",
-                _ => "Résultat inconnu."
+                LignesAvant = 0,
+                LignesApres = totalLignes,
+                Resultat = "Succès",
+                Message = $"{messageBaseCible} Lecture terminée : {tables.Count} table(s), {totalLignes} ligne(s) trouvée(s)."
             };
         }
 

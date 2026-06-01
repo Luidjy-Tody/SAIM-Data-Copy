@@ -12,6 +12,19 @@ namespace SaimDataCopy.Services.Execution
         // Charge le résumé de la dernière exécution.
         List<ExecutionResultatBaseModel> ChargerDerniersResultats();
 
+        // Charge les tables d'une base source.
+        // Exemple : DB_TestRH peut retourner dbo.EmployesTest.
+        List<string> ChargerTablesBaseSource(string nomBase);
+
+        // Compte les lignes d'une table source.
+        // Exemple : DB_TestRH + dbo.EmployesTest retourne 2.
+        int CompterLignesTableSource(string nomBase, string nomTable);
+
+        // Vérifie si une base existe sur le serveur cible.
+        // Si elle n'existe pas, elle est créée.
+        // Retourne true si la base a été créée, false si elle existait déjà.
+        bool VerifierOuCreerBaseCible(string nomBase);
+
         // Teste la connexion avant de lancer la copie.
         // Pour l'instant, on prépare une version simple et propre.
         // Plus tard, on pourra remplacer par un vrai test EF Core / SQL Server.

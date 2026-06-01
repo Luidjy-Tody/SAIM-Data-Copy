@@ -80,6 +80,12 @@ namespace SaimDataCopy.Controllers.Execution
 
                 if (connexionOk)
                 {
+                    // - la lecture des tables d'une base source
+                    // - le comptage des lignes de chaque table
+                    TesterLectureTablesBaseSource();
+
+                    
+
                     _view.AfficherMessage(
                         "Connexion réussie. Vous pouvez lancer la copie.",
                         "Test de connexion"
@@ -229,5 +235,46 @@ namespace SaimDataCopy.Controllers.Execution
                 _view.AfficherTableauBord(progression.TableauBord);
             }
         }
+
+        private void TesterLectureTablesBaseSource()
+        {
+            string nomBaseTest = "DB_TestRH";
+
+            _view.AjouterLog(new ExecutionLogModel
+            {
+                Heure = DateTime.Now.ToString("HH:mm:ss"),
+                Message = $"Lecture des tables de la base {nomBaseTest}...",
+                Type = "Info"
+            });
+
+            List<string> tables = _service.ChargerTablesBaseSource(nomBaseTest);
+
+            if (tables.Count == 0)
+            {
+                _view.AjouterLog(new ExecutionLogModel
+                {
+                    Heure = DateTime.Now.ToString("HH:mm:ss"),
+                    Message = $"Aucune table trouvée dans {nomBaseTest}.",
+                    Type = "Avertissement"
+                });
+
+                return;
+            }
+
+            foreach (string table in tables)
+            {
+                int nombreLignes =
+                    _service.CompterLignesTableSource(nomBaseTest, table);
+
+                _view.AjouterLog(new ExecutionLogModel
+                {
+                    Heure = DateTime.Now.ToString("HH:mm:ss"),
+                    Message = $"Table trouvée : {table} - {nombreLignes} ligne(s)",
+                    Type = "Succes"
+                });
+            }
+        }
+
+        
     }
 }
