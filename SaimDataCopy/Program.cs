@@ -1,3 +1,4 @@
+using SaimDataCopy.DataAccess;
 using SaimDataCopy.Views.Forms;
 
 namespace SaimDataCopy
@@ -5,15 +6,32 @@ namespace SaimDataCopy
     internal static class Program
     {
         /// <summary>
-        ///  The main entry point for the application.
+        /// Point d'entrée principal de l'application.
         /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new MainForm());
+
+            try
+            {
+                // Au démarrage, on vérifie si la base SQL Server existe.
+                // Si elle n'existe pas, EF Core crée la base et les tables.
+                DatabaseInitializer.InitialiserBaseDeDonnees();
+
+                Application.Run(new MainForm());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Erreur pendant l'initialisation de la base de données :"
+                    + Environment.NewLine
+                    + ex.Message,
+                    "Erreur SQL Server",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
         }
     }
 }
