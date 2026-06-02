@@ -24,6 +24,7 @@ namespace SaimDataCopy.Services.Execution
         // Si elle n'existe pas, elle est créée.
         // Retourne true si la base a été créée, false si elle existait déjà.
         bool VerifierOuCreerBaseCible(string nomBase);
+        bool VerifierOuCreerTableCible(string nomBase, string nomTable);
 
         // Teste la connexion avant de lancer la copie.
         // Pour l'instant, on prépare une version simple et propre.

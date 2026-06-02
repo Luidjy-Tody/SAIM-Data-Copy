@@ -39,6 +39,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             SELECT name AS Value
             FROM sys.databases
             WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb', 'SaimDataCopyDb')
+            AND name NOT LIKE 'CIBLE[_]%'
             ORDER BY name
             """
                 )

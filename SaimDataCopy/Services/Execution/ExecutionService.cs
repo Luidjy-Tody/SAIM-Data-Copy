@@ -59,6 +59,13 @@ namespace SaimDataCopy.Services.Execution
             return _executionDataProvider.VerifierOuCreerBaseCible(nomBase);
         }
 
+        public bool VerifierOuCreerTableCible(string nomBase, string nomTable)
+        {
+            // Le service ne fait pas directement le SQL.
+            // Il demande au DataProvider de vérifier ou créer la table côté cible.
+            return _executionDataProvider.VerifierOuCreerTableCible(nomBase, nomTable);
+        }
+
         public async Task<bool> TesterConnexionAsync(
             IProgress<ExecutionProgressionModel> progression,
             CancellationToken cancellationToken)
@@ -201,15 +208,30 @@ namespace SaimDataCopy.Services.Execution
                 {
                     throw;
                 }
+                catch (InvalidOperationException ex)
+                {
+                    // Ce cas peut arriver quand la source et la cible pointent vers la même base.
+                    // Ce n'est pas une erreur technique, c'est une protection pour éviter de modifier la source.
+                    resultat = new ExecutionResultatBaseModel
+                    {
+                        NomBase = baseCopie.NomBase,
+                        LignesAvant = 0,
+                        LignesApres = 0,
+                        Resultat = "Avertissement",
+                        Message = ex.Message
+                    };
+                }
                 catch (Exception ex)
                 {
+                    // Ici, on garde les vraies erreurs techniques :
+                    // problème SQL, problème de connexion, table invalide, etc.
                     resultat = new ExecutionResultatBaseModel
                     {
                         NomBase = baseCopie.NomBase,
                         LignesAvant = 0,
                         LignesApres = 0,
                         Resultat = "Erreur",
-                        Message = $"Erreur pendant la lecture : {ex.Message}"
+                        Message = $"Erreur pendant la copie : {ex.Message}"
                     };
                 }
 
@@ -266,8 +288,7 @@ namespace SaimDataCopy.Services.Execution
             return resultats;
         }
 
-        private ExecutionResultatBaseModel CreerResultatLectureReelle(
-            BaseCopieModel baseCopie,
+        private ExecutionResultatBaseModel CreerResultatLectureReelle( BaseCopieModel baseCopie,
             CancellationToken cancellationToken)
         {
             // Avant de lire les tables, on vérifie si la base existe côté cible.
@@ -279,6 +300,7 @@ namespace SaimDataCopy.Services.Execution
                 ? "Base cible créée."
                 : "Base cible déjà existante.";
 
+            // On charge les vraies tables de la base source.
             List<string> tables =
                 _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
 
@@ -295,18 +317,43 @@ namespace SaimDataCopy.Services.Execution
             }
 
             int totalLignes = 0;
+            int nombreTablesCreees = 0;
+            int nombreTablesDejaExistantes = 0;
 
             foreach (string table in tables)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                int lignesTable =
-                    _executionDataProvider.CompterLignesTableSource(
-                        baseCopie.NomBase,
-                        table
+                // Pour chaque table trouvée côté source,
+                // on vérifie si la même table existe côté cible.
+                // Si elle n'existe pas, elle sera créée automatiquement.
+                bool tableCibleCreee = _executionDataProvider.VerifierOuCreerTableCible(baseCopie.NomBase, table);
+
+                if (tableCibleCreee)
+                {
+                    nombreTablesCreees++;
+                }
+                else
+                {
+                    nombreTablesDejaExistantes++;
+                }
+
+                // On récupère le mode de copie choisi pour cette base.
+                // Exemple : "Ecraser" ou "Mettre a jour".
+
+                string modeCopie = baseCopie.ModeCopie;
+                // Ici, on lance la vraie copie des lignes.
+                // Si la source et la cible sont identiques, le DataProvider va bloquer la copie.
+
+                int lignesCopiees = _executionDataProvider.CopierLignesTableSourceVersCible(
+                    baseCopie.NomBase,
+                    table,
+                    modeCopie
+
+                
                     );
 
-                totalLignes += lignesTable;
+                totalLignes += lignesCopiees;
             }
 
             return new ExecutionResultatBaseModel
@@ -315,7 +362,11 @@ namespace SaimDataCopy.Services.Execution
                 LignesAvant = 0,
                 LignesApres = totalLignes,
                 Resultat = "Succès",
-                Message = $"{messageBaseCible} Lecture terminée : {tables.Count} table(s), {totalLignes} ligne(s) trouvée(s)."
+                Message =
+                    $"{messageBaseCible} " +
+                    $"Préparation cible terminée : {nombreTablesCreees} table(s) créée(s), " +
+                    $"{nombreTablesDejaExistantes} table(s) déjà existante(s). " +
+                    $"Copie terminée : {tables.Count} table(s), {totalLignes} ligne(s) copiée(s)."
             };
         }
 
