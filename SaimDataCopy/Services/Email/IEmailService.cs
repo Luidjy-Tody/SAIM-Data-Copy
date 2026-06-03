@@ -25,5 +25,15 @@ namespace SaimDataCopy.Services.Email
         /// </summary>
         bool EnvoyerEmailTest(EmailConfigModel configuration, out string message);
 
+        /// <summary>
+        /// Envoie un e-mail de confirmation après une copie réussie.
+        /// Cette méthode sera appelée plus tard par ExecutionService.
+        /// </summary>
+        bool EnvoyerEmailConfirmationCopie(
+            string listeBases,
+            string duree,
+            string? cheminFichierLog,
+            out string message
+        );
     }
 }

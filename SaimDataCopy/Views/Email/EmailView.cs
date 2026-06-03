@@ -29,6 +29,7 @@ namespace SaimDataCopy.Views.Email
         private readonly TextBox txtObjet = new TextBox();
         private readonly TextBox txtCorpsMessage = new TextBox();
 
+        private readonly CheckBox chkActiverEnvoiEmail = new CheckBox();
         private readonly CheckBox chkJoindreFichierLog = new CheckBox();
         private readonly Button btnTesterEmail = new Button();
 
@@ -44,7 +45,7 @@ namespace SaimDataCopy.Views.Email
             EmailFormStyle.AppliquerPage(this);
 
             panelContenu.Dock = DockStyle.Top;
-            panelContenu.Height = 1120;
+            panelContenu.Height = 1170;
             panelContenu.Padding = new Padding(25, 25, 25, 30);
             panelContenu.BackColor = Color.White;
 
@@ -141,13 +142,18 @@ namespace SaimDataCopy.Views.Email
 
         private void AjouterOptions()
         {
+            chkActiverEnvoiEmail.Text = "Activer l'envoi des e-mails";
+            chkActiverEnvoiEmail.Location = new Point(25, 955);
+
+            EmailFormStyle.AppliquerCheckBox(chkActiverEnvoiEmail);
+
             chkJoindreFichierLog.Text = "Joindre le fichier de log";
-            chkJoindreFichierLog.Location = new Point(25, 960);
+            chkJoindreFichierLog.Location = new Point(25, 985);
 
             EmailFormStyle.AppliquerCheckBox(chkJoindreFichierLog);
 
             Panel panelAlerte = new Panel();
-            panelAlerte.Location = new Point(25, 1004);
+            panelAlerte.Location = new Point(25, 1030);
             panelAlerte.Size = new Size(975, 48);
 
             EmailFormStyle.AppliquerAlerte(panelAlerte);
@@ -172,13 +178,14 @@ namespace SaimDataCopy.Views.Email
             panelAlerte.Controls.Add(lblAlerte);
 
             btnTesterEmail.Text = "  Envoyer un e-mail de test";
-            btnTesterEmail.Location = new Point(25, 1070);
+            btnTesterEmail.Location = new Point(25, 1095);
             btnTesterEmail.Size = new Size(245, 38);
             btnTesterEmail.TextAlign = ContentAlignment.MiddleCenter;
             btnTesterEmail.Click += BtnTesterEmail_Click;
 
             EmailFormStyle.AppliquerBoutonTest(btnTesterEmail);
 
+            panelContenu.Controls.Add(chkActiverEnvoiEmail);
             panelContenu.Controls.Add(chkJoindreFichierLog);
             panelContenu.Controls.Add(panelAlerte);
             panelContenu.Controls.Add(btnTesterEmail);
@@ -338,6 +345,7 @@ namespace SaimDataCopy.Views.Email
             txtObjet.Text = configuration.Objet;
             txtCorpsMessage.Text = configuration.CorpsMessage;
 
+            chkActiverEnvoiEmail.Checked = configuration.ActiverEnvoiEmail;
             chkJoindreFichierLog.Checked = configuration.JoindreFichierLog;
 
             if (cmbSecurite.SelectedIndex == -1)
@@ -367,6 +375,7 @@ namespace SaimDataCopy.Views.Email
                 Objet = txtObjet.Text.Trim(),
                 CorpsMessage = txtCorpsMessage.Text,
 
+                ActiverEnvoiEmail = chkActiverEnvoiEmail.Checked,
                 JoindreFichierLog = chkJoindreFichierLog.Checked
             };
         }

@@ -5,21 +5,27 @@ namespace SaimDataCopy.DataProviders.Email
 {
     /// <summary>
     /// DataProvider pour les paramètres email.
-    /// Il s'occupe seulement de lire et écrire les données.
+    /// Il s'occupe seulement de lire et écrire les données dans un fichier JSON.
     /// </summary>
     public class EmailDataProvider : IEmailDataProvider
     {
-        // Nom du fichier JSON où les paramètres email seront sauvegardés.
+        // Chemin complet du fichier JSON des paramètres email.
         private readonly string _cheminFichier;
 
         public EmailDataProvider()
         {
-            // Le fichier sera créé dans le dossier de l'application.
-            _cheminFichier = Path.Combine(
+            // On met le fichier dans le dossier Data de l'application.
+            string dossierData = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
-                "email_config.json"
+                "Data"
+            );
+
+            _cheminFichier = Path.Combine(
+                dossierData,
+                "email_parametres.json"
             );
         }
+
         /// <summary>
         /// Charge les paramètres email depuis le fichier JSON.
         /// Si le fichier n'existe pas, on retourne une configuration par défaut.
@@ -33,7 +39,12 @@ namespace SaimDataCopy.DataProviders.Email
 
             string contenuJson = File.ReadAllText(_cheminFichier);
 
-            EmailConfigModel? configuration = JsonConvert.DeserializeObject<EmailConfigModel>( contenuJson );
+            if (string.IsNullOrWhiteSpace(contenuJson))
+            {
+                return new EmailConfigModel();
+            }
+
+            EmailConfigModel? configuration = JsonConvert.DeserializeObject<EmailConfigModel>(contenuJson);
 
             return configuration ?? new EmailConfigModel();
         }
@@ -41,12 +52,21 @@ namespace SaimDataCopy.DataProviders.Email
         /// <summary>
         /// Enregistre les paramètres email dans le fichier JSON.
         /// </summary>
-        
-        public void Enregistrer( EmailConfigModel configuration)
+        public void Enregistrer(EmailConfigModel configuration)
         {
-            string contenuJson = JsonConvert.SerializeObject( configuration, Formatting.Indented );
+            string? dossier = Path.GetDirectoryName(_cheminFichier);
 
-            File.WriteAllText(_cheminFichier, contenuJson );
+            if (!string.IsNullOrWhiteSpace(dossier))
+            {
+                Directory.CreateDirectory(dossier);
+            }
+
+            string contenuJson = JsonConvert.SerializeObject(
+                configuration,
+                Formatting.Indented
+            );
+
+            File.WriteAllText(_cheminFichier, contenuJson);
         }
     }
 }

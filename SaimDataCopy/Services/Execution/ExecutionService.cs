@@ -1,7 +1,9 @@
-﻿using SaimDataCopy.DataProviders.Execution;
+﻿using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.DataProviders.Execution;
 using SaimDataCopy.DataProviders.Logs;
 using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Models.Execution;
+using SaimDataCopy.Services.Email;
 using SaimDataCopy.Services.Logs;
 using System.Diagnostics;
 
@@ -13,20 +15,34 @@ namespace SaimDataCopy.Services.Execution
     {
         private readonly IExecutionDataProvider _executionDataProvider;
         private readonly IJournalisationService _journalisationService;
+        private readonly IEmailService _emailService;
 
         public ExecutionService(IExecutionDataProvider executionDataProvider)
             : this(
                 executionDataProvider,
-                new JournalisationService(new LogsDataProvider()))
+                new JournalisationService(new LogsDataProvider()),
+                new EmailService(new EmailDataProvider()))
         {
         }
 
         public ExecutionService(
             IExecutionDataProvider executionDataProvider,
             IJournalisationService journalisationService)
+            : this(
+                executionDataProvider,
+                journalisationService,
+                new EmailService(new EmailDataProvider()))
+        {
+        }
+
+        public ExecutionService(
+            IExecutionDataProvider executionDataProvider,
+            IJournalisationService journalisationService,
+            IEmailService emailService)
         {
             _executionDataProvider = executionDataProvider;
             _journalisationService = journalisationService;
+            _emailService = emailService;
         }
 
         public ExecutionTableauBordModel ChargerTableauBordInitial()
@@ -62,8 +78,6 @@ namespace SaimDataCopy.Services.Execution
 
         public bool VerifierOuCreerBaseCible(string nomBase)
         {
-            // Le Service vérifie seulement que le nom de la base est correct.
-            // Ensuite, il demande au DataProvider de vérifier ou créer la base cible.
             if (string.IsNullOrWhiteSpace(nomBase))
             {
                 return false;
@@ -74,8 +88,6 @@ namespace SaimDataCopy.Services.Execution
 
         public bool VerifierOuCreerTableCible(string nomBase, string nomTable)
         {
-            // Le service ne fait pas directement le SQL.
-            // Il demande au DataProvider de vérifier ou créer la table côté cible.
             return _executionDataProvider.VerifierOuCreerTableCible(nomBase, nomTable);
         }
 
@@ -131,6 +143,8 @@ namespace SaimDataCopy.Services.Execution
 
             await Task.Delay(500, cancellationToken);
 
+            ExecutionTableauBordModel tableauBordInitial = ChargerTableauBordInitial();
+
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 100,
@@ -141,8 +155,8 @@ namespace SaimDataCopy.Services.Execution
                 TableauBord = new ExecutionTableauBordModel
                 {
                     NombreBasesSelectionnees = basesSelectionnees.Count,
-                    NombreLignesCopiees = ChargerTableauBordInitial().NombreLignesCopiees,
-                    DureeDerniereExecution = ChargerTableauBordInitial().DureeDerniereExecution
+                    NombreLignesCopiees = tableauBordInitial.NombreLignesCopiees,
+                    DureeDerniereExecution = tableauBordInitial.DureeDerniereExecution
                 }
             });
 
@@ -258,8 +272,6 @@ namespace SaimDataCopy.Services.Execution
                 }
                 catch (Exception ex)
                 {
-                    // Ici, on garde les vraies erreurs techniques :
-                    // problème SQL, problème de connexion, table invalide, etc.
                     _journalisationService.EcrireErreur(
                         $"Erreur pendant la copie de {baseCopie.NomBase}.",
                         ex);
@@ -323,6 +335,8 @@ namespace SaimDataCopy.Services.Execution
                 $"{totalLignesCopiees} ligne(s) copiée(s), " +
                 $"durée : {FormaterDuree(chronometre.Elapsed)}.");
 
+            EnvoyerEmailConfirmationSiSucces(resultats, chronometre.Elapsed);
+
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 100,
@@ -357,8 +371,6 @@ namespace SaimDataCopy.Services.Execution
             List<string> tables =
                 _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
 
-            // On récupère le mode de copie choisi pour cette base.
-            // Exemple : Écraser ou Mise à jour.
             string modeCopie = NormaliserModeCopie(baseCopie.ModeCopie);
 
             _journalisationService.EcrireInformation(
@@ -393,9 +405,6 @@ namespace SaimDataCopy.Services.Execution
                 _journalisationService.EcrireInformation(
                     $"{baseCopie.NomBase} : traitement de la table {table}.");
 
-                // Pour chaque table trouvée côté source,
-                // on vérifie si la même table existe côté cible.
-                // Si elle n'existe pas, elle sera créée automatiquement.
                 bool tableCibleCreee =
                     _executionDataProvider.VerifierOuCreerTableCible(
                         baseCopie.NomBase,
@@ -416,8 +425,6 @@ namespace SaimDataCopy.Services.Execution
                         $"{baseCopie.NomBase}.{table} : table cible déjà existante.");
                 }
 
-                // Ici, on lance la vraie copie des lignes.
-                // Si la source et la cible sont identiques, le DataProvider va bloquer la copie.
                 int lignesCopiees =
                     _executionDataProvider.CopierLignesTableSourceVersCible(
                         baseCopie.NomBase,
@@ -447,6 +454,68 @@ namespace SaimDataCopy.Services.Execution
                     $"{nombreTablesDejaExistantes} table(s) déjà existante(s). " +
                     $"Copie terminée : {tables.Count} table(s), {totalLignes} ligne(s) copiée(s)."
             };
+        }
+
+        private void EnvoyerEmailConfirmationSiSucces(
+            List<ExecutionResultatBaseModel> resultats,
+            TimeSpan dureeExecution)
+        {
+            if (!ExecutionTermineeAvecSucces(resultats))
+            {
+                _journalisationService.EcrireInformation(
+                    "E-mail de confirmation non envoyé car l'exécution contient une erreur ou un avertissement.");
+
+                return;
+            }
+
+            string listeBases = ConstruireListeBasesTraitees(resultats);
+            string duree = FormaterDuree(dureeExecution);
+
+            bool emailEnvoye = _emailService.EnvoyerEmailConfirmationCopie(
+                listeBases,
+                duree,
+                null,
+                out string messageEmail
+            );
+
+            if (emailEnvoye)
+            {
+                _journalisationService.EcrireInformation(messageEmail);
+            }
+            else
+            {
+                _journalisationService.EcrireAvertissement(messageEmail);
+            }
+        }
+
+        private bool ExecutionTermineeAvecSucces(List<ExecutionResultatBaseModel> resultats)
+        {
+            if (resultats.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (ExecutionResultatBaseModel resultat in resultats)
+            {
+                if (resultat.Resultat != "Succès")
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private string ConstruireListeBasesTraitees(List<ExecutionResultatBaseModel> resultats)
+        {
+            List<string> nomsBases = new List<string>();
+
+            foreach (ExecutionResultatBaseModel resultat in resultats)
+            {
+                nomsBases.Add(resultat.NomBase);
+            }
+
+            return string.Join(", ", nomsBases);
         }
 
         private string NormaliserModeCopie(string modeCopie)

@@ -56,6 +56,12 @@ SAIM LTD";
         // Options
         // -----------------------------
 
+        // Permet d'activer ou désactiver l'envoi automatique des e-mails.
+        // Par défaut, on met false pour éviter d'envoyer des e-mails sans configuration.
+        public bool ActiverEnvoiEmail { get; set; } = false;
+
+        // Permet de joindre ou non le fichier de log dans l'e-mail.
+
         public bool JoindreFichierLog { get; set; } = false;
     }
 }
