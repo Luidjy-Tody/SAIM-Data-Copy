@@ -1,6 +1,8 @@
 ﻿using SaimDataCopy.DataProviders.Execution;
+using SaimDataCopy.DataProviders.Logs;
 using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Models.Execution;
+using SaimDataCopy.Services.Logs;
 using System.Diagnostics;
 
 namespace SaimDataCopy.Services.Execution
@@ -10,10 +12,21 @@ namespace SaimDataCopy.Services.Execution
     public class ExecutionService : IExecutionService
     {
         private readonly IExecutionDataProvider _executionDataProvider;
+        private readonly IJournalisationService _journalisationService;
 
         public ExecutionService(IExecutionDataProvider executionDataProvider)
+            : this(
+                executionDataProvider,
+                new JournalisationService(new LogsDataProvider()))
+        {
+        }
+
+        public ExecutionService(
+            IExecutionDataProvider executionDataProvider,
+            IJournalisationService journalisationService)
         {
             _executionDataProvider = executionDataProvider;
+            _journalisationService = journalisationService;
         }
 
         public ExecutionTableauBordModel ChargerTableauBordInitial()
@@ -145,8 +158,21 @@ namespace SaimDataCopy.Services.Execution
 
             List<ExecutionResultatBaseModel> resultats = new List<ExecutionResultatBaseModel>();
 
+            // On démarre un nouveau fichier .log pour cette exécution.
+            _journalisationService.DemarrerNouvelleExecution();
+
+            // On supprime les anciens logs selon la durée de conservation.
+            _journalisationService.NettoyerAnciensLogs();
+
+            _journalisationService.EcrireInformation("Lancement manuel de la copie.");
+            _journalisationService.EcrireInformation(
+                $"{basesSelectionnees.Count} base(s) sélectionnée(s) pour la copie.");
+
             if (basesSelectionnees.Count == 0)
             {
+                _journalisationService.EcrireAvertissement(
+                    "Aucune base sélectionnée pour la copie.");
+
                 progression.Report(new ExecutionProgressionModel
                 {
                     Pourcentage = 0,
@@ -187,6 +213,9 @@ namespace SaimDataCopy.Services.Execution
 
                 BaseCopieModel baseCopie = basesSelectionnees[i];
 
+                _journalisationService.EcrireInformation(
+                    $"Début du traitement de la base : {baseCopie.NomBase}");
+
                 progression.Report(new ExecutionProgressionModel
                 {
                     Pourcentage = CalculerPourcentage(i, totalBases),
@@ -206,12 +235,18 @@ namespace SaimDataCopy.Services.Execution
                 }
                 catch (OperationCanceledException)
                 {
+                    _journalisationService.EcrireAvertissement(
+                        "Copie annulée par l'utilisateur.");
+
                     throw;
                 }
                 catch (InvalidOperationException ex)
                 {
                     // Ce cas peut arriver quand la source et la cible pointent vers la même base.
                     // Ce n'est pas une erreur technique, c'est une protection pour éviter de modifier la source.
+                    _journalisationService.EcrireAvertissement(
+                        $"{baseCopie.NomBase} : {ex.Message}");
+
                     resultat = new ExecutionResultatBaseModel
                     {
                         NomBase = baseCopie.NomBase,
@@ -225,6 +260,10 @@ namespace SaimDataCopy.Services.Execution
                 {
                     // Ici, on garde les vraies erreurs techniques :
                     // problème SQL, problème de connexion, table invalide, etc.
+                    _journalisationService.EcrireErreur(
+                        $"Erreur pendant la copie de {baseCopie.NomBase}.",
+                        ex);
+
                     resultat = new ExecutionResultatBaseModel
                     {
                         NomBase = baseCopie.NomBase,
@@ -236,6 +275,8 @@ namespace SaimDataCopy.Services.Execution
                 }
 
                 resultats.Add(resultat);
+
+                EcrireResultatDansFichier(baseCopie.NomBase, resultat);
 
                 int lignesPourCetteBase =
                     Math.Max(0, resultat.LignesApres - resultat.LignesAvant);
@@ -277,6 +318,11 @@ namespace SaimDataCopy.Services.Execution
                 resultats
             );
 
+            _journalisationService.EcrireSucces(
+                $"Exécution terminée. {totalBases} base(s) traitée(s), " +
+                $"{totalLignesCopiees} ligne(s) copiée(s), " +
+                $"durée : {FormaterDuree(chronometre.Elapsed)}.");
+
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 100,
@@ -288,9 +334,13 @@ namespace SaimDataCopy.Services.Execution
             return resultats;
         }
 
-        private ExecutionResultatBaseModel CreerResultatLectureReelle( BaseCopieModel baseCopie,
+        private ExecutionResultatBaseModel CreerResultatLectureReelle(
+            BaseCopieModel baseCopie,
             CancellationToken cancellationToken)
         {
+            _journalisationService.EcrireInformation(
+                $"Vérification de la base cible : {baseCopie.NomBase}");
+
             // Avant de lire les tables, on vérifie si la base existe côté cible.
             // Si elle n'existe pas, elle sera créée.
             bool baseCibleCreee =
@@ -300,14 +350,25 @@ namespace SaimDataCopy.Services.Execution
                 ? "Base cible créée."
                 : "Base cible déjà existante.";
 
+            _journalisationService.EcrireInformation(
+                $"{baseCopie.NomBase} : {messageBaseCible}");
+
             // On charge les vraies tables de la base source.
-            List<string> tables = _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
+            List<string> tables =
+                _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
+
             // On récupère le mode de copie choisi pour cette base.
             // Exemple : Écraser ou Mise à jour.
             string modeCopie = NormaliserModeCopie(baseCopie.ModeCopie);
 
+            _journalisationService.EcrireInformation(
+                $"{baseCopie.NomBase} : mode de copie utilisé = {modeCopie}");
+
             if (tables.Count == 0)
             {
+                _journalisationService.EcrireAvertissement(
+                    $"{baseCopie.NomBase} : aucune table trouvée.");
+
                 return new ExecutionResultatBaseModel
                 {
                     NomBase = baseCopie.NomBase,
@@ -318,6 +379,9 @@ namespace SaimDataCopy.Services.Execution
                 };
             }
 
+            _journalisationService.EcrireInformation(
+                $"{baseCopie.NomBase} : {tables.Count} table(s) trouvée(s).");
+
             int totalLignes = 0;
             int nombreTablesCreees = 0;
             int nombreTablesDejaExistantes = 0;
@@ -326,34 +390,49 @@ namespace SaimDataCopy.Services.Execution
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                _journalisationService.EcrireInformation(
+                    $"{baseCopie.NomBase} : traitement de la table {table}.");
+
                 // Pour chaque table trouvée côté source,
                 // on vérifie si la même table existe côté cible.
                 // Si elle n'existe pas, elle sera créée automatiquement.
-                bool tableCibleCreee = _executionDataProvider.VerifierOuCreerTableCible(baseCopie.NomBase, table);
+                bool tableCibleCreee =
+                    _executionDataProvider.VerifierOuCreerTableCible(
+                        baseCopie.NomBase,
+                        table);
 
                 if (tableCibleCreee)
                 {
                     nombreTablesCreees++;
+
+                    _journalisationService.EcrireInformation(
+                        $"{baseCopie.NomBase}.{table} : table cible créée.");
                 }
                 else
                 {
                     nombreTablesDejaExistantes++;
+
+                    _journalisationService.EcrireInformation(
+                        $"{baseCopie.NomBase}.{table} : table cible déjà existante.");
                 }
 
-                
                 // Ici, on lance la vraie copie des lignes.
                 // Si la source et la cible sont identiques, le DataProvider va bloquer la copie.
-
-                int lignesCopiees = _executionDataProvider.CopierLignesTableSourceVersCible(
-                    baseCopie.NomBase,
-                    table,
-                    modeCopie
-
-                
-                    );
+                int lignesCopiees =
+                    _executionDataProvider.CopierLignesTableSourceVersCible(
+                        baseCopie.NomBase,
+                        table,
+                        modeCopie);
 
                 totalLignes += lignesCopiees;
+
+                _journalisationService.EcrireSucces(
+                    $"{baseCopie.NomBase}.{table} : {lignesCopiees} ligne(s) copiée(s).");
             }
+
+            _journalisationService.EcrireSucces(
+                $"{baseCopie.NomBase} : copie terminée avec succès. " +
+                $"{tables.Count} table(s), {totalLignes} ligne(s) copiée(s).");
 
             return new ExecutionResultatBaseModel
             {
@@ -412,6 +491,32 @@ namespace SaimDataCopy.Services.Execution
                 Message = message,
                 Type = type
             };
+        }
+
+        private void EcrireResultatDansFichier(
+            string nomBase,
+            ExecutionResultatBaseModel resultat)
+        {
+            string message = $"{nomBase} : {resultat.Resultat} - {resultat.Message}";
+
+            switch (resultat.Resultat)
+            {
+                case "Succès":
+                    _journalisationService.EcrireSucces(message);
+                    break;
+
+                case "Avertissement":
+                    _journalisationService.EcrireAvertissement(message);
+                    break;
+
+                case "Erreur":
+                    _journalisationService.EcrireErreur(message);
+                    break;
+
+                default:
+                    _journalisationService.EcrireInformation(message);
+                    break;
+            }
         }
 
         private string FormaterDuree(TimeSpan duree)
