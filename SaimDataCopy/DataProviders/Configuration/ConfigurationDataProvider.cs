@@ -1,99 +1,58 @@
-﻿using SaimDataCopy.DataAccess;
+﻿using Newtonsoft.Json;
 using SaimDataCopy.Models.Configuration;
 
 namespace SaimDataCopy.DataProviders.Configuration
 {
     // DataProvider de configuration.
+    // Il sauvegarde et charge les paramètres depuis un fichier JSON.
     public class ConfigurationDataProvider : IConfigurationDataProvider
     {
-        public void EnregistrerConfiguration(ConfigurationModel configuration)
+        private readonly string _cheminFichierConfiguration;
+
+        public ConfigurationDataProvider()
         {
-            using SaimDbContext dbContext = SaimDbContextFactory.CreerDbContext();
+            // Le fichier JSON sera stocké dans le dossier Data de l'application.
+            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
-            // Pour la configuration générale, on garde une seule ligne.
-            ConfigurationSqlModel? configurationSql = dbContext.Configurations
-                .OrderBy(c => c.Id)
-                .FirstOrDefault();
-
-            if (configurationSql == null)
+            if (!Directory.Exists(dossierData))
             {
-                configurationSql = new ConfigurationSqlModel();
-                dbContext.Configurations.Add(configurationSql);
+                Directory.CreateDirectory(dossierData);
             }
 
-            RemplirConfigurationSql(configurationSql, configuration);
+            _cheminFichierConfiguration = Path.Combine(dossierData, "configuration_execution.json");
+        }
 
-            dbContext.SaveChanges();
+        public void EnregistrerConfiguration(ConfigurationModel configuration)
+        {
+            // Sauvegarde principale dans le fichier JSON.
+            string contenuJson = JsonConvert.SerializeObject(configuration, Formatting.Indented);
+
+            File.WriteAllText(_cheminFichierConfiguration, contenuJson);
         }
 
         public ConfigurationModel? ChargerConfiguration()
         {
-            using SaimDbContext dbContext = SaimDbContextFactory.CreerDbContext();
-
-            ConfigurationSqlModel? configurationSql = dbContext.Configurations
-                .OrderBy(c => c.Id)
-                .FirstOrDefault();
-
-            if (configurationSql == null)
+            if (!File.Exists(_cheminFichierConfiguration))
             {
                 return null;
             }
 
-            return ConvertirVersConfigurationModel(configurationSql);
-        }
+            string contenuJson = File.ReadAllText(_cheminFichierConfiguration);
 
-        private void RemplirConfigurationSql(
-            ConfigurationSqlModel configurationSql,
-            ConfigurationModel configuration)
-        {
-            // Serveur source
-            configurationSql.ServeurSourceNom = configuration.ServeurSource.NomServeur;
-            configurationSql.ServeurSourceChaineConnexion = configuration.ServeurSource.ChaineConnexion;
-            configurationSql.ServeurSourceIdentifiant = configuration.ServeurSource.Identifiant;
-            configurationSql.ServeurSourceMotDePasse = configuration.ServeurSource.MotDePasse;
-            configurationSql.ServeurSourcePort = configuration.ServeurSource.Port;
-
-            // Serveur cible
-            configurationSql.ServeurCibleNom = configuration.ServeurCible.NomServeur;
-            configurationSql.ServeurCibleChaineConnexion = configuration.ServeurCible.ChaineConnexion;
-            configurationSql.ServeurCibleIdentifiant = configuration.ServeurCible.Identifiant;
-            configurationSql.ServeurCibleMotDePasse = configuration.ServeurCible.MotDePasse;
-            configurationSql.ServeurCiblePort = configuration.ServeurCible.Port;
-
-            // Paramètres généraux
-            configurationSql.ModeCopie = configuration.ModeCopie;
-            configurationSql.ComportementErreur = configuration.ComportementErreur;
-            configurationSql.TentativesReprise = configuration.TentativesReprise;
-            configurationSql.DateModification = DateTime.Now;
-        }
-
-        private ConfigurationModel ConvertirVersConfigurationModel(
-            ConfigurationSqlModel configurationSql)
-        {
-            return new ConfigurationModel
+            if (string.IsNullOrWhiteSpace(contenuJson))
             {
-                ServeurSource = new ServeurConfigModel
-                {
-                    NomServeur = configurationSql.ServeurSourceNom,
-                    ChaineConnexion = configurationSql.ServeurSourceChaineConnexion,
-                    Identifiant = configurationSql.ServeurSourceIdentifiant,
-                    MotDePasse = configurationSql.ServeurSourceMotDePasse,
-                    Port = configurationSql.ServeurSourcePort
-                },
+                return null;
+            }
 
-                ServeurCible = new ServeurConfigModel
-                {
-                    NomServeur = configurationSql.ServeurCibleNom,
-                    ChaineConnexion = configurationSql.ServeurCibleChaineConnexion,
-                    Identifiant = configurationSql.ServeurCibleIdentifiant,
-                    MotDePasse = configurationSql.ServeurCibleMotDePasse,
-                    Port = configurationSql.ServeurCiblePort
-                },
-
-                ModeCopie = configurationSql.ModeCopie,
-                ComportementErreur = configurationSql.ComportementErreur,
-                TentativesReprise = configurationSql.TentativesReprise
-            };
+            try
+            {
+                return JsonConvert.DeserializeObject<ConfigurationModel>(contenuJson);
+            }
+            catch (JsonException)
+            {
+                throw new InvalidOperationException(
+                    "Le fichier configuration_execution.json est invalide. Vérifiez son contenu JSON.");
+            }
         }
     }
 }

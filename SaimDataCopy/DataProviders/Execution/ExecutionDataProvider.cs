@@ -273,18 +273,48 @@ namespace SaimDataCopy.DataProviders.Execution
 
             // Sécurité importante :
             // Si la source et la cible sont exactement la même base,
-            // on bloque la copie pour éviter de dupliquer ou supprimer les données source.
+            // on bloque la copie pour éviter de modifier les données source.
             if (SourceEtCibleIdentiques(chaineConnexionSource, chaineConnexionCible))
             {
                 throw new InvalidOperationException(
                     "La source et la cible pointent vers la même base. Copie annulée pour éviter de modifier les données source.");
             }
 
+            switch (modeCopie)
+            {
+                case "Ecraser":
+                case "Écraser":
+                    return CopierModeEcraser(
+                        nomBase,
+                        nomTable,
+                        chaineConnexionSource,
+                        chaineConnexionCible);
+
+                case "Mettre a jour":
+                case "Mettre à jour":
+                case "Mise à jour":
+                    return CopierModeMiseAJour(
+                        nomBase,
+                        nomTable,
+                        chaineConnexionSource,
+                        chaineConnexionCible);
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Mode de copie inconnu : {modeCopie}");
+            }
+        }
+
+        private int CopierModeEcraser(
+    string nomBase,
+    string nomTable,
+    string chaineConnexionSource,
+    string chaineConnexionCible)
+        {
             string nomTableSql = ConstruireNomTableSql(nomTable);
 
             // Cette requête lit toutes les lignes de la table source.
             // Exemple : SELECT * FROM [dbo].[EmployesTest]
-            // Elle sert à récupérer les données qui seront envoyées vers la table cible.
             string requeteLectureSource = $"SELECT * FROM {nomTableSql};";
 
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
@@ -293,30 +323,13 @@ namespace SaimDataCopy.DataProviders.Execution
             connexionSource.Open();
             connexionCible.Open();
 
-            switch (modeCopie)
+            // Cette requête vide la table cible avant la copie.
+            // DELETE est utilisé car il est plus simple et plus sûr que TRUNCATE.
+            string requeteSuppressionCible = $"DELETE FROM {nomTableSql};";
+
+            using (SqlCommand commandeSuppression = new SqlCommand(requeteSuppressionCible, connexionCible))
             {
-                case "Ecraser":
-                case "Écraser":
-                    // Cette requête vide la table cible avant la copie.
-                    // DELETE est plus sûr que TRUNCATE car il fonctionne même si la table a certaines contraintes.
-                    // Exemple : DELETE FROM [dbo].[EmployesTest]
-                    string requeteSuppressionCible = $"DELETE FROM {nomTableSql};";
-
-                    using (SqlCommand commandeSuppression = new SqlCommand(requeteSuppressionCible, connexionCible))
-                    {
-                        commandeSuppression.ExecuteNonQuery();
-                    }
-
-                    break;
-
-                case "Mettre a jour":
-                case "Mettre à jour":
-                    throw new NotSupportedException(
-                        "Le mode 'Mettre à jour' n'est pas encore implémenté. Il sera ajouté après la copie simple.");
-
-                default:
-                    throw new InvalidOperationException(
-                        $"Mode de copie inconnu : {modeCopie}");
+                commandeSuppression.ExecuteNonQuery();
             }
 
             using SqlCommand commandeLecture = new SqlCommand(requeteLectureSource, connexionSource);
@@ -339,13 +352,284 @@ namespace SaimDataCopy.DataProviders.Execution
                 string nomColonne = lecteur.GetName(i);
 
                 // On associe chaque colonne source avec la colonne cible du même nom.
-                // Exemple : source Nom -> cible Nom
                 bulkCopy.ColumnMappings.Add(nomColonne, nomColonne);
             }
 
             bulkCopy.WriteToServer(lecteur);
 
             return CompterLignesTableSource(nomBase, nomTable);
+        }
+
+        private int CopierModeMiseAJour(
+            string nomBase,
+            string nomTable,
+            string chaineConnexionSource,
+            string chaineConnexionCible)
+        {
+            string[] morceaux = nomTable.Split('.');
+
+            if (morceaux.Length != 2)
+            {
+                throw new InvalidOperationException(
+                    $"Le nom de table '{nomTable}' est invalide. Format attendu : schema.table.");
+            }
+
+            string schema = morceaux[0];
+            string table = morceaux[1];
+
+            List<string> colonnes = ChargerNomsColonnesSource(nomBase, schema, table);
+            List<string> colonnesCles = ChargerColonnesClesSource(nomBase, schema, table);
+
+            if (colonnes.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Impossible de copier la table '{nomTable}' car aucune colonne source n'a été trouvée.");
+            }
+
+            if (colonnesCles.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Impossible d'utiliser le mode Mise à jour pour '{nomTable}' : aucune clé primaire ou colonne unique n'a été trouvée.");
+            }
+
+            string nomTableSql = ConstruireNomTableSql(nomTable);
+            string nomTableTemporaire = CreerNomTableTemporaire(table);
+
+            // Cette requête lit toutes les lignes de la table source.
+            // Ces lignes seront d'abord copiées dans une table temporaire côté cible.
+            string requeteLectureSource = $"SELECT * FROM {nomTableSql};";
+
+            using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
+            using SqlConnection connexionCible = new SqlConnection(chaineConnexionCible);
+
+            connexionSource.Open();
+            connexionCible.Open();
+
+            CreerTableTemporaireCible(
+                connexionCible,
+                nomTableSql,
+                nomTableTemporaire);
+
+            using SqlCommand commandeLecture = new SqlCommand(requeteLectureSource, connexionSource);
+            using SqlDataReader lecteur = commandeLecture.ExecuteReader();
+
+            if (!lecteur.HasRows)
+            {
+                return 0;
+            }
+
+            using SqlBulkCopy bulkCopy = new SqlBulkCopy(
+                connexionCible,
+                SqlBulkCopyOptions.KeepIdentity,
+                null);
+
+            bulkCopy.DestinationTableName = nomTableTemporaire;
+
+            for (int i = 0; i < lecteur.FieldCount; i++)
+            {
+                string nomColonne = lecteur.GetName(i);
+
+                // On associe chaque colonne source avec la colonne temporaire du même nom.
+                bulkCopy.ColumnMappings.Add(nomColonne, nomColonne);
+            }
+
+            bulkCopy.WriteToServer(lecteur);
+
+            string requeteMerge = ConstruireRequeteMerge(
+                nomTableSql,
+                nomTableTemporaire,
+                colonnes,
+                colonnesCles);
+
+            using SqlCommand commandeMerge = new SqlCommand(requeteMerge, connexionCible);
+            commandeMerge.ExecuteNonQuery();
+
+            return CompterLignesTableSource(nomBase, nomTable);
+        }
+
+        private List<string> ChargerNomsColonnesSource(string nomBase, string schema, string table)
+        {
+            List<string> colonnes = new List<string>();
+
+            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
+
+            // Cette requête récupère les colonnes de la table source.
+            // L'ordre est important pour garder la même structure que la table source.
+            string requete = @"
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = @Schema
+        AND TABLE_NAME = @Table
+        ORDER BY ORDINAL_POSITION;
+    ";
+
+            using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
+            connexionSource.Open();
+
+            using SqlCommand commande = new SqlCommand(requete, connexionSource);
+            commande.Parameters.AddWithValue("@Schema", schema);
+            commande.Parameters.AddWithValue("@Table", table);
+
+            using SqlDataReader lecteur = commande.ExecuteReader();
+
+            while (lecteur.Read())
+            {
+                colonnes.Add(lecteur.GetString(0));
+            }
+
+            return colonnes;
+        }
+
+        private List<string> ChargerColonnesClesSource(string nomBase, string schema, string table)
+        {
+            List<string> colonnesCles = new List<string>();
+
+            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
+
+            // Cette requête cherche la clé de comparaison de la table source.
+            // Elle prend d'abord la clé primaire.
+            // S'il n'y a pas de clé primaire, elle peut prendre un index unique.
+            string requete = @"
+        SELECT c.name
+        FROM sys.indexes i
+        INNER JOIN sys.index_columns ic 
+            ON i.object_id = ic.object_id 
+            AND i.index_id = ic.index_id
+        INNER JOIN sys.columns c 
+            ON ic.object_id = c.object_id 
+            AND ic.column_id = c.column_id
+        INNER JOIN sys.tables t 
+            ON i.object_id = t.object_id
+        INNER JOIN sys.schemas s 
+            ON t.schema_id = s.schema_id
+        WHERE s.name = @Schema
+        AND t.name = @Table
+        AND i.is_unique = 1
+        AND i.is_hypothetical = 0
+        AND i.has_filter = 0
+        AND ic.is_included_column = 0
+        AND i.index_id = (
+            SELECT TOP 1 i2.index_id
+            FROM sys.indexes i2
+            INNER JOIN sys.tables t2 
+                ON i2.object_id = t2.object_id
+            INNER JOIN sys.schemas s2 
+                ON t2.schema_id = s2.schema_id
+            WHERE s2.name = @Schema
+            AND t2.name = @Table
+            AND i2.is_unique = 1
+            AND i2.is_hypothetical = 0
+            AND i2.has_filter = 0
+            ORDER BY 
+                CASE WHEN i2.is_primary_key = 1 THEN 0 ELSE 1 END,
+                i2.index_id
+        )
+        ORDER BY ic.key_ordinal;
+    ";
+
+            using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
+            connexionSource.Open();
+
+            using SqlCommand commande = new SqlCommand(requete, connexionSource);
+            commande.Parameters.AddWithValue("@Schema", schema);
+            commande.Parameters.AddWithValue("@Table", table);
+
+            using SqlDataReader lecteur = commande.ExecuteReader();
+
+            while (lecteur.Read())
+            {
+                colonnesCles.Add(lecteur.GetString(0));
+            }
+
+            return colonnesCles;
+        }
+
+        private void CreerTableTemporaireCible(
+            SqlConnection connexionCible,
+            string nomTableSql,
+            string nomTableTemporaire)
+        {
+            // Cette requête crée une table temporaire avec la même structure que la table cible.
+            // TOP 0 veut dire qu'on copie seulement la structure, pas les données.
+            string requeteCreationTemporaire = $@"
+        SELECT TOP 0 *
+        INTO {nomTableTemporaire}
+        FROM {nomTableSql};
+    ";
+
+            using SqlCommand commande = new SqlCommand(requeteCreationTemporaire, connexionCible);
+            commande.ExecuteNonQuery();
+        }
+
+        private string ConstruireRequeteMerge(
+            string nomTableSql,
+            string nomTableTemporaire,
+            List<string> colonnes,
+            List<string> colonnesCles)
+        {
+            List<string> colonnesNonCles = colonnes
+                .Where(c => !colonnesCles.Any(cle =>
+                    cle.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            string conditionJointure = string.Join(
+                " AND ",
+                colonnesCles.Select(c =>
+                    $"cible.{ConstruireNomSql(c)} = source.{ConstruireNomSql(c)}"));
+
+            string colonnesInsert = string.Join(
+                ", ",
+                colonnes.Select(ConstruireNomSql));
+
+            string valeursInsert = string.Join(
+                ", ",
+                colonnes.Select(c => $"source.{ConstruireNomSql(c)}"));
+
+            string clauseUpdate = string.Empty;
+
+            if (colonnesNonCles.Count > 0)
+            {
+                string valeursUpdate = string.Join(
+                    "," + Environment.NewLine + "        ",
+                    colonnesNonCles.Select(c =>
+                        $"cible.{ConstruireNomSql(c)} = source.{ConstruireNomSql(c)}"));
+
+                clauseUpdate = $@"
+    WHEN MATCHED THEN
+        UPDATE SET
+        {valeursUpdate}";
+            }
+
+            // Cette requête fait l'équivalent SQL Server de :
+            // INSERT ... ON DUPLICATE KEY UPDATE en MySQL.
+            // Si la clé existe déjà, elle met à jour.
+            // Si la clé n'existe pas, elle insère une nouvelle ligne.
+            string requeteMerge = $@"
+        MERGE INTO {nomTableSql} AS cible
+        USING {nomTableTemporaire} AS source
+        ON {conditionJointure}
+        {clauseUpdate}
+        WHEN NOT MATCHED BY TARGET THEN
+            INSERT ({colonnesInsert})
+            VALUES ({valeursInsert});
+    ";
+
+            return requeteMerge;
+        }
+
+        private string CreerNomTableTemporaire(string nomTable)
+        {
+            string nomNettoye = new string(
+                nomTable
+                    .Where(c => char.IsLetterOrDigit(c) || c == '_')
+                    .ToArray());
+
+            if (string.IsNullOrWhiteSpace(nomNettoye))
+            {
+                nomNettoye = "Table";
+            }
+
+            return "#Temp_" + nomNettoye + "_" + Guid.NewGuid().ToString("N");
         }
 
         private bool SourceEtCibleIdentiques(string chaineConnexionSource, string chaineConnexionCible)
@@ -369,27 +653,10 @@ namespace SaimDataCopy.DataProviders.Execution
 
         private string ObtenirNomBaseCible (string nomBaseSource)
         {
-            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBaseSource);
-            string chaineConnexionCible = CreerChaineConnexionBaseCible(nomBaseSource);
-
-            SqlConnectionStringBuilder source = new SqlConnectionStringBuilder (chaineConnexionSource);
-
-            SqlConnectionStringBuilder cible = new SqlConnectionStringBuilder(chaineConnexionCible);
-
-            bool memeServeur = string.Equals(source.DataSource, cible.DataSource, StringComparison.OrdinalIgnoreCase);
-
-            if (memeServeur)
-            {
-                // Cas de test local :
-                // Si la source et la cible sont sur le même serveur,
-                // on utilise une base cible différente pour éviter de toucher à la source.
-                return $"CIBLE_{nomBaseSource}";
-            }
-
-            // Cas réel :
-            // Si les serveurs sont différents, on garde le même nom de base.
-            // Exemple : ServeurSource.DB_TestRH -> ServeurCible.DB_TestRH
-
+            // on garde le même nom de base côté cible.
+            // Exemple :
+            // Source : (localdb)\MSSQLLocalDB / DB_TestRH
+            // Cible  : localhost,1433 / DB_TestRH
             return nomBaseSource;
 
         }

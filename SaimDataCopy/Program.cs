@@ -1,4 +1,3 @@
-using SaimDataCopy.DataAccess;
 using SaimDataCopy.Views.Forms;
 
 namespace SaimDataCopy
@@ -15,19 +14,16 @@ namespace SaimDataCopy
 
             try
             {
-                // Au démarrage, on vérifie si la base SQL Server existe.
-                // Si elle n'existe pas, EF Core crée la base et les tables.
-                DatabaseInitializer.InitialiserBaseDeDonnees();
-
+                // On lance l'interface principale de l'application.
                 Application.Run(new MainForm());
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Erreur pendant l'initialisation de la base de données :"
+                    "Erreur pendant le démarrage de l'application :"
                     + Environment.NewLine
                     + ex.Message,
-                    "Erreur SQL Server",
+                    "Erreur",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );

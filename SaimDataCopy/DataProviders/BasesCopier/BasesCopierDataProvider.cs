@@ -1,22 +1,44 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using SaimDataCopy.DataAccess;
+using SaimDataCopy.DataProviders.Configuration;
 using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Models.Configuration;
 
 namespace SaimDataCopy.DataProviders.BasesCopier
 {
     // DataProvider pour la page Bases à copier.
-    // il sauvegarde l'état dans SQL Server avec Entity Framework Core.
+    // Il lit les bases depuis le serveur source
+    // et sauvegarde les choix de l'utilisateur dans un fichier JSON.
     public class BasesCopierDataProvider : IBasesCopierDataProvider
     {
+        private readonly string _cheminFichierBases;
+        private readonly IConfigurationDataProvider _configurationDataProvider;
+
+        public BasesCopierDataProvider()
+            : this(new ConfigurationDataProvider())
+        {
+        }
+
+        public BasesCopierDataProvider(IConfigurationDataProvider configurationDataProvider)
+        {
+            _configurationDataProvider = configurationDataProvider;
+
+            // Le fichier JSON sera stocké dans le dossier Data de l'application.
+            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+
+            if (!Directory.Exists(dossierData))
+            {
+                Directory.CreateDirectory(dossierData);
+            }
+
+            _cheminFichierBases = Path.Combine(dossierData, "bases_copier.json");
+        }
+
         public List<BaseCopieModel> ChargerBasesDepuisServeurSource()
         {
-            // On récupère d'abord la configuration sauvegardée dans SaimDataCopyDb.
-            using SaimDbContext dbContextApplication = SaimDbContextFactory.CreerDbContext();
-
-            var configuration = dbContextApplication.Configurations
-                .OrderBy(c => c.Id)
-                .FirstOrDefault();
+            // On récupère la configuration depuis configuration_execution.json.
+            ConfigurationModel? configuration = _configurationDataProvider.ChargerConfiguration();
 
             if (configuration == null)
             {
@@ -33,15 +55,18 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             // Ici, on crée un DbContext connecté au serveur source.
             using SaimDbContext dbContextSource = new SaimDbContext(optionsSource);
 
+            // Cette requête lit les bases disponibles sur le serveur source.
+            // On ignore les bases système, la base interne de l'application,
+            // et les anciennes bases temporaires qui commencent par CIBLE_.
             List<string> nomsBases = dbContextSource.Database
                 .SqlQueryRaw<string>(
                     """
-            SELECT name AS Value
-            FROM sys.databases
-            WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb', 'SaimDataCopyDb')
-            AND name NOT LIKE 'CIBLE[_]%'
-            ORDER BY name
-            """
+                    SELECT name AS Value
+                    FROM sys.databases
+                    WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb', 'SaimDataCopyDb')
+                    AND name NOT LIKE 'CIBLE[_]%'
+                    ORDER BY name
+                    """
                 )
                 .ToList();
 
@@ -69,16 +94,118 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             return bases;
         }
 
-        private string ConstruireChaineConnexionSource(ConfigurationSqlModel configuration)
+        public List<BaseCopieModel> ChargerBasesSauvegardees()
+        {
+            List<BaseCopieModel> basesServeur = ChargerBasesDepuisServeurSource();
+
+            // On charge les choix sauvegardés dans bases_copier.json.
+            List<BaseCopieModel> basesJson = ChargerBasesJson();
+
+            // Si aucune sauvegarde JSON n'existe encore,
+            // on retourne les bases du serveur source cochées par défaut.
+            if (basesJson.Count == 0)
+            {
+                return basesServeur;
+            }
+
+            // On fusionne les vraies bases du serveur source
+            // avec les choix sauvegardés dans le fichier JSON.
+            return FusionnerBasesServeurEtSauvegarde(
+                basesServeur,
+                basesJson
+            );
+        }
+
+        public void EnregistrerBases(List<BaseCopieModel> bases)
+        {
+            // Sauvegarde uniquement dans le fichier JSON.
+            EnregistrerBasesJson(bases);
+        }
+
+        public void AppliquerModeCopieGlobal(string modeCopieGlobal)
+        {
+            List<BaseCopieModel> bases = ChargerBasesSauvegardees();
+
+            if (bases.Count == 0)
+            {
+                bases = ChargerBasesDepuisServeurSource();
+            }
+
+            foreach (BaseCopieModel baseCopie in bases)
+            {
+                baseCopie.ModeCopie = NormaliserModeCopie(modeCopieGlobal);
+            }
+
+            EnregistrerBases(bases);
+        }
+
+        private void EnregistrerBasesJson(List<BaseCopieModel> bases)
+        {
+            List<BaseCopieModel> basesNormalisees = bases
+                .Select(NormaliserBaseCopieModel)
+                .OrderBy(b => b.OrdreTraitement)
+                .ToList();
+
+            string contenuJson = JsonConvert.SerializeObject(
+                basesNormalisees,
+                Formatting.Indented
+            );
+
+            File.WriteAllText(_cheminFichierBases, contenuJson);
+        }
+
+        private List<BaseCopieModel> ChargerBasesJson()
+        {
+            if (!File.Exists(_cheminFichierBases))
+            {
+                return new List<BaseCopieModel>();
+            }
+
+            string contenuJson = File.ReadAllText(_cheminFichierBases);
+
+            if (string.IsNullOrWhiteSpace(contenuJson))
+            {
+                return new List<BaseCopieModel>();
+            }
+
+            try
+            {
+                List<BaseCopieModel>? bases =
+                    JsonConvert.DeserializeObject<List<BaseCopieModel>>(contenuJson);
+
+                if (bases == null)
+                {
+                    return new List<BaseCopieModel>();
+                }
+
+                return bases
+                    .Select(NormaliserBaseCopieModel)
+                    .OrderBy(b => b.OrdreTraitement)
+                    .ToList();
+            }
+            catch (JsonException)
+            {
+                throw new InvalidOperationException(
+                    "Le fichier bases_copier.json est invalide. Vérifiez son contenu JSON.");
+            }
+        }
+
+        private string ConstruireChaineConnexionSource(ConfigurationModel configuration)
         {
             // Si une chaîne complète est déjà saisie dans Configuration,
             // on l'utilise directement.
-            if (!string.IsNullOrWhiteSpace(configuration.ServeurSourceChaineConnexion))
+            if (!string.IsNullOrWhiteSpace(configuration.ServeurSource.ChaineConnexion))
             {
-                return configuration.ServeurSourceChaineConnexion;
+                return configuration.ServeurSource.ChaineConnexion;
             }
 
-            string nomServeur = configuration.ServeurSourceNom.Trim();
+            string nomServeur = configuration.ServeurSource.NomServeur.Trim();
+
+            if (string.IsNullOrWhiteSpace(nomServeur))
+            {
+                throw new InvalidOperationException(
+                    "Le serveur source n'est pas renseigné dans la configuration.");
+            }
 
             // LocalDB ne fonctionne pas avec un port.
             bool estLocalDb = nomServeur.Contains(
@@ -86,23 +213,30 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                 StringComparison.OrdinalIgnoreCase
             );
 
+            bool estInstanceNommee = nomServeur.Contains('\\');
+
             string serveurAvecPort = nomServeur;
 
-            if (!estLocalDb && configuration.ServeurSourcePort > 0)
+            // On ajoute le port seulement pour un vrai serveur réseau.
+            // On ne l'ajoute pas pour LocalDB ou pour une instance nommée.
+            if (!estLocalDb &&
+                !estInstanceNommee &&
+                configuration.ServeurSource.Port > 0 &&
+                !serveurAvecPort.Contains(','))
             {
-                serveurAvecPort = $"{nomServeur},{configuration.ServeurSourcePort}";
+                serveurAvecPort = $"{nomServeur},{configuration.ServeurSource.Port}";
             }
 
             bool utiliseAuthentificationSql =
-                !string.IsNullOrWhiteSpace(configuration.ServeurSourceIdentifiant);
+                !string.IsNullOrWhiteSpace(configuration.ServeurSource.Identifiant);
 
             if (utiliseAuthentificationSql)
             {
                 return
                     $"Server={serveurAvecPort};" +
                     "Database=master;" +
-                    $"User Id={configuration.ServeurSourceIdentifiant};" +
-                    $"Password={configuration.ServeurSourceMotDePasse};" +
+                    $"User Id={configuration.ServeurSource.Identifiant};" +
+                    $"Password={configuration.ServeurSource.MotDePasse};" +
                     "TrustServerCertificate=True;";
             }
 
@@ -112,145 +246,18 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                 "Trusted_Connection=True;" +
                 "TrustServerCertificate=True;";
         }
-        public List<BaseCopieModel> ChargerBasesSauvegardees()
-        {
-            List<BaseCopieModel> basesServeur = ChargerBasesDepuisServeurSource();
 
-            using SaimDbContext dbContext = SaimDbContextFactory.CreerDbContext();
-
-            List<BaseCopieSqlModel> basesSql = dbContext.BasesCopier
-                .OrderBy(b => b.OrdreTraitement)
-                .ToList();
-
-            // Si aucune sauvegarde SQL n'existe encore,
-            // on retourne les bases du serveur source cochées par défaut.
-            if (basesSql.Count == 0)
-            {
-                return basesServeur;
-            }
-
-            List<BaseCopieModel> basesSauvegardees = basesSql
-                .Select(ConvertirVersBaseCopieModel)
-                .ToList();
-
-            return FusionnerBasesServeurEtSauvegarde(
-                basesServeur,
-                basesSauvegardees
-            );
-        }
-
-        public void EnregistrerBases(List<BaseCopieModel> bases)
-        {
-            using SaimDbContext dbContext = SaimDbContextFactory.CreerDbContext();
-
-            // Liste des bases actuellement visibles dans la page.
-            // Ce sont les bases réellement trouvées sur le serveur source.
-            List<string> nomsBasesActuelles = bases
-                .Select(b => b.NomBase.Trim())
-                .ToList();
-
-            // On charge les anciennes bases déjà enregistrées dans SQL.
-            List<BaseCopieSqlModel> basesSqlExistantes = dbContext.BasesCopier
-                .ToList();
-
-            // On supprime les bases qui étaient sauvegardées avant,
-            // mais qui n'existent plus dans la liste actuelle.
-            List<BaseCopieSqlModel> basesASupprimer = basesSqlExistantes
-                .Where(b => !nomsBasesActuelles.Any(nom =>
-                    nom.Equals(b.NomBase, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-
-            if (basesASupprimer.Count > 0)
-            {
-                dbContext.BasesCopier.RemoveRange(basesASupprimer);
-            }
-
-            foreach (BaseCopieModel baseCopie in bases)
-            {
-                string nomBase = baseCopie.NomBase.Trim();
-
-                BaseCopieSqlModel? baseSql = dbContext.BasesCopier
-                    .FirstOrDefault(b => b.NomBase == nomBase);
-
-                if (baseSql == null)
-                {
-                    baseSql = new BaseCopieSqlModel
-                    {
-                        NomBase = nomBase,
-                        DateCreation = DateTime.Now
-                    };
-
-                    dbContext.BasesCopier.Add(baseSql);
-                }
-
-                RemplirBaseCopieSql(baseSql, baseCopie);
-            }
-
-            dbContext.SaveChanges();
-        }
-        public void AppliquerModeCopieGlobal(string modeCopieGlobal)
-        {
-            using SaimDbContext dbContext = SaimDbContextFactory.CreerDbContext();
-
-            List<BaseCopieSqlModel> basesSql = dbContext.BasesCopier
-                .OrderBy(b => b.OrdreTraitement)
-                .ToList();
-
-            // Si rien n'est encore sauvegardé,
-            // on crée d'abord les bases depuis la liste simulée.
-            if (basesSql.Count == 0)
-            {
-                List<BaseCopieModel> basesServeur = ChargerBasesDepuisServeurSource();
-
-                foreach (BaseCopieModel baseCopie in basesServeur)
-                {
-                    BaseCopieSqlModel nouvelleBaseSql = new BaseCopieSqlModel
-                    {
-                        NomBase = baseCopie.NomBase,
-                        DateCreation = DateTime.Now
-                    };
-
-                    RemplirBaseCopieSql(nouvelleBaseSql, baseCopie);
-                    dbContext.BasesCopier.Add(nouvelleBaseSql);
-                    basesSql.Add(nouvelleBaseSql);
-                }
-            }
-
-            foreach (BaseCopieSqlModel baseSql in basesSql)
-            {
-                baseSql.ModeCopie = NormaliserModeCopie(modeCopieGlobal);
-                baseSql.DateModification = DateTime.Now;
-            }
-
-            dbContext.SaveChanges();
-        }
-
-        private void RemplirBaseCopieSql(
-            BaseCopieSqlModel baseSql,
-            BaseCopieModel baseCopie)
-        {
-            baseSql.Inclure = baseCopie.Inclure;
-            baseSql.NomBase = baseCopie.NomBase.Trim();
-            baseSql.OrdreTraitement = baseCopie.OrdreTraitement;
-            baseSql.ModeCopie = NormaliserModeCopie(baseCopie.ModeCopie);
-            baseSql.Statut = baseCopie.Statut;
-            baseSql.DerniereCopie = baseCopie.DerniereCopie;
-            baseSql.ExisteSurServeurSource = baseCopie.ExisteSurServeurSource;
-            baseSql.NomModifiable = false;
-            baseSql.DateModification = DateTime.Now;
-        }
-
-        private BaseCopieModel ConvertirVersBaseCopieModel(BaseCopieSqlModel baseSql)
+        private BaseCopieModel NormaliserBaseCopieModel(BaseCopieModel baseCopie)
         {
             return new BaseCopieModel
             {
-                Inclure = baseSql.Inclure,
-                NomBase = baseSql.NomBase,
-                OrdreTraitement = baseSql.OrdreTraitement,
-                ModeCopie = NormaliserModeCopie(baseSql.ModeCopie),
-                Statut = baseSql.Statut,
-                DerniereCopie = baseSql.DerniereCopie,
-                ExisteSurServeurSource = baseSql.ExisteSurServeurSource,
+                Inclure = baseCopie.Inclure,
+                NomBase = baseCopie.NomBase.Trim(),
+                OrdreTraitement = baseCopie.OrdreTraitement,
+                ModeCopie = NormaliserModeCopie(baseCopie.ModeCopie),
+                Statut = baseCopie.Statut,
+                DerniereCopie = baseCopie.DerniereCopie,
+                ExisteSurServeurSource = baseCopie.ExisteSurServeurSource,
                 NomModifiable = false
             };
         }
@@ -279,7 +286,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                     continue;
                 }
 
-                // La base existe déjà dans SQL.
+                // La base existe déjà dans le fichier JSON.
                 // On garde les choix de l'utilisateur.
                 resultat.Add(new BaseCopieModel
                 {

@@ -301,8 +301,10 @@ namespace SaimDataCopy.Services.Execution
                 : "Base cible déjà existante.";
 
             // On charge les vraies tables de la base source.
-            List<string> tables =
-                _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
+            List<string> tables = _executionDataProvider.ChargerTablesBaseSource(baseCopie.NomBase);
+            // On récupère le mode de copie choisi pour cette base.
+            // Exemple : Écraser ou Mise à jour.
+            string modeCopie = NormaliserModeCopie(baseCopie.ModeCopie);
 
             if (tables.Count == 0)
             {
@@ -312,7 +314,7 @@ namespace SaimDataCopy.Services.Execution
                     LignesAvant = 0,
                     LignesApres = 0,
                     Resultat = "Avertissement",
-                    Message = $"{messageBaseCible} Aucune table trouvée dans cette base."
+                    Message = $"Mode : {modeCopie}. {messageBaseCible} Aucune table trouvée dans cette base."
                 };
             }
 
@@ -338,10 +340,7 @@ namespace SaimDataCopy.Services.Execution
                     nombreTablesDejaExistantes++;
                 }
 
-                // On récupère le mode de copie choisi pour cette base.
-                // Exemple : "Ecraser" ou "Mettre a jour".
-
-                string modeCopie = baseCopie.ModeCopie;
+                
                 // Ici, on lance la vraie copie des lignes.
                 // Si la source et la cible sont identiques, le DataProvider va bloquer la copie.
 
@@ -363,10 +362,24 @@ namespace SaimDataCopy.Services.Execution
                 LignesApres = totalLignes,
                 Resultat = "Succès",
                 Message =
+                    $"Mode : {modeCopie}. " +
                     $"{messageBaseCible} " +
                     $"Préparation cible terminée : {nombreTablesCreees} table(s) créée(s), " +
                     $"{nombreTablesDejaExistantes} table(s) déjà existante(s). " +
                     $"Copie terminée : {tables.Count} table(s), {totalLignes} ligne(s) copiée(s)."
+            };
+        }
+
+        private string NormaliserModeCopie(string modeCopie)
+        {
+            return modeCopie switch
+            {
+                "Ecraser" => "Écraser",
+                "Écraser" => "Écraser",
+                "Mettre a jour" => "Mise à jour",
+                "Mettre à jour" => "Mise à jour",
+                "Mise à jour" => "Mise à jour",
+                _ => "Écraser"
             };
         }
 

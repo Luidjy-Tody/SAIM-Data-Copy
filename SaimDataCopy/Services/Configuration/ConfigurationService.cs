@@ -41,7 +41,7 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            if (configuration.ServeurSource.Port <= 0)
+            if (!PortValide(configuration.ServeurSource))
             {
                 message = "Le port du serveur source est invalide.";
                 return false;
@@ -53,7 +53,7 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            if (configuration.ServeurCible.Port <= 0)
+            if (!PortValide(configuration.ServeurCible))
             {
                 message = "Le port du serveur cible est invalide.";
                 return false;
@@ -110,6 +110,44 @@ namespace SaimDataCopy.Services.Configuration
             return true;
         }
 
+        private bool PortValide(ServeurConfigModel serveur)
+        {
+            // Un port négatif est toujours invalide.
+            if (serveur.Port < 0)
+            {
+                return false;
+            }
+
+            // LocalDB n'utilise pas de port.
+            // Donc 0 ou vide est accepté.
+            if (ServeurSansPort(serveur.NomServeur))
+            {
+                return true;
+            }
+
+            // Pour un vrai serveur réseau, le port doit être supérieur à 0.
+            // Exemple : localhost,1433
+            return serveur.Port > 0;
+        }
+
+        private bool ServeurSansPort(string nomServeur)
+        {
+            if (string.IsNullOrWhiteSpace(nomServeur))
+            {
+                return false;
+            }
+
+            bool estLocalDb = nomServeur.Contains(
+                "(localdb)",
+                StringComparison.OrdinalIgnoreCase);
+
+            bool estInstanceNommee = nomServeur.Contains('\\');
+
+            // LocalDB : (localdb)\MSSQLLocalDB
+            // Instance nommée : PC\SQLEXPRESS
+            // Ces deux cas n'ont pas besoin d'un port dans notre interface.
+            return estLocalDb || estInstanceNommee;
+        }
         private string NormaliserModeCopie(string modeCopie)
         {
             return modeCopie switch
@@ -120,5 +158,7 @@ namespace SaimDataCopy.Services.Configuration
                 _ => string.Empty
             };
         }
+
+
     }
 }
