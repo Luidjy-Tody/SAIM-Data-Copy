@@ -236,14 +236,14 @@ namespace SaimDataCopy.Styles
             }
         }
 
-        // Style du bouton Voir détail.
+        // Style du bouton Voir détail dans le tableau Historique.
         public static void AppliquerBoutonDetail(Button bouton)
         {
-            bouton.Width = 90;
-            bouton.Height = 62;
-            bouton.Text = "Voir\ndétail";
+            bouton.Width = 84;
+            bouton.Height = 36;
+            bouton.Text = "Voir détail";
 
-            bouton.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            bouton.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
             bouton.ForeColor = CouleurTexte;
             bouton.BackColor = Color.White;
 
@@ -251,7 +251,12 @@ namespace SaimDataCopy.Styles
             bouton.FlatAppearance.BorderColor = CouleurBordure;
             bouton.FlatAppearance.BorderSize = 1;
 
+            bouton.TextAlign = ContentAlignment.MiddleCenter;
+            bouton.Padding = new Padding(0);
+            bouton.Margin = new Padding(0);
+
             bouton.Cursor = Cursors.Hand;
+            bouton.UseVisualStyleBackColor = false;
         }
 
         // Style du panel de détail.

@@ -1,12 +1,17 @@
 ﻿using SaimDataCopy.DataProviders.Email;
 using SaimDataCopy.DataProviders.Execution;
+using SaimDataCopy.DataProviders.Historique;
 using SaimDataCopy.DataProviders.Logs;
+using SaimDataCopy.Helpers;
 using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Models.Execution;
+using SaimDataCopy.Models.Historique;
 using SaimDataCopy.Services.Email;
 using SaimDataCopy.Services.Logs;
 using System.Diagnostics;
-using SaimDataCopy.Helpers;
+using SaimDataCopy.DataProviders.Configuration;
+using SaimDataCopy.Models.Configuration;
+using System.Configuration;
 
 namespace SaimDataCopy.Services.Execution
 {
@@ -17,6 +22,8 @@ namespace SaimDataCopy.Services.Execution
         private readonly IExecutionDataProvider _executionDataProvider;
         private readonly IJournalisationService _journalisationService;
         private readonly IEmailService _emailService;
+        private readonly IHistoriqueDataProvider _historiqueDataProvider;
+        private readonly IConfigurationDataProvider _configurationDataProvider;
 
         public ExecutionService(IExecutionDataProvider executionDataProvider)
             : this(
@@ -40,10 +47,40 @@ namespace SaimDataCopy.Services.Execution
             IExecutionDataProvider executionDataProvider,
             IJournalisationService journalisationService,
             IEmailService emailService)
+            : this(
+                executionDataProvider,
+                journalisationService,
+                emailService,
+                new HistoriqueDataProvider())
+        {
+        }
+
+        public ExecutionService(
+    IExecutionDataProvider executionDataProvider,
+    IJournalisationService journalisationService,
+    IEmailService emailService,
+    IHistoriqueDataProvider historiqueDataProvider)
+    : this(
+        executionDataProvider,
+        journalisationService,
+        emailService,
+        historiqueDataProvider,
+        new ConfigurationDataProvider())
+        {
+        }
+
+        public ExecutionService(
+            IExecutionDataProvider executionDataProvider,
+            IJournalisationService journalisationService,
+            IEmailService emailService,
+            IHistoriqueDataProvider historiqueDataProvider,
+            IConfigurationDataProvider configurationDataProvider)
         {
             _executionDataProvider = executionDataProvider;
             _journalisationService = journalisationService;
             _emailService = emailService;
+            _historiqueDataProvider = historiqueDataProvider;
+            _configurationDataProvider = configurationDataProvider;
         }
 
         public ExecutionTableauBordModel ChargerTableauBordInitial()
@@ -204,6 +241,8 @@ namespace SaimDataCopy.Services.Execution
                 return resultats;
             }
 
+            DateTime dateHeureLancement = DateTime.Now;
+
             Stopwatch chronometre = Stopwatch.StartNew();
 
             int totalBases = basesSelectionnees.Count;
@@ -339,7 +378,17 @@ namespace SaimDataCopy.Services.Execution
                 $"{totalLignesCopiees} ligne(s) copiée(s), " +
                 $"durée : {FormaterDuree(chronometre.Elapsed)}.");
 
-            EnvoyerEmailConfirmationSiSucces(resultats, chronometre.Elapsed);
+            bool emailEnvoye = EnvoyerEmailConfirmationSiSucces(
+                resultats,
+                chronometre.Elapsed
+            );
+
+            EnregistrerExecutionDansHistorique(
+                dateHeureLancement,
+                resultats,
+                chronometre.Elapsed,
+                emailEnvoye
+            );
 
             progression.Report(new ExecutionProgressionModel
             {
@@ -461,7 +510,7 @@ namespace SaimDataCopy.Services.Execution
             };
         }
 
-        private void EnvoyerEmailConfirmationSiSucces(
+        private bool EnvoyerEmailConfirmationSiSucces(
             List<ExecutionResultatBaseModel> resultats,
             TimeSpan dureeExecution)
         {
@@ -470,7 +519,7 @@ namespace SaimDataCopy.Services.Execution
                 _journalisationService.EcrireInformation(
                     "E-mail de confirmation non envoyé car l'exécution contient une erreur ou un avertissement.");
 
-                return;
+                return false;
             }
 
             string listeBases = ConstruireListeBasesTraitees(resultats);
@@ -478,7 +527,8 @@ namespace SaimDataCopy.Services.Execution
 
             // On récupère le fichier log de l'exécution actuelle.
             // Ce fichier pourra être joint à l'e-mail si l'option est cochée dans Paramètres Email.
-            string cheminFichierLog = _journalisationService.RecupererCheminFichierExecutionActuel();
+            string cheminFichierLog =
+                _journalisationService.RecupererCheminFichierExecutionActuel();
 
             bool emailEnvoye = _emailService.EnvoyerEmailConfirmationCopie(
                 listeBases,
@@ -495,6 +545,8 @@ namespace SaimDataCopy.Services.Execution
             {
                 _journalisationService.EcrireAvertissement(messageEmail);
             }
+
+            return emailEnvoye;
         }
 
         private bool ExecutionTermineeAvecSucces(List<ExecutionResultatBaseModel> resultats)
@@ -525,6 +577,130 @@ namespace SaimDataCopy.Services.Execution
             }
 
             return string.Join(", ", nomsBases);
+        }
+
+        private void EnregistrerExecutionDansHistorique(
+    DateTime dateHeureLancement,
+    List<ExecutionResultatBaseModel> resultats,
+    TimeSpan dureeExecution,
+    bool emailEnvoye)
+        {
+            try
+            {
+                ConfigurationModel? configuration =
+                    _configurationDataProvider.ChargerConfiguration();
+
+                HistoriqueExecutionModel historique = new HistoriqueExecutionModel
+                {
+                    DateHeureLancement = dateHeureLancement,
+                    Origine = "Manuel",
+                    ServeurSource = ObtenirServeurAffichage(configuration?.ServeurSource),
+                    ServeurCible = ObtenirServeurAffichage(configuration?.ServeurCible),
+                    BasesTraitees = resultats
+                        .Select(resultat => resultat.NomBase)
+                        .ToList(),
+                    LignesAvant = resultats.Sum(resultat => resultat.LignesAvant),
+                    LignesApres = resultats.Sum(resultat => resultat.LignesApres),
+                    DureeSecondes = (int)Math.Ceiling(dureeExecution.TotalSeconds),
+                    Statut = DeterminerStatutHistorique(resultats),
+                    EmailEnvoye = emailEnvoye,
+                    DateHeureEmail = emailEnvoye ? DateTime.Now : null,
+                    EmailRapport = emailEnvoye ? "Rapport envoyé" : "Non envoyé",
+                    CheminFichierLog =
+                        _journalisationService.RecupererCheminFichierExecutionActuel(),
+                    Etapes = ConvertirResultatsEnEtapesHistorique(resultats)
+                };
+
+                _historiqueDataProvider.EnregistrerExecution(historique);
+
+                _journalisationService.EcrireInformation(
+                    "Historique de l'exécution enregistré.");
+            }
+            catch (Exception ex)
+            {
+                // Si l'historique échoue, on ne bloque pas toute la copie.
+                _journalisationService.EcrireAvertissement(
+                    $"Impossible d'enregistrer l'historique : {ex.Message}");
+            }
+        }
+
+        private string DeterminerStatutHistorique(List<ExecutionResultatBaseModel> resultats)
+        {
+            if (resultats.Any(resultat => resultat.Resultat == "Erreur"))
+            {
+                return "Échec";
+            }
+
+            if (resultats.Any(resultat => resultat.Resultat == "Avertissement"))
+            {
+                return "Avertissement";
+            }
+
+            return "Succès";
+        }
+
+        private List<HistoriqueEtapeExecutionModel> ConvertirResultatsEnEtapesHistorique(
+            List<ExecutionResultatBaseModel> resultats)
+        {
+            List<HistoriqueEtapeExecutionModel> etapes =
+                new List<HistoriqueEtapeExecutionModel>();
+
+            foreach (ExecutionResultatBaseModel resultat in resultats)
+            {
+                HistoriqueEtapeExecutionModel etape = new HistoriqueEtapeExecutionModel
+                {
+                    NomBase = resultat.NomBase,
+                    LignesAvant = resultat.LignesAvant,
+                    LignesApres = resultat.LignesApres,
+                    Statut = resultat.Resultat == "Erreur" ? "Échec" : resultat.Resultat,
+                    Message = resultat.Message,
+                    Logs = ConstruireLogsAffichageBase(resultat)
+                };
+
+                etapes.Add(etape);
+            }
+
+            return etapes;
+        }
+        private List<string> ConstruireLogsAffichageBase(ExecutionResultatBaseModel resultat)
+        {
+            List<string> logs = new List<string>();
+
+            logs.Add($"[{DateTime.Now:HH:mm:ss}] Traitement de la base {resultat.NomBase}");
+            logs.Add($"[{DateTime.Now:HH:mm:ss}] Statut : {resultat.Resultat}");
+            logs.Add($"[{DateTime.Now:HH:mm:ss}] Lignes : {resultat.LignesAvant} → {resultat.LignesApres}");
+
+            if (!string.IsNullOrWhiteSpace(resultat.Message))
+            {
+                logs.Add($"[{DateTime.Now:HH:mm:ss}] {resultat.Message}");
+            }
+
+            return logs;
+        }
+
+        private string ObtenirServeurAffichage(ServeurConfigModel? serveur)
+        {
+            if (serveur == null)
+            {
+                return "Non renseigné";
+            }
+
+            if (!string.IsNullOrWhiteSpace(serveur.ChaineConnexion))
+            {
+                return serveur.ChaineConnexion;
+            }
+
+            if (string.IsNullOrWhiteSpace(serveur.NomServeur))
+            {
+                return "Non renseigné";
+            }
+
+            if (serveur.Port > 0)
+            {
+                return $"{serveur.NomServeur},{serveur.Port}";
+            }
+
+            return serveur.NomServeur;
         }
 
         private string NormaliserModeCopie(string modeCopie)
