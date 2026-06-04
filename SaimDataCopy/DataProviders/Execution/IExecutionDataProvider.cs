@@ -23,7 +23,8 @@ namespace SaimDataCopy.DataProviders.Execution
         // Retourne true si la base a été créée, false si elle existait déjà.
 
         bool VerifierOuCreerTableCible(string nomBase, string nomTable);
-        int CopierLignesTableSourceVersCible(string nomBase, string nomTable, string modeCopie);
+        int CopierLignesTableSourceVersCible(string nomBase,string nomTable,string modeCopie,
+        CancellationToken cancellationToken);
         bool VerifierOuCreerBaseCible(string nomBase);
 
         // Charge le tableau de bord de la dernière exécution.

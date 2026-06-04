@@ -67,6 +67,7 @@ namespace SaimDataCopy.DataProviders.Execution
 
             string chaineConnexion = CreerChaineConnexionBaseSource(nomBase);
 
+            // Cette requête récupère toutes les tables utilisateur de la base source.
             string requete = @"
                 SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS NomTable
                 FROM INFORMATION_SCHEMA.TABLES
@@ -101,6 +102,7 @@ namespace SaimDataCopy.DataProviders.Execution
 
             string nomTableSql = ConstruireNomTableSql(nomTable);
 
+            // Cette requête compte le nombre de lignes dans la table source.
             string requete = $"SELECT COUNT(*) FROM {nomTableSql};";
 
             using SqlConnection connexion = new SqlConnection(chaineConnexion);
@@ -124,26 +126,28 @@ namespace SaimDataCopy.DataProviders.Execution
             {
                 return false;
             }
+
             string nomBaseCible = ObtenirNomBaseCible(nomBase);
 
             string chaineConnexion = CreerChaineConnexionBaseCible("master");
 
             string nomBaseSql = ConstruireNomBaseSql(nomBaseCible);
+
             // Cette requête vérifie si la base cible existe déjà.
             // Si elle n'existe pas, SQL Server crée la base avec CREATE DATABASE.
             // SELECT 1 = la base vient d'être créée.
             // SELECT 0 = la base existait déjà.
             string requete = $@"
-            IF DB_ID(@NomBase) IS NULL
-            BEGIN
-                CREATE DATABASE {nomBaseSql};
-                SELECT 1;
-            END
-            ELSE
-            BEGIN
-                SELECT 0;
-            END;
-        ";
+                IF DB_ID(@NomBase) IS NULL
+                BEGIN
+                    CREATE DATABASE {nomBaseSql};
+                    SELECT 1;
+                END
+                ELSE
+                BEGIN
+                    SELECT 0;
+                END;
+            ";
 
             using SqlConnection connexion = new SqlConnection(chaineConnexion);
             connexion.Open();
@@ -171,11 +175,9 @@ namespace SaimDataCopy.DataProviders.Execution
                 return false;
             }
 
-
             string[] morceaux = nomTable.Split('.');
 
             if (morceaux.Length != 2)
-
             {
                 throw new InvalidOperationException(
                     $"Le nom de table '{nomTable}' est invalide. Format attendu : schema.table.");
@@ -187,16 +189,18 @@ namespace SaimDataCopy.DataProviders.Execution
             string nomBaseCible = ObtenirNomBaseCible(nomBase);
 
             string chaineConnexionCible = CreerChaineConnexionBaseCible(nomBaseCible);
+
             // Cette requête vérifie si la table existe déjà dans la base cible.
             // INFORMATION_SCHEMA.TABLES contient la liste des tables de la base.
             // COUNT(*) retourne 0 si la table n’existe pas, ou 1 si elle existe.
             string requeteVerification = @"
                 SELECT COUNT(*)
                 FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_SCHEMA  = @Schema
+                WHERE TABLE_SCHEMA = @Schema
                 AND TABLE_NAME = @Table
                 AND TABLE_TYPE = 'BASE TABLE';
             ";
+
             using SqlConnection connexionCible = new SqlConnection(chaineConnexionCible);
             connexionCible.Open();
 
@@ -206,13 +210,14 @@ namespace SaimDataCopy.DataProviders.Execution
 
             object? resultatVerification = commandeVerification.ExecuteScalar();
 
-            bool tableExiste = resultatVerification != null && Convert.ToInt32(resultatVerification) > 0;
+            bool tableExiste =
+                resultatVerification != null &&
+                Convert.ToInt32(resultatVerification) > 0;
 
             if (tableExiste)
             {
-                //false = la table existant deja
-
-                return false ;
+                // false = la table existe déjà.
+                return false;
             }
 
             List<string> colonnesSql =
@@ -222,7 +227,6 @@ namespace SaimDataCopy.DataProviders.Execution
             {
                 throw new InvalidOperationException(
                     $"Impossible de créer la table cible '{nomTable}' car aucune colonne source n'a été trouvée.");
-
             }
 
             string nomSchemaSql = ConstruireNomSql(schema);
@@ -230,7 +234,8 @@ namespace SaimDataCopy.DataProviders.Execution
             string nomTableCompletSql = $"{nomSchemaSql}.{nomTableSql}";
 
             string definitionColonnes = string.Join(
-                "," + Environment.NewLine + "    ", colonnesSql);
+                "," + Environment.NewLine + "    ",
+                colonnesSql);
 
             // Cette requête crée le schéma s'il n'existe pas encore.
             // Ensuite elle crée la table cible avec les colonnes récupérées depuis la table source.
@@ -242,26 +247,28 @@ namespace SaimDataCopy.DataProviders.Execution
 
                 CREATE TABLE {nomTableCompletSql}
                 (
-
-                    {
-                        definitionColonnes
-                    }
+                    {definitionColonnes}
                 );
             ";
 
             using SqlCommand commandeCreation = new SqlCommand(requeteCreation, connexionCible);
-            commandeCreation.Parameters.AddWithValue("@Schema", schema );
+            commandeCreation.Parameters.AddWithValue("@Schema", schema);
             commandeCreation.ExecuteNonQuery();
 
-            //true = la table vient d'etre creee
-
-            return true ;
-
+            // true = la table vient d'être créée.
+            return true;
         }
 
-        public int CopierLignesTableSourceVersCible(string nomBase, string nomTable, string modeCopie)
+        public int CopierLignesTableSourceVersCible(
+            string nomBase,
+            string nomTable,
+            string modeCopie,
+            CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(nomBase) || string.IsNullOrWhiteSpace(nomTable))
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (string.IsNullOrWhiteSpace(nomBase) ||
+                string.IsNullOrWhiteSpace(nomTable))
             {
                 return 0;
             }
@@ -280,6 +287,8 @@ namespace SaimDataCopy.DataProviders.Execution
                     "La source et la cible pointent vers la même base. Copie annulée pour éviter de modifier les données source.");
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             switch (modeCopie)
             {
                 case "Ecraser":
@@ -288,7 +297,8 @@ namespace SaimDataCopy.DataProviders.Execution
                         nomBase,
                         nomTable,
                         chaineConnexionSource,
-                        chaineConnexionCible);
+                        chaineConnexionCible,
+                        cancellationToken);
 
                 case "Mettre a jour":
                 case "Mettre à jour":
@@ -297,7 +307,8 @@ namespace SaimDataCopy.DataProviders.Execution
                         nomBase,
                         nomTable,
                         chaineConnexionSource,
-                        chaineConnexionCible);
+                        chaineConnexionCible,
+                        cancellationToken);
 
                 default:
                     throw new InvalidOperationException(
@@ -306,11 +317,14 @@ namespace SaimDataCopy.DataProviders.Execution
         }
 
         private int CopierModeEcraser(
-    string nomBase,
-    string nomTable,
-    string chaineConnexionSource,
-    string chaineConnexionCible)
+            string nomBase,
+            string nomTable,
+            string chaineConnexionSource,
+            string chaineConnexionCible,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             string nomTableSql = ConstruireNomTableSql(nomTable);
 
             // Cette requête lit toutes les lignes de la table source.
@@ -320,8 +334,10 @@ namespace SaimDataCopy.DataProviders.Execution
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
             using SqlConnection connexionCible = new SqlConnection(chaineConnexionCible);
 
-            connexionSource.Open();
-            connexionCible.Open();
+            connexionSource.OpenAsync(cancellationToken).GetAwaiter().GetResult();
+            connexionCible.OpenAsync(cancellationToken).GetAwaiter().GetResult();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Cette requête vide la table cible avant la copie.
             // DELETE est utilisé car il est plus simple et plus sûr que TRUNCATE.
@@ -329,16 +345,27 @@ namespace SaimDataCopy.DataProviders.Execution
 
             using (SqlCommand commandeSuppression = new SqlCommand(requeteSuppressionCible, connexionCible))
             {
-                commandeSuppression.ExecuteNonQuery();
+                commandeSuppression
+                    .ExecuteNonQueryAsync(cancellationToken)
+                    .GetAwaiter()
+                    .GetResult();
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             using SqlCommand commandeLecture = new SqlCommand(requeteLectureSource, connexionSource);
-            using SqlDataReader lecteur = commandeLecture.ExecuteReader();
+
+            using SqlDataReader lecteur =
+                commandeLecture.ExecuteReaderAsync(cancellationToken)
+                    .GetAwaiter()
+                    .GetResult();
 
             if (!lecteur.HasRows)
             {
                 return 0;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             using SqlBulkCopy bulkCopy = new SqlBulkCopy(
                 connexionCible,
@@ -355,7 +382,11 @@ namespace SaimDataCopy.DataProviders.Execution
                 bulkCopy.ColumnMappings.Add(nomColonne, nomColonne);
             }
 
-            bulkCopy.WriteToServer(lecteur);
+            bulkCopy.WriteToServerAsync(lecteur, cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             return CompterLignesTableSource(nomBase, nomTable);
         }
@@ -364,8 +395,11 @@ namespace SaimDataCopy.DataProviders.Execution
             string nomBase,
             string nomTable,
             string chaineConnexionSource,
-            string chaineConnexionCible)
+            string chaineConnexionCible,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             string[] morceaux = nomTable.Split('.');
 
             if (morceaux.Length != 2)
@@ -402,21 +436,31 @@ namespace SaimDataCopy.DataProviders.Execution
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
             using SqlConnection connexionCible = new SqlConnection(chaineConnexionCible);
 
-            connexionSource.Open();
-            connexionCible.Open();
+            connexionSource.OpenAsync(cancellationToken).GetAwaiter().GetResult();
+            connexionCible.OpenAsync(cancellationToken).GetAwaiter().GetResult();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             CreerTableTemporaireCible(
                 connexionCible,
                 nomTableSql,
                 nomTableTemporaire);
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             using SqlCommand commandeLecture = new SqlCommand(requeteLectureSource, connexionSource);
-            using SqlDataReader lecteur = commandeLecture.ExecuteReader();
+
+            using SqlDataReader lecteur =
+                commandeLecture.ExecuteReaderAsync(cancellationToken)
+                    .GetAwaiter()
+                    .GetResult();
 
             if (!lecteur.HasRows)
             {
                 return 0;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             using SqlBulkCopy bulkCopy = new SqlBulkCopy(
                 connexionCible,
@@ -433,7 +477,11 @@ namespace SaimDataCopy.DataProviders.Execution
                 bulkCopy.ColumnMappings.Add(nomColonne, nomColonne);
             }
 
-            bulkCopy.WriteToServer(lecteur);
+            bulkCopy.WriteToServerAsync(lecteur, cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             string requeteMerge = ConstruireRequeteMerge(
                 nomTableSql,
@@ -442,7 +490,12 @@ namespace SaimDataCopy.DataProviders.Execution
                 colonnesCles);
 
             using SqlCommand commandeMerge = new SqlCommand(requeteMerge, connexionCible);
-            commandeMerge.ExecuteNonQuery();
+
+            commandeMerge.ExecuteNonQueryAsync(cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             return CompterLignesTableSource(nomBase, nomTable);
         }
@@ -456,12 +509,12 @@ namespace SaimDataCopy.DataProviders.Execution
             // Cette requête récupère les colonnes de la table source.
             // L'ordre est important pour garder la même structure que la table source.
             string requete = @"
-        SELECT COLUMN_NAME
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = @Schema
-        AND TABLE_NAME = @Table
-        ORDER BY ORDINAL_POSITION;
-    ";
+                SELECT COLUMN_NAME
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = @Schema
+                AND TABLE_NAME = @Table
+                ORDER BY ORDINAL_POSITION;
+            ";
 
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
             connexionSource.Open();
@@ -490,42 +543,42 @@ namespace SaimDataCopy.DataProviders.Execution
             // Elle prend d'abord la clé primaire.
             // S'il n'y a pas de clé primaire, elle peut prendre un index unique.
             string requete = @"
-        SELECT c.name
-        FROM sys.indexes i
-        INNER JOIN sys.index_columns ic 
-            ON i.object_id = ic.object_id 
-            AND i.index_id = ic.index_id
-        INNER JOIN sys.columns c 
-            ON ic.object_id = c.object_id 
-            AND ic.column_id = c.column_id
-        INNER JOIN sys.tables t 
-            ON i.object_id = t.object_id
-        INNER JOIN sys.schemas s 
-            ON t.schema_id = s.schema_id
-        WHERE s.name = @Schema
-        AND t.name = @Table
-        AND i.is_unique = 1
-        AND i.is_hypothetical = 0
-        AND i.has_filter = 0
-        AND ic.is_included_column = 0
-        AND i.index_id = (
-            SELECT TOP 1 i2.index_id
-            FROM sys.indexes i2
-            INNER JOIN sys.tables t2 
-                ON i2.object_id = t2.object_id
-            INNER JOIN sys.schemas s2 
-                ON t2.schema_id = s2.schema_id
-            WHERE s2.name = @Schema
-            AND t2.name = @Table
-            AND i2.is_unique = 1
-            AND i2.is_hypothetical = 0
-            AND i2.has_filter = 0
-            ORDER BY 
-                CASE WHEN i2.is_primary_key = 1 THEN 0 ELSE 1 END,
-                i2.index_id
-        )
-        ORDER BY ic.key_ordinal;
-    ";
+                SELECT c.name
+                FROM sys.indexes i
+                INNER JOIN sys.index_columns ic 
+                    ON i.object_id = ic.object_id 
+                    AND i.index_id = ic.index_id
+                INNER JOIN sys.columns c 
+                    ON ic.object_id = c.object_id 
+                    AND ic.column_id = c.column_id
+                INNER JOIN sys.tables t 
+                    ON i.object_id = t.object_id
+                INNER JOIN sys.schemas s 
+                    ON t.schema_id = s.schema_id
+                WHERE s.name = @Schema
+                AND t.name = @Table
+                AND i.is_unique = 1
+                AND i.is_hypothetical = 0
+                AND i.has_filter = 0
+                AND ic.is_included_column = 0
+                AND i.index_id = (
+                    SELECT TOP 1 i2.index_id
+                    FROM sys.indexes i2
+                    INNER JOIN sys.tables t2 
+                        ON i2.object_id = t2.object_id
+                    INNER JOIN sys.schemas s2 
+                        ON t2.schema_id = s2.schema_id
+                    WHERE s2.name = @Schema
+                    AND t2.name = @Table
+                    AND i2.is_unique = 1
+                    AND i2.is_hypothetical = 0
+                    AND i2.has_filter = 0
+                    ORDER BY 
+                        CASE WHEN i2.is_primary_key = 1 THEN 0 ELSE 1 END,
+                        i2.index_id
+                )
+                ORDER BY ic.key_ordinal;
+            ";
 
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
             connexionSource.Open();
@@ -552,10 +605,10 @@ namespace SaimDataCopy.DataProviders.Execution
             // Cette requête crée une table temporaire avec la même structure que la table cible.
             // TOP 0 veut dire qu'on copie seulement la structure, pas les données.
             string requeteCreationTemporaire = $@"
-        SELECT TOP 0 *
-        INTO {nomTableTemporaire}
-        FROM {nomTableSql};
-    ";
+                SELECT TOP 0 *
+                INTO {nomTableTemporaire}
+                FROM {nomTableSql};
+            ";
 
             using SqlCommand commande = new SqlCommand(requeteCreationTemporaire, connexionCible);
             commande.ExecuteNonQuery();
@@ -595,9 +648,9 @@ namespace SaimDataCopy.DataProviders.Execution
                         $"cible.{ConstruireNomSql(c)} = source.{ConstruireNomSql(c)}"));
 
                 clauseUpdate = $@"
-    WHEN MATCHED THEN
-        UPDATE SET
-        {valeursUpdate}";
+                    WHEN MATCHED THEN
+                        UPDATE SET
+                        {valeursUpdate}";
             }
 
             // Cette requête fait l'équivalent SQL Server de :
@@ -605,14 +658,14 @@ namespace SaimDataCopy.DataProviders.Execution
             // Si la clé existe déjà, elle met à jour.
             // Si la clé n'existe pas, elle insère une nouvelle ligne.
             string requeteMerge = $@"
-        MERGE INTO {nomTableSql} AS cible
-        USING {nomTableTemporaire} AS source
-        ON {conditionJointure}
-        {clauseUpdate}
-        WHEN NOT MATCHED BY TARGET THEN
-            INSERT ({colonnesInsert})
-            VALUES ({valeursInsert});
-    ";
+                MERGE INTO {nomTableSql} AS cible
+                USING {nomTableTemporaire} AS source
+                ON {conditionJointure}
+                {clauseUpdate}
+                WHEN NOT MATCHED BY TARGET THEN
+                    INSERT ({colonnesInsert})
+                    VALUES ({valeursInsert});
+            ";
 
             return requeteMerge;
         }
@@ -634,32 +687,34 @@ namespace SaimDataCopy.DataProviders.Execution
 
         private bool SourceEtCibleIdentiques(string chaineConnexionSource, string chaineConnexionCible)
         {
-            SqlConnectionStringBuilder source = new SqlConnectionStringBuilder(chaineConnexionSource);
+            SqlConnectionStringBuilder source =
+                new SqlConnectionStringBuilder(chaineConnexionSource);
 
-            SqlConnectionStringBuilder cible = new SqlConnectionStringBuilder(chaineConnexionCible);
+            SqlConnectionStringBuilder cible =
+                new SqlConnectionStringBuilder(chaineConnexionCible);
 
             bool memeServeur = string.Equals(
-                    source.DataSource,
-                    cible.DataSource,
-                    StringComparison.OrdinalIgnoreCase);
+                source.DataSource,
+                cible.DataSource,
+                StringComparison.OrdinalIgnoreCase);
 
             bool memeBase = string.Equals(
-                    source.InitialCatalog,
-                    cible.InitialCatalog,
-                    StringComparison.OrdinalIgnoreCase);
+                source.InitialCatalog,
+                cible.InitialCatalog,
+                StringComparison.OrdinalIgnoreCase);
 
             return memeServeur && memeBase;
         }
 
-        private string ObtenirNomBaseCible (string nomBaseSource)
+        private string ObtenirNomBaseCible(string nomBaseSource)
         {
-            // on garde le même nom de base côté cible.
+            // On garde le même nom de base côté cible.
             // Exemple :
             // Source : (localdb)\MSSQLLocalDB / DB_TestRH
             // Cible  : localhost,1433 / DB_TestRH
             return nomBaseSource;
-
         }
+
         private string CreerChaineConnexionBaseCible(string nomBase)
         {
             ConfigurationModel? configuration = _configurationDataProvider.ChargerConfiguration();
@@ -711,20 +766,22 @@ namespace SaimDataCopy.DataProviders.Execution
 
             string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
 
+            // Cette requête récupère les définitions des colonnes de la table source.
+            // Elle sert à recréer la même structure dans la table cible.
             string requete = @"
-        SELECT 
-            COLUMN_NAME,
-            DATA_TYPE,
-            CHARACTER_MAXIMUM_LENGTH,
-            NUMERIC_PRECISION,
-            NUMERIC_SCALE,
-            DATETIME_PRECISION,
-            IS_NULLABLE
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = @Schema
-        AND TABLE_NAME = @Table
-        ORDER BY ORDINAL_POSITION;
-    ";
+                SELECT 
+                    COLUMN_NAME,
+                    DATA_TYPE,
+                    CHARACTER_MAXIMUM_LENGTH,
+                    NUMERIC_PRECISION,
+                    NUMERIC_SCALE,
+                    DATETIME_PRECISION,
+                    IS_NULLABLE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = @Schema
+                AND TABLE_NAME = @Table
+                ORDER BY ORDINAL_POSITION;
+            ";
 
             using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
             connexionSource.Open();
@@ -917,12 +974,13 @@ namespace SaimDataCopy.DataProviders.Execution
 
             return builder.ConnectionString;
         }
+
         private SqlConnectionStringBuilder CreerBuilderDepuisServeur(ServeurConfigModel serveur)
         {
             if (string.IsNullOrWhiteSpace(serveur.NomServeur))
             {
                 throw new InvalidOperationException(
-                    "Le serveur source n'est pas renseigné dans la configuration.");
+                    "Le serveur SQL n'est pas renseigné dans la configuration.");
             }
 
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
@@ -971,7 +1029,7 @@ namespace SaimDataCopy.DataProviders.Execution
             if (string.IsNullOrWhiteSpace(serveur.NomServeur))
             {
                 throw new InvalidOperationException(
-                    "Le serveur source n'est pas renseigné dans la configuration.");
+                    "Le serveur SQL n'est pas renseigné dans la configuration.");
             }
 
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
@@ -1017,7 +1075,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string schema = morceaux[0];
             string table = morceaux[1];
 
-            return $"[{schema}].[{table}]";
+            return $"{ConstruireNomSql(schema)}.{ConstruireNomSql(table)}";
         }
 
         private ExecutionSauvegardeModel ChargerSauvegarde()

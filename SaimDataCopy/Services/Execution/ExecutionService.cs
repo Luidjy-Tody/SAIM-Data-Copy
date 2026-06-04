@@ -6,6 +6,7 @@ using SaimDataCopy.Models.Execution;
 using SaimDataCopy.Services.Email;
 using SaimDataCopy.Services.Logs;
 using System.Diagnostics;
+using SaimDataCopy.Helpers;
 
 namespace SaimDataCopy.Services.Execution
 {
@@ -272,9 +273,12 @@ namespace SaimDataCopy.Services.Execution
                 }
                 catch (Exception ex)
                 {
+                    // On transforme l'erreur technique SQL en message simple pour l'utilisateur.
+                    string messageSimple = MessageErreurSqlHelper.ObtenirMessageSimple(ex);
+
+                    // Dans le fichier log, on garde aussi le détail technique avec l'exception.
                     _journalisationService.EcrireErreur(
-                        $"Erreur pendant la copie de {baseCopie.NomBase}.",
-                        ex);
+                        $"Erreur pendant la copie de {baseCopie.NomBase}. Message utilisateur : {messageSimple}", ex);
 
                     resultat = new ExecutionResultatBaseModel
                     {
@@ -282,7 +286,7 @@ namespace SaimDataCopy.Services.Execution
                         LignesAvant = 0,
                         LignesApres = 0,
                         Resultat = "Erreur",
-                        Message = $"Erreur pendant la copie : {ex.Message}"
+                        Message = messageSimple
                     };
                 }
 
@@ -429,7 +433,8 @@ namespace SaimDataCopy.Services.Execution
                     _executionDataProvider.CopierLignesTableSourceVersCible(
                         baseCopie.NomBase,
                         table,
-                        modeCopie);
+                        modeCopie,
+                        cancellationToken);
 
                 totalLignes += lignesCopiees;
 
