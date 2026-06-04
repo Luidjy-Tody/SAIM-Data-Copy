@@ -203,7 +203,8 @@ namespace SaimDataCopy.Services.Execution
 
         public async Task<List<ExecutionResultatBaseModel>> LancerCopieAsync(
             IProgress<ExecutionProgressionModel> progression,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string origineExecution = "Manuel")
         {
             List<BaseCopieModel> basesSelectionnees =
                 _executionDataProvider.ChargerBasesSelectionnees();
@@ -216,8 +217,8 @@ namespace SaimDataCopy.Services.Execution
             // On supprime les anciens logs selon la durée de conservation.
             _journalisationService.NettoyerAnciensLogs();
 
-            _journalisationService.EcrireInformation("Lancement manuel de la copie.");
             _journalisationService.EcrireInformation(
+                $"Lancement {NormaliserOrigineExecution(origineExecution).ToLower()} de la copie."); _journalisationService.EcrireInformation(
                 $"{basesSelectionnees.Count} base(s) sélectionnée(s) pour la copie.");
 
             if (basesSelectionnees.Count == 0)
@@ -387,7 +388,8 @@ namespace SaimDataCopy.Services.Execution
                 dateHeureLancement,
                 resultats,
                 chronometre.Elapsed,
-                emailEnvoye
+                emailEnvoye,
+                origineExecution
             );
 
             progression.Report(new ExecutionProgressionModel
@@ -580,10 +582,11 @@ namespace SaimDataCopy.Services.Execution
         }
 
         private void EnregistrerExecutionDansHistorique(
-    DateTime dateHeureLancement,
-    List<ExecutionResultatBaseModel> resultats,
-    TimeSpan dureeExecution,
-    bool emailEnvoye)
+            DateTime dateHeureLancement,
+            List<ExecutionResultatBaseModel> resultats,
+            TimeSpan dureeExecution,
+            bool emailEnvoye,
+            string origineExecution)
         {
             try
             {
@@ -593,7 +596,7 @@ namespace SaimDataCopy.Services.Execution
                 HistoriqueExecutionModel historique = new HistoriqueExecutionModel
                 {
                     DateHeureLancement = dateHeureLancement,
-                    Origine = "Manuel",
+                    Origine = NormaliserOrigineExecution(origineExecution),
                     ServeurSource = ObtenirServeurAffichage(configuration?.ServeurSource),
                     ServeurCible = ObtenirServeurAffichage(configuration?.ServeurCible),
                     BasesTraitees = resultats
@@ -702,7 +705,17 @@ namespace SaimDataCopy.Services.Execution
 
             return serveur.NomServeur;
         }
-
+        private string NormaliserOrigineExecution(string origineExecution)
+        {
+            return origineExecution switch
+            {
+                "Automatique" => "Automatique",
+                "Task Scheduler" => "Automatique",
+                "TaskScheduler" => "Automatique",
+                "Manuel" => "Manuel",
+                _ => "Manuel"
+            };
+        }
         private string NormaliserModeCopie(string modeCopie)
         {
             return modeCopie switch

@@ -35,7 +35,8 @@ namespace SaimDataCopy.Services.Execution
 
         // Lance la copie des bases.
         Task<List<ExecutionResultatBaseModel>> LancerCopieAsync(
-            IProgress<ExecutionProgressionModel> progression,
-            CancellationToken cancellationToken);
+        IProgress<ExecutionProgressionModel> progression,
+        CancellationToken cancellationToken,
+        string origineExecution = "Manuel");
     }
 }
