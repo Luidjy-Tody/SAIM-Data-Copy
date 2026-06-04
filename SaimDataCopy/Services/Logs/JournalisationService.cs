@@ -42,6 +42,11 @@ namespace SaimDataCopy.Services.Logs
             EcrireInformation("Nouvelle exécution démarrée.");
         }
 
+        public string RecupererCheminFichierExecutionActuel()
+        {
+            return _cheminFichierExecution;
+        }
+
         public void EcrireInformation(string message)
         {
             EcrireLog(TypeLog.Information, message, null);

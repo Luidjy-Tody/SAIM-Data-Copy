@@ -471,10 +471,14 @@ namespace SaimDataCopy.Services.Execution
             string listeBases = ConstruireListeBasesTraitees(resultats);
             string duree = FormaterDuree(dureeExecution);
 
+            // On récupère le fichier log de l'exécution actuelle.
+            // Ce fichier pourra être joint à l'e-mail si l'option est cochée dans Paramètres Email.
+            string cheminFichierLog = _journalisationService.RecupererCheminFichierExecutionActuel();
+
             bool emailEnvoye = _emailService.EnvoyerEmailConfirmationCopie(
                 listeBases,
                 duree,
-                null,
+                cheminFichierLog,
                 out string messageEmail
             );
 

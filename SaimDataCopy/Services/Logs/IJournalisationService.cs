@@ -13,6 +13,12 @@
         void DemarrerNouvelleExecution();
 
         /// <summary>
+        /// Retourne le chemin du fichier log de l'exécution actuelle.
+        /// Ce chemin sera utilisé pour joindre le fichier log dans l'e-mail.
+        /// </summary>
+        string RecupererCheminFichierExecutionActuel();
+
+        /// <summary>
         /// Écrit un message d'information dans le fichier log.
         /// </summary>
         void EcrireInformation(string message);
