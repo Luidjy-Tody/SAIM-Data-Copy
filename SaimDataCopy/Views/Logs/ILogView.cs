@@ -8,10 +8,6 @@ namespace SaimDataCopy.Views.Logs
     /// </summary>
     public interface ILogsView
     {
-        /// <summary>
-        /// Événement déclenché quand l'utilisateur clique sur le bouton Parcourir.
-        /// </summary>
-        event EventHandler? ParcourirDemande;
 
         /// <summary>
         /// Récupère les valeurs saisies dans l'interface.

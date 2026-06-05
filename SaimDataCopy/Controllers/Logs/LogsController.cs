@@ -21,7 +21,6 @@ namespace SaimDataCopy.Controllers.Logs
             // Quand l'utilisateur clique sur Parcourir,
             // le Controller réagit à l'événement.
 
-            _view.ParcourirDemande += GererParcourirDemande;
         }
 
         /// <summary>
@@ -77,24 +76,5 @@ namespace SaimDataCopy.Controllers.Logs
 
         }
 
-        /// <summary>
-        /// Ouvre une fenêtre pour choisir le dossier des logs.
-        /// </summary
-        /// 
-        private void GererParcourirDemande(object? sender,  EventArgs e)
-        {
-            using FolderBrowserDialog dialog = new FolderBrowserDialog();
-
-            dialog.Description = "Sélectionner le répertoire des logs";
-            dialog.ShowNewFolderButton = true;
-
-            DialogResult resultat = dialog.ShowDialog();
-
-            if (resultat == DialogResult.OK && 
-                !string.IsNullOrWhiteSpace(dialog.SelectedPath))
-            {
-                _view.ModifierRepertoireLogs(dialog.SelectedPath);
-            }
-        }
     }
 }

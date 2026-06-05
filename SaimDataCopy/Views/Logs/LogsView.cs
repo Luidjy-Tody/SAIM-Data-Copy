@@ -1,6 +1,7 @@
 ﻿using FontAwesome.Sharp;
 using SaimDataCopy.Models.Logs;
 using SaimDataCopy.Styles;
+using System.IO;
 
 namespace SaimDataCopy.Views.Logs
 {
@@ -23,7 +24,6 @@ namespace SaimDataCopy.Views.Logs
         private readonly NumericUpDown _nudDureeConservation;
         private readonly NumericUpDown _nudTailleMaxFichier;
 
-        public event EventHandler? ParcourirDemande;
 
         public LogsView()
         {
@@ -271,7 +271,29 @@ namespace SaimDataCopy.Views.Logs
 
         private void BtnParcourir_Click(object? sender, EventArgs e)
         {
-            ParcourirDemande?.Invoke(this, EventArgs.Empty);
+            string cheminInitial = _txtRepertoireLogs.Text.Trim();
+
+            using DossierLogsSelectionForm fenetreSelection =
+                new DossierLogsSelectionForm(cheminInitial);
+
+            Form? fenetreParent = FindForm();
+
+            DialogResult resultat;
+
+            if (fenetreParent != null)
+            {
+                resultat = fenetreSelection.ShowDialog(fenetreParent);
+            }
+            else
+            {
+                resultat = fenetreSelection.ShowDialog();
+            }
+
+            if (resultat == DialogResult.OK &&
+                !string.IsNullOrWhiteSpace(fenetreSelection.DossierSelectionne))
+            {
+                _txtRepertoireLogs.Text = fenetreSelection.DossierSelectionne;
+            }
         }
 
         private static decimal AjusterValeur(int valeur, decimal minimum, decimal maximum)
