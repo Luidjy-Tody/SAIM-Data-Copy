@@ -10,28 +10,38 @@
         /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        /// <param name="disposing">true if managed resources should be disposed; false otherwise.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         #region Windows Form Designer generated code
 
         /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
+        ///  Required method for Designer support.
         /// </summary>
         private void InitializeComponent()
         {
+            panelTop = new Panel();
             panelBottom = new Panel();
             panelMenu = new Panel();
             panelMain = new Panel();
             SuspendLayout();
+            // 
+            // panelTop
+            // 
+            panelTop.BackColor = Color.White;
+            panelTop.Dock = DockStyle.Top;
+            panelTop.Location = new Point(0, 0);
+            panelTop.Name = "panelTop";
+            panelTop.Size = new Size(1282, 56);
+            panelTop.TabIndex = 4;
             // 
             // panelBottom
             // 
@@ -47,17 +57,17 @@
             panelMenu.BackColor = Color.WhiteSmoke;
             panelMenu.Dock = DockStyle.Left;
             panelMenu.Font = new Font("Segoe UI", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            panelMenu.Location = new Point(0, 0);
+            panelMenu.Location = new Point(0, 56);
             panelMenu.Name = "panelMenu";
-            panelMenu.Size = new Size(230, 774);
+            panelMenu.Size = new Size(230, 718);
             panelMenu.TabIndex = 2;
             // 
             // panelMain
             // 
             panelMain.Dock = DockStyle.Fill;
-            panelMain.Location = new Point(230, 0);
+            panelMain.Location = new Point(230, 56);
             panelMain.Name = "panelMain";
-            panelMain.Size = new Size(1052, 774);
+            panelMain.Size = new Size(1052, 718);
             panelMain.TabIndex = 3;
             // 
             // MainForm
@@ -69,8 +79,9 @@
             Controls.Add(panelMain);
             Controls.Add(panelMenu);
             Controls.Add(panelBottom);
-            MaximumSize = new Size(1300, 856);
-            MinimumSize = new Size(1300, 856);
+            Controls.Add(panelTop);
+            MaximumSize = Size.Empty;
+            MinimumSize = new Size(1280, 720);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Copie automatique des données entre serveurs — SAIM LTD";
@@ -79,6 +90,7 @@
 
         #endregion
 
+        private Panel panelTop;
         private Panel panelBottom;
         private Panel panelMenu;
         private Panel panelMain;

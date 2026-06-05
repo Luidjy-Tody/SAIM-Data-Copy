@@ -20,6 +20,9 @@ using SaimDataCopy.Views.Email;
 using SaimDataCopy.Views.Execution;
 using SaimDataCopy.Views.Historique;
 using SaimDataCopy.Views.Logs;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -63,54 +66,216 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Historique.
         private HistoriqueController? historiqueController;
+        // Permet de déplacer la fenêtre quand on clique sur la barre personnalisée.
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HTCAPTION = 0x2;
 
         public MainForm()
         {
             InitializeComponent();
 
-            // Configure la taille et le redimensionnement de la fenêtre principale.
             ConfigurerFenetrePrincipale();
 
+            CreerBarreHaut();
             CreerMenu();
             CreerBarreBas();
 
             // Au démarrage, on affiche directement la vraie page Configuration.
             AfficherPage(CreerConfigurationView());
         }
-        // Configure la fenêtre principale pour un affichage adapté aux grands écrans.
+
         // Configure la fenêtre principale pour un affichage adapté aux grands écrans.
         private void ConfigurerFenetrePrincipale()
         {
             // Important : enlève une éventuelle limite de taille définie dans le Designer.
             MaximumSize = Size.Empty;
 
-            // Taille minimale : l'application ne pourra pas devenir trop petite.
+            // Taille minimale pour éviter que l'application devienne trop petite.
             MinimumSize = new Size(1280, 720);
 
-            // Taille utilisée quand l'utilisateur quitte le mode maximisé.
+            // Taille utilisée si l'utilisateur quitte le mode maximisé.
             Size = new Size(1600, 900);
 
-            // Positionne la fenêtre au centre de l'écran au démarrage.
             StartPosition = FormStartPosition.CenterScreen;
 
-            // Permet à l'utilisateur de redimensionner la fenêtre.
-            FormBorderStyle = FormBorderStyle.Sizable;
+            // Supprime la barre Windows native.
+            FormBorderStyle = FormBorderStyle.None;
 
-            // Active les boutons réduire / agrandir.
             MinimizeBox = true;
             MaximizeBox = true;
 
-            // Le menu reste fixé à gauche.
+            // Les zones principales restent fixes.
+            panelTop.Dock = DockStyle.Top;
             panelMenu.Dock = DockStyle.Left;
-
-            // La barre du bas reste fixée en bas.
             panelBottom.Dock = DockStyle.Bottom;
-
-            // Le contenu principal prend tout l'espace restant.
             panelMain.Dock = DockStyle.Fill;
 
             // Ouvre l'application en grand écran Windows.
             WindowState = FormWindowState.Maximized;
+        }
+
+        // Crée une barre haute personnalisée plus propre.
+        private void CreerBarreHaut()
+        {
+            panelTop.Controls.Clear();
+
+            panelTop.Height = 72;
+            panelTop.BackColor = Color.White;
+            panelTop.Dock = DockStyle.Top;
+            panelTop.Padding = new Padding(22, 0, 0, 0);
+
+            IconPictureBox icone = new IconPictureBox();
+            icone.IconChar = IconChar.Database;
+            icone.IconColor = Color.FromArgb(30, 96, 190);
+            icone.IconSize = 26;
+            icone.Size = new Size(34, 34);
+            icone.Location = new Point(22, 19);
+            icone.BackColor = Color.White;
+
+            Label lblTitre = new Label();
+            lblTitre.Text = "Copie automatique des données entre serveurs — SAIM LTD";
+            lblTitre.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+            lblTitre.ForeColor = Color.FromArgb(25, 25, 25);
+            lblTitre.AutoSize = true;
+            lblTitre.Location = new Point(66, 14);
+
+            Label lblSousTitre = new Label();
+            lblSousTitre.Text = "Application de synchronisation SQL Server";
+            lblSousTitre.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            lblSousTitre.ForeColor = Color.FromArgb(100, 100, 100);
+            lblSousTitre.AutoSize = true;
+            lblSousTitre.Location = new Point(68, 42);
+
+            IconButton btnReduire = new IconButton();
+            btnReduire.IconChar = IconChar.Minus;
+            btnReduire.IconSize = 16;
+            btnReduire.IconColor = Color.FromArgb(80, 80, 80);
+            btnReduire.Size = new Size(55, 44);
+            btnReduire.FlatStyle = FlatStyle.Flat;
+            btnReduire.FlatAppearance.BorderSize = 0;
+            btnReduire.BackColor = Color.White;
+            btnReduire.Cursor = Cursors.Hand;
+            btnReduire.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnReduire.Click += (sender, e) =>
+            {
+                WindowState = FormWindowState.Minimized;
+            };
+
+            IconButton btnAgrandir = new IconButton();
+            btnAgrandir.IconChar = IconChar.WindowMaximize;
+            btnAgrandir.IconSize = 16;
+            btnAgrandir.IconColor = Color.FromArgb(80, 80, 80);
+            btnAgrandir.Size = new Size(55, 44);
+            btnAgrandir.FlatStyle = FlatStyle.Flat;
+            btnAgrandir.FlatAppearance.BorderSize = 0;
+            btnAgrandir.BackColor = Color.White;
+            btnAgrandir.Cursor = Cursors.Hand;
+            btnAgrandir.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAgrandir.Click += (sender, e) =>
+            {
+                if (WindowState == FormWindowState.Maximized)
+                {
+                    WindowState = FormWindowState.Normal;
+                }
+                else
+                {
+                    WindowState = FormWindowState.Maximized;
+                }
+            };
+
+            IconButton btnFermer = new IconButton();
+            btnFermer.IconChar = IconChar.Xmark;
+            btnFermer.IconSize = 18;
+            btnFermer.IconColor = Color.FromArgb(80, 80, 80);
+            btnFermer.Size = new Size(55, 44);
+            btnFermer.FlatStyle = FlatStyle.Flat;
+            btnFermer.FlatAppearance.BorderSize = 0;
+            btnFermer.BackColor = Color.White;
+            btnFermer.Cursor = Cursors.Hand;
+            btnFermer.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnFermer.Click += (sender, e) =>
+            {
+                Close();
+            };
+
+            // Effet gris au survol du bouton Réduire.
+            btnReduire.MouseEnter += (sender, e) =>
+            {
+                btnReduire.BackColor = Color.FromArgb(230, 230, 230);
+            };
+
+            btnReduire.MouseLeave += (sender, e) =>
+            {
+                btnReduire.BackColor = Color.White;
+            };
+
+            // Effet gris au survol du bouton Agrandir.
+            btnAgrandir.MouseEnter += (sender, e) =>
+            {
+                btnAgrandir.BackColor = Color.FromArgb(230, 230, 230);
+            };
+
+            btnAgrandir.MouseLeave += (sender, e) =>
+            {
+                btnAgrandir.BackColor = Color.White;
+            };
+
+            // Effet rouge au survol du bouton Fermer.
+            btnFermer.MouseEnter += (sender, e) =>
+            {
+                btnFermer.BackColor = Color.FromArgb(232, 17, 35);
+                btnFermer.IconColor = Color.White;
+            };
+
+            btnFermer.MouseLeave += (sender, e) =>
+            {
+                btnFermer.BackColor = Color.White;
+                btnFermer.IconColor = Color.FromArgb(80, 80, 80);
+            };
+
+            // Position des boutons dans le panelTop.
+            btnFermer.Location = new Point(panelTop.Width - 60, 14);
+            btnAgrandir.Location = new Point(panelTop.Width - 115, 14);
+            btnReduire.Location = new Point(panelTop.Width - 170, 14);
+
+            panelTop.Resize += (sender, e) =>
+            {
+                btnFermer.Location = new Point(panelTop.Width - 60, 14);
+                btnAgrandir.Location = new Point(panelTop.Width - 115, 14);
+                btnReduire.Location = new Point(panelTop.Width - 170, 14);
+            };
+
+            Panel ligneBas = new Panel();
+            ligneBas.Dock = DockStyle.Bottom;
+            ligneBas.Height = 1;
+            ligneBas.BackColor = Color.FromArgb(220, 220, 220);
+
+            panelTop.Controls.Add(icone);
+            panelTop.Controls.Add(lblTitre);
+            panelTop.Controls.Add(lblSousTitre);
+            panelTop.Controls.Add(btnReduire);
+            panelTop.Controls.Add(btnAgrandir);
+            panelTop.Controls.Add(btnFermer);
+            panelTop.Controls.Add(ligneBas);
+            // Permet de déplacer la fenêtre avec la barre haute personnalisée.
+            panelTop.MouseDown += PanelTop_MouseDown;
+        }
+        // Déplace la fenêtre quand l'utilisateur maintient la souris sur panelTop.
+        private void PanelTop_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
         }
 
         // Crée tous les boutons du menu gauche.
