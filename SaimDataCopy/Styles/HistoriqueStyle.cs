@@ -18,9 +18,10 @@ namespace SaimDataCopy.Styles
         // Appliquer le style général de la page.
         public static void AppliquerPage(UserControl page)
         {
+            page.Dock = DockStyle.Fill;
             page.BackColor = CouleurFondPage;
-            page.AutoScroll = true;
-            page.Padding = new Padding(22, 25, 22, 25);
+            page.AutoScroll = false;
+            page.Padding = new Padding(0);
         }
 
         // Style du grand titre.
@@ -43,28 +44,27 @@ namespace SaimDataCopy.Styles
         // Style du filtre date.
         public static void AppliquerDatePicker(DateTimePicker datePicker)
         {
-            datePicker.Width = 240;
             datePicker.Height = 36;
             datePicker.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             datePicker.Format = DateTimePickerFormat.Custom;
             datePicker.CustomFormat = "'jj/mm/aaaa'";
             datePicker.ShowCheckBox = false;
+            datePicker.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         // Style des ComboBox de filtre.
         public static void AppliquerComboBox(ComboBox comboBox)
         {
-            comboBox.Width = 240;
             comboBox.Height = 36;
             comboBox.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox.FlatStyle = FlatStyle.System;
+            comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         // Style du bouton Rechercher.
         public static void AppliquerBoutonRecherche(IconButton bouton)
         {
-            bouton.Width = 240;
             bouton.Height = 30;
 
             bouton.Text = "Rechercher";
@@ -86,17 +86,18 @@ namespace SaimDataCopy.Styles
             bouton.Padding = new Padding(0);
             bouton.Margin = new Padding(0);
             bouton.Cursor = Cursors.Hand;
+
+            bouton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         // Cadre extérieur du tableau.
-        // Le BackColor sert aussi à faire une bordure propre.
         public static void AppliquerCadreTableau(Panel panel)
         {
-            panel.Width = 995;
-            panel.Height = 336;
+            panel.Height = 360;
             panel.BackColor = CouleurBordure;
             panel.Padding = new Padding(1);
             panel.Margin = new Padding(0, 24, 0, 0);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         // Contenu intérieur du tableau.
@@ -106,7 +107,7 @@ namespace SaimDataCopy.Styles
             panel.BackColor = Color.White;
             panel.FlowDirection = FlowDirection.TopDown;
             panel.WrapContents = false;
-            panel.AutoScroll = false;
+            panel.AutoScroll = true;
             panel.Padding = new Padding(0);
             panel.Margin = new Padding(0);
         }
@@ -114,7 +115,6 @@ namespace SaimDataCopy.Styles
         // Ligne d'en-tête du tableau.
         public static void AppliquerLigneEntete(TableLayoutPanel ligne)
         {
-            ligne.Width = 993;
             ligne.Height = 66;
             ligne.BackColor = CouleurEnteteTableau;
             ligne.Margin = new Padding(0);
@@ -125,7 +125,6 @@ namespace SaimDataCopy.Styles
         // Ligne de données du tableau.
         public static void AppliquerLigneDonnee(TableLayoutPanel ligne)
         {
-            ligne.Width = 993;
             ligne.Height = 88;
             ligne.BackColor = Color.White;
             ligne.Margin = new Padding(0);
@@ -136,7 +135,6 @@ namespace SaimDataCopy.Styles
         // Séparateur horizontal entre les lignes.
         public static void AppliquerSeparateur(Panel separateur)
         {
-            separateur.Width = 993;
             separateur.Height = 1;
             separateur.BackColor = CouleurBordure;
             separateur.Margin = new Padding(0);
@@ -147,19 +145,11 @@ namespace SaimDataCopy.Styles
         public static void AppliquerCelluleEntete(Label label)
         {
             label.Dock = DockStyle.Fill;
-
-            // Un peu marqué, mais pas trop lourd.
             label.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-
             label.ForeColor = CouleurTexte;
             label.BackColor = CouleurEnteteTableau;
-
-            // Aligné verticalement au milieu.
             label.TextAlign = ContentAlignment.MiddleLeft;
-
-            // Moins de padding pour éviter que les mots se coupent.
             label.Padding = new Padding(10, 0, 6, 0);
-
             label.AutoSize = false;
         }
 
@@ -241,7 +231,7 @@ namespace SaimDataCopy.Styles
         {
             bouton.Width = 84;
             bouton.Height = 36;
-            bouton.Text = "Voir détail";
+            bouton.Text = "Voir";
 
             bouton.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
             bouton.ForeColor = CouleurTexte;
@@ -259,16 +249,16 @@ namespace SaimDataCopy.Styles
             bouton.UseVisualStyleBackColor = false;
         }
 
-        // Style du panel de détail.
+        // Style du panel de détail ancien, gardé si besoin.
         public static void AppliquerPanelDetail(Panel panel)
         {
-            panel.Width = 995;
             panel.Height = 260;
             panel.BackColor = Color.White;
             panel.BorderStyle = BorderStyle.FixedSingle;
             panel.Padding = new Padding(16);
             panel.Margin = new Padding(0, 25, 0, 0);
             panel.Visible = false;
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         // Style du titre dans le détail.

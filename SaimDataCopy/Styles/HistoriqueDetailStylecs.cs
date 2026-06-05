@@ -11,8 +11,6 @@ namespace SaimDataCopy.Styles
     {
         private static readonly Color BleuPrimaire = ColorTranslator.FromHtml("#1A5FB4");
         private static readonly Color VertAction = ColorTranslator.FromHtml("#3B6D11");
-        private static readonly Color BgPrincipal = Color.White;
-        private static readonly Color BgSecondaire = ColorTranslator.FromHtml("#EEF2F7");
         private static readonly Color Bordure = ColorTranslator.FromHtml("#CBD5E1");
         private static readonly Color TextePrimaire = ColorTranslator.FromHtml("#1E293B");
         private static readonly Color TexteSecondaire = ColorTranslator.FromHtml("#64748B");
@@ -65,12 +63,12 @@ namespace SaimDataCopy.Styles
 
         public static void AppliquerCarteResume(Panel panel)
         {
-            panel.Width = 975;
             panel.Height = 76;
-            panel.BackColor = Color.White;
+            panel.BackColor = Color.FromArgb(245, 245, 245); ;
             panel.BorderStyle = BorderStyle.None;
             panel.Padding = new Padding(16);
             panel.Margin = new Padding(0, 0, 0, 16);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             AjouterBordureArrondie(panel, Bordure, 4);
         }
@@ -78,7 +76,7 @@ namespace SaimDataCopy.Styles
         public static void AppliquerTitreResume(Label label)
         {
             label.AutoSize = true;
-            label.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            label.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             label.ForeColor = TextePrimaire;
         }
 
@@ -126,22 +124,22 @@ namespace SaimDataCopy.Styles
 
         public static void AppliquerZoneCartes(FlowLayoutPanel panel)
         {
-            panel.Width = 990;
             panel.AutoSize = true;
             panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             panel.FlowDirection = FlowDirection.LeftToRight;
             panel.WrapContents = true;
             panel.Margin = new Padding(0, 0, 0, 18);
+            panel.Padding = new Padding(0);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         public static void AppliquerCarteInfo(Panel panel)
         {
-            panel.Width = 316;
             panel.Height = 92;
             panel.BackColor = Color.White;
             panel.BorderStyle = BorderStyle.None;
             panel.Padding = new Padding(14);
-            panel.Margin = new Padding(0, 0, 10, 12);
+            panel.Margin = new Padding(0, 0, 14, 14);
 
             AjouterBordureArrondie(panel, Bordure, 4);
         }
@@ -184,24 +182,23 @@ namespace SaimDataCopy.Styles
 
         public static void AppliquerCarteBase(Panel panel, string statut)
         {
-            panel.Width = 975;
-            panel.AutoSize = true;
-            panel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            panel.AutoSize = false;
             panel.BackColor = Color.White;
             panel.BorderStyle = BorderStyle.None;
             panel.Margin = new Padding(0, 0, 0, 10);
             panel.Padding = new Padding(0);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             AjouterBordureArrondie(panel, Bordure, 4);
         }
 
         public static void AppliquerEnteteBase(Panel panel, string statut)
         {
-            panel.Width = 975;
             panel.Height = 46;
             panel.Margin = new Padding(0);
             panel.Padding = new Padding(0);
             panel.BackColor = ObtenirFondStatut(statut);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             panel.Paint += (sender, e) =>
             {
@@ -226,24 +223,22 @@ namespace SaimDataCopy.Styles
             label.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             label.ForeColor = TexteSecondaire;
             label.TextAlign = ContentAlignment.MiddleRight;
-            label.Location = new Point(720, 8);
         }
 
         public static void AppliquerMessageErreur(Label label)
         {
             label.AutoSize = false;
-            label.Width = 975;
             label.Height = 30;
             label.Font = new Font("Segoe UI", 8.5F, FontStyle.Regular);
             label.ForeColor = Orange;
             label.BackColor = ColorTranslator.FromHtml("#FFFBEB");
             label.Padding = new Padding(12, 7, 12, 7);
             label.Margin = new Padding(0);
+            label.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         public static void AppliquerZoneLogs(RichTextBox richTextBox)
         {
-            richTextBox.Width = 975;
             richTextBox.Height = 140;
             richTextBox.BackColor = BgConsole;
             richTextBox.ForeColor = VertConsole;
@@ -252,6 +247,7 @@ namespace SaimDataCopy.Styles
             richTextBox.ReadOnly = true;
             richTextBox.Margin = new Padding(0);
             richTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
+            richTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         }
 
         public static void AppliquerBoutonOuvrirLog(IconButton bouton)
@@ -324,7 +320,7 @@ namespace SaimDataCopy.Styles
                 "Succès" => ColorTranslator.FromHtml("#F0F7EB"),
                 "Avertissement" => ColorTranslator.FromHtml("#FEF3C7"),
                 "Échec" => ColorTranslator.FromHtml("#FEF2F2"),
-                _ => BgSecondaire
+                _ => ColorTranslator.FromHtml("#EEF2F7")
             };
         }
 
@@ -333,6 +329,7 @@ namespace SaimDataCopy.Styles
             controle.Paint += (sender, e) =>
             {
                 using Pen pen = new Pen(couleurBordure, 1);
+
                 Rectangle rectangle = new Rectangle(
                     0,
                     0,
@@ -340,11 +337,50 @@ namespace SaimDataCopy.Styles
                     controle.Height - 1
                 );
 
+                int diametre = rayon * 2;
+
                 using GraphicsPath chemin = new GraphicsPath();
-                chemin.AddArc(rectangle.X, rectangle.Y, rayon * 2, rayon * 2, 180, 90);
-                chemin.AddArc(rectangle.Right - rayon * 2, rectangle.Y, rayon * 2, rayon * 2, 270, 90);
-                chemin.AddArc(rectangle.Right - rayon * 2, rectangle.Bottom - rayon * 2, rayon * 2, rayon * 2, 0, 90);
-                chemin.AddArc(rectangle.X, rectangle.Bottom - rayon * 2, rayon * 2, rayon * 2, 90, 90);
+
+                // Coin haut gauche
+                chemin.AddArc(
+                    rectangle.X,
+                    rectangle.Y,
+                    diametre,
+                    diametre,
+                    180,
+                    90
+                );
+
+                // Coin haut droit
+                chemin.AddArc(
+                    rectangle.Right - diametre,
+                    rectangle.Y,
+                    diametre,
+                    diametre,
+                    270,
+                    90
+                );
+
+                // Coin bas droit
+                chemin.AddArc(
+                    rectangle.Right - diametre,
+                    rectangle.Bottom - diametre,
+                    diametre,
+                    diametre,
+                    0,
+                    90
+                );
+
+                // Coin bas gauche
+                chemin.AddArc(
+                    rectangle.X,
+                    rectangle.Bottom - diametre,
+                    diametre,
+                    diametre,
+                    90,
+                    90
+                );
+
                 chemin.CloseFigure();
 
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;

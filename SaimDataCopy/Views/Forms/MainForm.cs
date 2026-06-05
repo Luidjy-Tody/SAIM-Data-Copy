@@ -68,11 +68,49 @@ namespace SaimDataCopy.Views.Forms
         {
             InitializeComponent();
 
+            // Configure la taille et le redimensionnement de la fenêtre principale.
+            ConfigurerFenetrePrincipale();
+
             CreerMenu();
             CreerBarreBas();
 
             // Au démarrage, on affiche directement la vraie page Configuration.
             AfficherPage(CreerConfigurationView());
+        }
+        // Configure la fenêtre principale pour un affichage adapté aux grands écrans.
+        // Configure la fenêtre principale pour un affichage adapté aux grands écrans.
+        private void ConfigurerFenetrePrincipale()
+        {
+            // Important : enlève une éventuelle limite de taille définie dans le Designer.
+            MaximumSize = Size.Empty;
+
+            // Taille minimale : l'application ne pourra pas devenir trop petite.
+            MinimumSize = new Size(1280, 720);
+
+            // Taille utilisée quand l'utilisateur quitte le mode maximisé.
+            Size = new Size(1600, 900);
+
+            // Positionne la fenêtre au centre de l'écran au démarrage.
+            StartPosition = FormStartPosition.CenterScreen;
+
+            // Permet à l'utilisateur de redimensionner la fenêtre.
+            FormBorderStyle = FormBorderStyle.Sizable;
+
+            // Active les boutons réduire / agrandir.
+            MinimizeBox = true;
+            MaximizeBox = true;
+
+            // Le menu reste fixé à gauche.
+            panelMenu.Dock = DockStyle.Left;
+
+            // La barre du bas reste fixée en bas.
+            panelBottom.Dock = DockStyle.Bottom;
+
+            // Le contenu principal prend tout l'espace restant.
+            panelMain.Dock = DockStyle.Fill;
+
+            // Ouvre l'application en grand écran Windows.
+            WindowState = FormWindowState.Maximized;
         }
 
         // Crée tous les boutons du menu gauche.

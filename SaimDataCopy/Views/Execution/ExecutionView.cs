@@ -14,12 +14,25 @@ namespace SaimDataCopy.Views.Execution
     /// </summary>
     public class ExecutionView : UserControl, IExecutionView
     {
-        private const int LargeurPage = 976;
+        private const int LargeurMinimumPage = 976;
+        private const int HauteurMinimumPage = 820;
+        private const int MargePage = 25;
+
+        private readonly Panel _panelContenu = new Panel();
+        private readonly Panel _panelPage = new Panel();
+
+        private readonly Label _lblTitre = new Label();
+
+        private readonly Panel _carteBases = new Panel();
+        private readonly Panel _carteLignes = new Panel();
+        private readonly Panel _carteDuree = new Panel();
 
         private readonly Label _lblBasesSelectionnees = new Label();
         private readonly Label _lblLignesCopiees = new Label();
         private readonly Label _lblDuree = new Label();
 
+        private readonly Label _lblJournal = new Label();
+        private readonly Panel _panelJournal = new Panel();
         private readonly RichTextBox _txtJournal = new RichTextBox();
 
         private readonly Panel _panelProgression = new Panel();
@@ -34,6 +47,8 @@ namespace SaimDataCopy.Views.Execution
         private readonly IconButton _btnAnnuler = new IconButton();
         private readonly IconButton _btnLancerCopie = new IconButton();
 
+        private bool _progressionVisible;
+
         public event EventHandler? TesterConnexionDemandee;
         public event EventHandler? LancerCopieDemandee;
         public event EventHandler? AnnulerCopieDemandee;
@@ -43,48 +58,39 @@ namespace SaimDataCopy.Views.Execution
             Dock = DockStyle.Fill;
             ExecutionStyle.AppliquerFondPage(this);
 
+            _progressionVisible = false;
+
             CreerInterface();
         }
 
         private void CreerInterface()
         {
-            Panel panelContenu = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true
-            };
+            _panelContenu.Dock = DockStyle.Fill;
+            _panelContenu.AutoScroll = true;
+            _panelContenu.Padding = new Padding(0);
 
-            ExecutionStyle.AppliquerFondPage(panelContenu);
-            Controls.Add(panelContenu);
+            ExecutionStyle.AppliquerFondPage(_panelContenu);
+            Controls.Add(_panelContenu);
 
-            Panel panelPage = new Panel
-            {
-                Location = new Point(25, 25),
-                Size = new Size(LargeurPage, 820)
-            };
+            _panelPage.Location = new Point(MargePage, MargePage);
+            _panelPage.Size = new Size(LargeurMinimumPage, HauteurMinimumPage);
 
-            ExecutionStyle.AppliquerFondPage(panelPage);
-            panelContenu.Controls.Add(panelPage);
+            ExecutionStyle.AppliquerFondPage(_panelPage);
+            _panelContenu.Controls.Add(_panelPage);
 
-            Label lblTitre = new Label
-            {
-                Text = "Lancement manuel de la copie",
-                Location = new Point(0, 0)
-            };
+            _lblTitre.Text = "Lancement manuel de la copie";
+            _lblTitre.Location = new Point(0, 0);
 
-            ExecutionStyle.AppliquerTitrePage(lblTitre);
-            panelPage.Controls.Add(lblTitre);
+            ExecutionStyle.AppliquerTitrePage(_lblTitre);
+            _panelPage.Controls.Add(_lblTitre);
 
-            AjouterCartesTableauBord(panelPage);
-            AjouterJournal(panelPage);
-            AjouterProgression(panelPage);
-            AjouterTableauResultats(panelPage);
-            AjouterBoutonsAction(panelPage);
+            AjouterCartesTableauBord();
+            AjouterJournal();
+            AjouterProgression();
+            AjouterTableauResultats();
+            AjouterBoutonsAction();
 
-            // Au démarrage, on cache la progression.
             AfficherZoneProgression(false);
-
-            // Le bouton Annuler est désactivé tant que la copie n'est pas lancée.
             ActiverBoutonAnnuler(false);
 
             AjouterLog(new ExecutionLogModel
@@ -93,44 +99,50 @@ namespace SaimDataCopy.Views.Execution
                 Message = "En attente du lancement de la copie...",
                 Type = "Info"
             });
-        }
 
-        private void AjouterCartesTableauBord(Panel parent)
-        {
-            Panel carteBases = CreerCarteTableauBord(
-                "Bases sélectionnées",
-                _lblBasesSelectionnees,
-                "0",
-                new Point(0, 58)
-            );
-
-            Panel carteLignes = CreerCarteTableauBord(
-                "Lignes copiées (dernière fois)",
-                _lblLignesCopiees,
-                "0",
-                new Point(330, 58)
-            );
-
-            Panel carteDuree = CreerCarteTableauBord(
-                "Durée dernière exécution",
-                _lblDuree,
-                "-",
-                new Point(660, 58)
-            );
-
-            parent.Controls.Add(carteBases);
-            parent.Controls.Add(carteLignes);
-            parent.Controls.Add(carteDuree);
-        }
-
-        private Panel CreerCarteTableauBord(string titre, Label labelValeur, string valeurDefaut, Point position)
-        {
-            Panel panelCarte = new Panel
+            _panelContenu.Resize += (sender, e) =>
             {
-                Location = position,
-                Size = new Size(315, 102)
+                AdapterDisposition();
             };
 
+            AdapterDisposition();
+        }
+
+        private void AjouterCartesTableauBord()
+        {
+            ConfigurerCarteTableauBord(
+                _carteBases,
+                "Bases sélectionnées",
+                _lblBasesSelectionnees,
+                "0"
+            );
+
+            ConfigurerCarteTableauBord(
+                _carteLignes,
+                "Lignes copiées (dernière fois)",
+                _lblLignesCopiees,
+                "0"
+            );
+
+            ConfigurerCarteTableauBord(
+                _carteDuree,
+                "Durée dernière exécution",
+                _lblDuree,
+                "-"
+            );
+
+            _panelPage.Controls.Add(_carteBases);
+            _panelPage.Controls.Add(_carteLignes);
+            _panelPage.Controls.Add(_carteDuree);
+        }
+
+        private void ConfigurerCarteTableauBord(
+            Panel panelCarte,
+            string titre,
+            Label labelValeur,
+            string valeurDefaut)
+        {
+            panelCarte.Size = new Size(315, 102);
             ExecutionStyle.AppliquerCarteTableauBord(panelCarte);
 
             labelValeur.Text = valeurDefaut;
@@ -146,65 +158,60 @@ namespace SaimDataCopy.Views.Execution
 
             ExecutionStyle.AppliquerTitreCarte(lblTitreCarte);
             panelCarte.Controls.Add(lblTitreCarte);
-
-            return panelCarte;
         }
 
-        private void AjouterJournal(Panel parent)
+        private void AjouterJournal()
         {
-            Label lblJournal = new Label
-            {
-                Text = "Journal d'exécution en direct",
-                Location = new Point(0, 192)
-            };
+            _lblJournal.Text = "Journal d'exécution en direct";
+            _lblJournal.Location = new Point(0, 192);
 
-            ExecutionStyle.AppliquerSousTitre(lblJournal);
-            parent.Controls.Add(lblJournal);
+            ExecutionStyle.AppliquerSousTitre(_lblJournal);
+            _panelPage.Controls.Add(_lblJournal);
 
-            Panel panelJournal = new Panel
-            {
-                Location = new Point(0, 228),
-                Size = new Size(LargeurPage, 175)
-            };
+            _panelJournal.Location = new Point(0, 228);
+            _panelJournal.Size = new Size(LargeurMinimumPage, 175);
 
-            ExecutionStyle.AppliquerPanelJournal(panelJournal);
-            parent.Controls.Add(panelJournal);
+            ExecutionStyle.AppliquerPanelJournal(_panelJournal);
+            _panelPage.Controls.Add(_panelJournal);
 
             _txtJournal.Location = new Point(12, 10);
-            _txtJournal.Size = new Size(LargeurPage - 24, 155);
+            _txtJournal.Size = new Size(LargeurMinimumPage - 24, 155);
 
             ExecutionStyle.AppliquerJournal(_txtJournal);
-            panelJournal.Controls.Add(_txtJournal);
+            _panelJournal.Controls.Add(_txtJournal);
         }
 
-        private void AjouterProgression(Panel parent)
+        private void AjouterProgression()
         {
             _panelProgression.Location = new Point(0, 416);
-            _panelProgression.Size = new Size(LargeurPage, 55);
+            _panelProgression.Size = new Size(LargeurMinimumPage, 55);
+
             ExecutionStyle.AppliquerFondPage(_panelProgression);
-            parent.Controls.Add(_panelProgression);
+            _panelPage.Controls.Add(_panelProgression);
 
             _progressBar.Location = new Point(0, 0);
-            _progressBar.Width = LargeurPage;
+            _progressBar.Width = LargeurMinimumPage;
+
             ExecutionStyle.AppliquerProgressBar(_progressBar);
             _panelProgression.Controls.Add(_progressBar);
 
             _lblProgression.Text = "Progression : 0%";
             _lblProgression.Location = new Point(0, 32);
+
             ExecutionStyle.AppliquerLabelProgression(_lblProgression);
             _panelProgression.Controls.Add(_lblProgression);
         }
 
-        private void AjouterTableauResultats(Panel parent)
+        private void AjouterTableauResultats()
         {
             _lblResultats.Text = "Résumé de la dernière exécution";
-            _lblResultats.Location = new Point(0, 500);
+            _lblResultats.Location = new Point(0, 438);
 
             ExecutionStyle.AppliquerSousTitre(_lblResultats);
-            parent.Controls.Add(_lblResultats);
+            _panelPage.Controls.Add(_lblResultats);
 
-            _grilleResultats.Location = new Point(0, 536);
-            _grilleResultats.Size = new Size(LargeurPage, 220);
+            _grilleResultats.Location = new Point(0, 474);
+            _grilleResultats.Size = new Size(LargeurMinimumPage, 220);
 
             ExecutionStyle.AppliquerTableauResultat(_grilleResultats);
 
@@ -249,30 +256,148 @@ namespace SaimDataCopy.Views.Execution
 
             ExecutionStyle.DesactiverTriColonnes(_grilleResultats);
 
-            parent.Controls.Add(_grilleResultats);
+            _panelPage.Controls.Add(_grilleResultats);
         }
 
-        private void AjouterBoutonsAction(Panel parent)
+        private void AjouterBoutonsAction()
         {
-            _panelActions.Location = new Point(0, 778);
-            _panelActions.Size = new Size(LargeurPage, 45);
-            ExecutionStyle.AppliquerFondPage(_panelActions);
-            parent.Controls.Add(_panelActions);
+            _panelActions.Location = new Point(0, 716);
+            _panelActions.Size = new Size(LargeurMinimumPage, 45);
 
-            _btnTesterConnexion.Location = new Point(0, 0);
+            ExecutionStyle.AppliquerFondPage(_panelActions);
+            _panelPage.Controls.Add(_panelActions);
+
             ExecutionStyle.AppliquerBoutonTesterConnexion(_btnTesterConnexion);
             _btnTesterConnexion.Click += BtnTesterConnexion_Click;
             _panelActions.Controls.Add(_btnTesterConnexion);
 
-            _btnAnnuler.Location = new Point(LargeurPage - 306, 0);
             ExecutionStyle.AppliquerBoutonAnnuler(_btnAnnuler);
             _btnAnnuler.Click += BtnAnnuler_Click;
             _panelActions.Controls.Add(_btnAnnuler);
 
-            _btnLancerCopie.Location = new Point(LargeurPage - 170, 0);
             ExecutionStyle.AppliquerBoutonLancer(_btnLancerCopie);
             _btnLancerCopie.Click += BtnLancerCopie_Click;
             _panelActions.Controls.Add(_btnLancerCopie);
+        }
+
+        private void AdapterDisposition()
+        {
+            int largeurDisponible = _panelContenu.ClientSize.Width - (MargePage * 2);
+            int hauteurDisponible = _panelContenu.ClientSize.Height - (MargePage * 2);
+
+            if (largeurDisponible < LargeurMinimumPage)
+            {
+                largeurDisponible = LargeurMinimumPage;
+            }
+
+            if (hauteurDisponible < HauteurMinimumPage)
+            {
+                hauteurDisponible = HauteurMinimumPage;
+            }
+
+            _panelPage.Size = new Size(largeurDisponible, hauteurDisponible);
+
+            AdapterCartes(largeurDisponible);
+            AdapterJournal(largeurDisponible);
+            AdapterProgression(largeurDisponible);
+            AdapterTableauEtBoutons(largeurDisponible, hauteurDisponible);
+        }
+
+        private void AdapterCartes(int largeurPage)
+        {
+            int espace = 16;
+            int largeurCarte = (largeurPage - (espace * 2)) / 3;
+
+            if (largeurCarte < 280)
+            {
+                largeurCarte = 280;
+            }
+
+            _carteBases.Location = new Point(0, 58);
+            _carteBases.Size = new Size(largeurCarte, 102);
+
+            _carteLignes.Location = new Point(largeurCarte + espace, 58);
+            _carteLignes.Size = new Size(largeurCarte, 102);
+
+            _carteDuree.Location = new Point((largeurCarte + espace) * 2, 58);
+            _carteDuree.Size = new Size(largeurCarte, 102);
+        }
+
+        private void AdapterJournal(int largeurPage)
+        {
+            _lblJournal.Location = new Point(0, 192);
+
+            _panelJournal.Location = new Point(0, 228);
+            _panelJournal.Size = new Size(largeurPage, 175);
+
+            _txtJournal.Location = new Point(12, 10);
+            _txtJournal.Size = new Size(largeurPage - 24, 155);
+        }
+
+        private void AdapterProgression(int largeurPage)
+        {
+            _panelProgression.Location = new Point(0, 416);
+            _panelProgression.Size = new Size(largeurPage, 55);
+
+            _progressBar.Location = new Point(0, 0);
+            _progressBar.Width = largeurPage;
+
+            _lblProgression.Location = new Point(0, 32);
+        }
+
+        private void AdapterTableauEtBoutons(int largeurPage, int hauteurPage)
+        {
+            int yTitreResultats;
+            int yGrille;
+
+            if (_progressionVisible)
+            {
+                yTitreResultats = 500;
+                yGrille = 536;
+            }
+            else
+            {
+                yTitreResultats = 438;
+                yGrille = 474;
+            }
+
+            int hauteurPanelActions = 45;
+            int margeAvantBoutons = 20;
+
+            int yActions = hauteurPage - hauteurPanelActions;
+
+            int hauteurGrille = yActions - yGrille - margeAvantBoutons;
+
+            if (hauteurGrille < 220)
+            {
+                hauteurGrille = 220;
+                yActions = yGrille + hauteurGrille + margeAvantBoutons;
+            }
+
+            _lblResultats.Location = new Point(0, yTitreResultats);
+
+            _grilleResultats.Location = new Point(0, yGrille);
+            _grilleResultats.Size = new Size(largeurPage, hauteurGrille);
+
+            _panelActions.Location = new Point(0, yActions);
+            _panelActions.Size = new Size(largeurPage, hauteurPanelActions);
+
+            AdapterBoutonsActions(largeurPage);
+        }
+
+        private void AdapterBoutonsActions(int largeurPage)
+        {
+            _btnTesterConnexion.Location = new Point(0, 0);
+
+            _btnLancerCopie.Location = new Point(
+                largeurPage - _btnLancerCopie.Width,
+                0
+            );
+
+            _btnAnnuler.Location = new Point(
+                _btnLancerCopie.Left - _btnAnnuler.Width - 15,
+                0
+            );
         }
 
         public void AfficherTableauBord(ExecutionTableauBordModel tableauBord)
@@ -370,21 +495,10 @@ namespace SaimDataCopy.Views.Execution
                 return;
             }
 
+            _progressionVisible = visible;
             _panelProgression.Visible = visible;
 
-            if (visible)
-            {
-                _lblResultats.Location = new Point(0, 500);
-                _grilleResultats.Location = new Point(0, 536);
-                _panelActions.Location = new Point(0, 778);
-            }
-            else
-            {
-                // Quand la copie n'est pas lancée, on évite de laisser un grand vide.
-                _lblResultats.Location = new Point(0, 438);
-                _grilleResultats.Location = new Point(0, 474);
-                _panelActions.Location = new Point(0, 716);
-            }
+            AdapterDisposition();
         }
 
         public void AfficherProgression(int pourcentage, string message)

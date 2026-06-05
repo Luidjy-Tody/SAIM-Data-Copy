@@ -1,7 +1,9 @@
 ﻿using FontAwesome.Sharp;
 using SaimDataCopy.Models.Logs;
 using SaimDataCopy.Styles;
-using System.IO;
+using System;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace SaimDataCopy.Views.Logs
 {
@@ -11,95 +13,130 @@ namespace SaimDataCopy.Views.Logs
     /// </summary>
     public class LogsView : UserControl, ILogsView
     {
-        private const int LargeurControles = 682;
+        private const int LargeurMinimumContenu = 700;
         private const int HauteurChamp = 38;
-        private const int EspaceEntreChamps = 62;
         private const int LargeurBoutonParcourir = 125;
         private const int EspaceBouton = 8;
-        private const int DecalageVertical = 25;
 
-        private readonly TextBox _txtRepertoireLogs;
-        private readonly IconButton _btnParcourir;
-        private readonly TextBox _txtNommageFichiers;
-        private readonly NumericUpDown _nudDureeConservation;
-        private readonly NumericUpDown _nudTailleMaxFichier;
+        private readonly Panel panelContenu = new Panel();
+        private readonly TableLayoutPanel layoutPrincipal = new TableLayoutPanel();
 
+        private readonly TextBox _txtRepertoireLogs = new TextBox();
+        private readonly IconButton _btnParcourir = new IconButton();
+        private readonly TextBox _txtNommageFichiers = new TextBox();
+        private readonly NumericUpDown _nudDureeConservation = new NumericUpDown();
+        private readonly NumericUpDown _nudTailleMaxFichier = new NumericUpDown();
 
         public LogsView()
         {
             Dock = DockStyle.Fill;
             BackColor = Color.White;
 
-            _txtRepertoireLogs = new TextBox();
-            _btnParcourir = new IconButton();
-            _txtNommageFichiers = new TextBox();
-            _nudDureeConservation = new NumericUpDown();
-            _nudTailleMaxFichier = new NumericUpDown();
-
             CreerInterface();
         }
 
         private void CreerInterface()
         {
-            Panel panelContenu = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                AutoScroll = true
-            };
+            panelContenu.Dock = DockStyle.Fill;
+            panelContenu.BackColor = Color.White;
+            panelContenu.AutoScroll = true;
+            panelContenu.Padding = new Padding(25, 25, 25, 25);
 
             Controls.Add(panelContenu);
 
-            // Panel interne pour décaler toute l'interface vers la droite.
-            // Comme ça, on ne modifie pas chaque champ un par un.
-            Panel panelFormulaire = new Panel
+            layoutPrincipal.ColumnCount = 1;
+            layoutPrincipal.RowCount = 0;
+            layoutPrincipal.Dock = DockStyle.Top;
+            layoutPrincipal.AutoSize = true;
+            layoutPrincipal.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            layoutPrincipal.BackColor = Color.White;
+            layoutPrincipal.Margin = new Padding(0);
+            layoutPrincipal.Padding = new Padding(0);
+
+            layoutPrincipal.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            panelContenu.Controls.Add(layoutPrincipal);
+
+            int ligne = 0;
+
+            AjouterTitre(ref ligne);
+            AjouterChampPleineLargeur(ref ligne, CreerChampRepertoire());
+            AjouterChampPleineLargeur(ref ligne, CreerChampTexte("Nommage des fichiers", _txtNommageFichiers, true));
+            AjouterChampPleineLargeur(ref ligne, CreerChampNombre("Durée de conservation en jours", _nudDureeConservation, 1, 3650, 30));
+            AjouterChampPleineLargeur(ref ligne, CreerChampNombre("Taille maximale d'un fichier en Mo", _nudTailleMaxFichier, 1, 1024, 10));
+            AjouterChampPleineLargeur(ref ligne, CreerBlocInformation());
+
+            panelContenu.Resize += (sender, e) =>
             {
-                Location = new Point(25, 0),
-                Size = new Size(900, 650),
-                BackColor = Color.White
+                AdapterLargeurContenu();
             };
 
-            panelContenu.Controls.Add(panelFormulaire);
-
-            Label lblTitre = new Label
-            {
-                Text = "Paramètres de journalisation",
-                Location = new Point(0, DecalageVertical)
-            };
-
-            LogFormStyle.AppliquerTitre(lblTitre);
-            panelFormulaire.Controls.Add(lblTitre);
-
-            int positionY = 58 + DecalageVertical;
-
-            AjouterChampRepertoire(panelFormulaire, ref positionY);
-            AjouterChampTexte(panelFormulaire, "Nommage des fichiers", _txtNommageFichiers, ref positionY);
-            AjouterChampNombre(panelFormulaire, "Durée de conservation en jours", _nudDureeConservation, ref positionY, 1, 3650, 30);
-            AjouterChampNombre(panelFormulaire, "Taille maximale d'un fichier en Mo", _nudTailleMaxFichier, ref positionY, 1, 1024, 10);
-
-            AjouterBlocInformation(panelFormulaire, positionY);
+            AdapterLargeurContenu();
         }
 
-        private void AjouterChampRepertoire(Panel parent, ref int positionY)
+        private void AdapterLargeurContenu()
         {
-            Label label = new Label
+            int largeur = panelContenu.ClientSize.Width
+                - panelContenu.Padding.Left
+                - panelContenu.Padding.Right
+                - SystemInformation.VerticalScrollBarWidth;
+
+            if (largeur < LargeurMinimumContenu)
             {
-                Text = "Répertoire des logs",
-                Location = new Point(0, positionY)
-            };
+                largeur = LargeurMinimumContenu;
+            }
+
+            layoutPrincipal.Width = largeur;
+        }
+
+        private void AjouterTitre(ref int ligne)
+        {
+            Label lblTitre = new Label();
+            lblTitre.Text = "Paramètres de journalisation";
+            lblTitre.Margin = new Padding(0, 0, 0, 28);
+
+            LogFormStyle.AppliquerTitre(lblTitre);
+
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(lblTitre, 0, ligne);
+
+            ligne++;
+        }
+
+        private void AjouterChampPleineLargeur(ref int ligne, Panel champ)
+        {
+            AjouterLigneAuto();
+
+            champ.Dock = DockStyle.Fill;
+            champ.Margin = new Padding(0, 0, 0, 22);
+
+            layoutPrincipal.Controls.Add(champ, 0, ligne);
+
+            ligne++;
+        }
+
+        private void AjouterLigneAuto()
+        {
+            layoutPrincipal.RowCount++;
+            layoutPrincipal.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
+
+        private Panel CreerChampRepertoire()
+        {
+            Panel panel = CreerPanelChamp(70);
+
+            Label label = new Label();
+            label.Text = "Répertoire des logs";
+            label.Location = new Point(0, 0);
 
             LogFormStyle.AppliquerLabel(label);
-            parent.Controls.Add(label);
+            panel.Controls.Add(label);
 
-            positionY += 25;
-
-            int largeurChampRepertoire = LargeurControles - LargeurBoutonParcourir - EspaceBouton;
-
-            _txtRepertoireLogs.Location = new Point(0, positionY);
-            _txtRepertoireLogs.Width = largeurChampRepertoire;
+            _txtRepertoireLogs.Location = new Point(0, 25);
             _txtRepertoireLogs.Height = HauteurChamp;
+
             LogFormStyle.AppliquerChampTexte(_txtRepertoireLogs);
-            parent.Controls.Add(_txtRepertoireLogs);
+            panel.Controls.Add(_txtRepertoireLogs);
 
             _btnParcourir.Text = "Parcourir";
             _btnParcourir.IconChar = IconChar.FolderOpen;
@@ -108,81 +145,109 @@ namespace SaimDataCopy.Views.Logs
             _btnParcourir.TextImageRelation = TextImageRelation.ImageBeforeText;
             _btnParcourir.ImageAlign = ContentAlignment.MiddleLeft;
             _btnParcourir.TextAlign = ContentAlignment.MiddleCenter;
-            _btnParcourir.Location = new Point(largeurChampRepertoire + EspaceBouton, positionY);
-            _btnParcourir.Width = LargeurBoutonParcourir;
             _btnParcourir.Height = HauteurChamp;
+
             LogFormStyle.AppliquerBoutonParcourir(_btnParcourir);
+
             _btnParcourir.Click += BtnParcourir_Click;
-            parent.Controls.Add(_btnParcourir);
+            panel.Controls.Add(_btnParcourir);
 
-            positionY += EspaceEntreChamps;
-        }
-
-        private void AjouterChampTexte(Panel parent, string texteLabel, TextBox textBox, ref int positionY)
-        {
-            Label label = new Label
+            panel.Resize += (sender, e) =>
             {
-                Text = texteLabel,
-                Location = new Point(0, positionY)
+                int largeurChamp = panel.Width - LargeurBoutonParcourir - EspaceBouton;
+
+                if (largeurChamp < 300)
+                {
+                    largeurChamp = 300;
+                }
+
+                _txtRepertoireLogs.Width = largeurChamp;
+
+                _btnParcourir.Location = new Point(
+                    largeurChamp + EspaceBouton,
+                    25
+                );
+
+                _btnParcourir.Width = LargeurBoutonParcourir;
             };
 
+            return panel;
+        }
+
+        private Panel CreerChampTexte(string texteLabel, TextBox textBox, bool afficherIconeInfo)
+        {
+            Panel panel = CreerPanelChamp(70);
+
+            Label label = new Label();
+            label.Text = texteLabel;
+            label.Location = new Point(0, 0);
+
             LogFormStyle.AppliquerLabel(label);
-            parent.Controls.Add(label);
+            panel.Controls.Add(label);
 
-            positionY += 25;
-
-            textBox.Location = new Point(0, positionY);
-            textBox.Width = LargeurControles;
+            textBox.Location = new Point(0, 25);
             textBox.Height = HauteurChamp;
-            LogFormStyle.AppliquerChampTexte(textBox);
-            parent.Controls.Add(textBox);
 
-            IconPictureBox iconeInfo = new IconPictureBox
+            LogFormStyle.AppliquerChampTexte(textBox);
+            panel.Controls.Add(textBox);
+
+            IconPictureBox? iconeInfo = null;
+
+            if (afficherIconeInfo)
             {
-                IconChar = IconChar.CircleInfo,
-                IconColor = Color.FromArgb(30, 96, 190),
-                IconSize = 18,
-                Size = new Size(18, 18),
-                Location = new Point(LargeurControles + 12, positionY + 10),
-                BackColor = Color.White
+                iconeInfo = new IconPictureBox();
+                iconeInfo.IconChar = IconChar.CircleInfo;
+                iconeInfo.IconColor = Color.FromArgb(30, 96, 190);
+                iconeInfo.IconSize = 18;
+                iconeInfo.Size = new Size(18, 18);
+                iconeInfo.BackColor = Color.White;
+
+                panel.Controls.Add(iconeInfo);
+            }
+
+            panel.Resize += (sender, e) =>
+            {
+                int margeIcone = afficherIconeInfo ? 35 : 0;
+
+                textBox.Width = panel.Width - margeIcone;
+
+                if (iconeInfo != null)
+                {
+                    iconeInfo.Location = new Point(
+                        panel.Width - 22,
+                        35
+                    );
+                }
             };
 
-            parent.Controls.Add(iconeInfo);
-
-            positionY += EspaceEntreChamps;
+            return panel;
         }
 
-        private void AjouterChampNombre(
-                Panel parent,
-                string texteLabel,
-                NumericUpDown numeric,
-                ref int positionY,
-                int minimum,
-                int maximum,
-                int valeurDefaut)
+        private Panel CreerChampNombre(
+            string texteLabel,
+            NumericUpDown numeric,
+            int minimum,
+            int maximum,
+            int valeurDefaut)
         {
-            Label label = new Label
-            {
-                Text = texteLabel,
-                Location = new Point(0, positionY)
-            };
+            Panel panel = CreerPanelChamp(70);
+
+            Label label = new Label();
+            label.Text = texteLabel;
+            label.Location = new Point(0, 0);
 
             LogFormStyle.AppliquerLabel(label);
-            parent.Controls.Add(label);
+            panel.Controls.Add(label);
 
-            positionY += 25;
-
-            Panel panelNombre = new Panel
-            {
-                Location = new Point(0, positionY),
-                Size = new Size(LargeurControles, HauteurChamp)
-            };
+            Panel panelNombre = new Panel();
+            panelNombre.Location = new Point(0, 25);
+            panelNombre.Height = HauteurChamp;
 
             LogFormStyle.AppliquerPanelChampNombre(panelNombre);
-            parent.Controls.Add(panelNombre);
+            panel.Controls.Add(panelNombre);
 
             numeric.Location = new Point(8, 7);
-            numeric.Size = new Size(LargeurControles - 16, 28);
+            numeric.Height = 28;
             numeric.Minimum = minimum;
             numeric.Maximum = maximum;
             numeric.Value = valeurDefaut;
@@ -191,40 +256,59 @@ namespace SaimDataCopy.Views.Logs
             LogFormStyle.AppliquerChampNombre(numeric);
             panelNombre.Controls.Add(numeric);
 
-            positionY += EspaceEntreChamps;
+            panel.Resize += (sender, e) =>
+            {
+                panelNombre.Width = panel.Width;
+                numeric.Width = panelNombre.Width - 16;
+            };
+
+            return panel;
         }
 
-        private void AjouterBlocInformation(Panel parent, int positionY)
+        private Panel CreerBlocInformation()
         {
-            Panel panelInfo = new Panel
-            {
-                Location = new Point(0, positionY),
-                Width = LargeurControles
-            };
+            Panel panelInfo = new Panel();
+            panelInfo.Height = 48;
+            panelInfo.BackColor = Color.White;
 
             LogFormStyle.AppliquerBlocInformation(panelInfo);
-            parent.Controls.Add(panelInfo);
 
-            IconPictureBox iconeInfo = new IconPictureBox
-            {
-                IconChar = IconChar.CircleInfo,
-                IconColor = Color.FromArgb(30, 96, 190),
-                IconSize = 18,
-                Size = new Size(20, 20),
-                Location = new Point(25, 18),
-                BackColor = panelInfo.BackColor
-            };
+            IconPictureBox iconeInfo = new IconPictureBox();
+            iconeInfo.IconChar = IconChar.CircleInfo;
+            iconeInfo.IconColor = Color.FromArgb(30, 96, 190);
+            iconeInfo.IconSize = 18;
+            iconeInfo.Size = new Size(20, 20);
+            iconeInfo.Location = new Point(16, 14);
+            iconeInfo.BackColor = panelInfo.BackColor;
 
             panelInfo.Controls.Add(iconeInfo);
 
-            Label lblTexte = new Label
-            {
-                Text = "Exemple de nom de fichier : log_2025-05-18_14-30-00.txt",
-                Location = new Point(45, 14)
-            };
+            Label lblTexte = new Label();
+            lblTexte.Text = "Exemple de nom de fichier : log_2025-05-18_14-30-00.txt";
+            lblTexte.Location = new Point(45, 13);
+            lblTexte.Height = 24;
+            lblTexte.AutoSize = false;
+            lblTexte.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             LogFormStyle.AppliquerTexteInformation(lblTexte);
+
             panelInfo.Controls.Add(lblTexte);
+
+            panelInfo.Resize += (sender, e) =>
+            {
+                lblTexte.Width = panelInfo.Width - lblTexte.Left - 15;
+            };
+
+            return panelInfo;
+        }
+
+        private Panel CreerPanelChamp(int hauteur)
+        {
+            Panel panel = new Panel();
+            panel.Height = hauteur;
+            panel.BackColor = Color.White;
+
+            return panel;
         }
 
         public LogConfigModel RecupererConfiguration()

@@ -17,6 +17,14 @@ namespace SaimDataCopy.Views.Historique
         private Panel pageListeHistorique;
         private Panel pageDetailExecution;
 
+        private FlowLayoutPanel panelGlobalListe;
+        private FlowLayoutPanel panelFiltres;
+
+        private Panel blocDateFiltre;
+        private Panel blocOrigineFiltre;
+        private Panel blocStatutFiltre;
+        private Panel blocBoutonFiltre;
+
         private DateTimePicker dtpDate;
         private ComboBox cboOrigine;
         private ComboBox cboStatut;
@@ -35,12 +43,18 @@ namespace SaimDataCopy.Views.Historique
 
         public HistoriqueView()
         {
-            BackColor = Color.White;
-            AutoScroll = false;
-            Padding = new Padding(0);
+            HistoriqueStyle.AppliquerPage(this);
 
             pageListeHistorique = new Panel();
             pageDetailExecution = new Panel();
+
+            panelGlobalListe = new FlowLayoutPanel();
+            panelFiltres = new FlowLayoutPanel();
+
+            blocDateFiltre = new Panel();
+            blocOrigineFiltre = new Panel();
+            blocStatutFiltre = new Panel();
+            blocBoutonFiltre = new Panel();
 
             dtpDate = new DateTimePicker();
             cboOrigine = new ComboBox();
@@ -76,44 +90,54 @@ namespace SaimDataCopy.Views.Historique
         {
             pageListeHistorique.Dock = DockStyle.Fill;
             pageListeHistorique.BackColor = Color.White;
-            pageListeHistorique.AutoScroll = true;
+            pageListeHistorique.AutoScroll = false;
             pageListeHistorique.Padding = new Padding(22, 25, 22, 25);
 
-            FlowLayoutPanel panelGlobal = new FlowLayoutPanel();
-            panelGlobal.Dock = DockStyle.Top;
-            panelGlobal.AutoSize = true;
-            panelGlobal.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            panelGlobal.FlowDirection = FlowDirection.TopDown;
-            panelGlobal.WrapContents = false;
+            panelGlobalListe.Dock = DockStyle.Fill;
+            panelGlobalListe.AutoScroll = true;
+            panelGlobalListe.FlowDirection = FlowDirection.TopDown;
+            panelGlobalListe.WrapContents = false;
+            panelGlobalListe.Margin = new Padding(0);
+            panelGlobalListe.Padding = new Padding(0);
 
             Label lblTitre = new Label();
             lblTitre.Text = "Historique des exécutions";
             HistoriqueStyle.AppliquerTitre(lblTitre);
 
-            FlowLayoutPanel panelFiltres = CreerZoneFiltres();
+            FlowLayoutPanel zoneFiltres = CreerZoneFiltres();
 
             HistoriqueStyle.AppliquerCadreTableau(panelTableau);
             HistoriqueStyle.AppliquerListeTableau(tableauExecutions);
 
             panelTableau.Controls.Add(tableauExecutions);
 
-            panelGlobal.Controls.Add(lblTitre);
-            panelGlobal.Controls.Add(panelFiltres);
-            panelGlobal.Controls.Add(panelTableau);
+            panelGlobalListe.Controls.Add(lblTitre);
+            panelGlobalListe.Controls.Add(zoneFiltres);
+            panelGlobalListe.Controls.Add(panelTableau);
 
-            pageListeHistorique.Controls.Add(panelGlobal);
+            pageListeHistorique.Controls.Add(panelGlobalListe);
+
+            panelGlobalListe.Resize += (sender, e) =>
+            {
+                AdapterDispositionListe();
+            };
+
+            tableauExecutions.Resize += (sender, e) =>
+            {
+                MettreAJourLargeursTableau();
+            };
         }
 
         private FlowLayoutPanel CreerZoneFiltres()
         {
-            FlowLayoutPanel panelFiltres = new FlowLayoutPanel();
-            panelFiltres.AutoSize = true;
-            panelFiltres.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            panelFiltres.AutoSize = false;
+            panelFiltres.Height = 65;
             panelFiltres.FlowDirection = FlowDirection.LeftToRight;
             panelFiltres.WrapContents = false;
             panelFiltres.Margin = new Padding(0);
+            panelFiltres.Padding = new Padding(0);
 
-            Panel blocDate = CreerBlocFiltre("Filtre par date", dtpDate);
+            blocDateFiltre = CreerBlocFiltre("Filtre par date", dtpDate);
             HistoriqueStyle.AppliquerDatePicker(dtpDate);
 
             dtpDate.CustomFormat = "'jj/mm/aaaa'";
@@ -133,7 +157,7 @@ namespace SaimDataCopy.Views.Historique
                 }
             };
 
-            Panel blocOrigine = CreerBlocFiltre("Filtre par origine", cboOrigine);
+            blocOrigineFiltre = CreerBlocFiltre("Filtre par origine", cboOrigine);
 
             cboOrigine.Items.AddRange(new object[]
             {
@@ -145,7 +169,7 @@ namespace SaimDataCopy.Views.Historique
             cboOrigine.SelectedIndex = 0;
             HistoriqueStyle.AppliquerComboBox(cboOrigine);
 
-            Panel blocStatut = CreerBlocFiltre("Filtre par statut", cboStatut);
+            blocStatutFiltre = CreerBlocFiltre("Filtre par statut", cboStatut);
 
             cboStatut.Items.AddRange(new object[]
             {
@@ -158,28 +182,27 @@ namespace SaimDataCopy.Views.Historique
             cboStatut.SelectedIndex = 0;
             HistoriqueStyle.AppliquerComboBox(cboStatut);
 
-            Panel blocBouton = new Panel();
-            blocBouton.Width = 240;
-            blocBouton.Height = 65;
-            blocBouton.Margin = new Padding(0);
+            blocBoutonFiltre = new Panel();
+            blocBoutonFiltre.Width = 240;
+            blocBoutonFiltre.Height = 65;
+            blocBoutonFiltre.Margin = new Padding(0);
 
             HistoriqueStyle.AppliquerBoutonRecherche(btnRechercher);
 
             btnRechercher.Height = cboStatut.Height;
-            btnRechercher.Width = cboStatut.Width;
-            btnRechercher.Location = new Point(0, cboStatut.Top);
+            btnRechercher.Location = new Point(0, 25);
 
             btnRechercher.Click += (sender, e) =>
             {
                 RechercheDemandee?.Invoke(this, EventArgs.Empty);
             };
 
-            blocBouton.Controls.Add(btnRechercher);
+            blocBoutonFiltre.Controls.Add(btnRechercher);
 
-            panelFiltres.Controls.Add(blocDate);
-            panelFiltres.Controls.Add(blocOrigine);
-            panelFiltres.Controls.Add(blocStatut);
-            panelFiltres.Controls.Add(blocBouton);
+            panelFiltres.Controls.Add(blocDateFiltre);
+            panelFiltres.Controls.Add(blocOrigineFiltre);
+            panelFiltres.Controls.Add(blocStatutFiltre);
+            panelFiltres.Controls.Add(blocBoutonFiltre);
 
             return panelFiltres;
         }
@@ -204,6 +227,68 @@ namespace SaimDataCopy.Views.Historique
             return panel;
         }
 
+        private void AdapterDispositionListe()
+        {
+            int largeurContenu = ObtenirLargeurContenuListe();
+
+            panelFiltres.Width = largeurContenu;
+            panelTableau.Width = largeurContenu;
+
+            int hauteurTableau = panelGlobalListe.ClientSize.Height - 140;
+
+            if (hauteurTableau < 360)
+            {
+                hauteurTableau = 360;
+            }
+
+            panelTableau.Height = hauteurTableau;
+
+            AdapterZoneFiltres(largeurContenu);
+            MettreAJourLargeursTableau();
+        }
+
+        private int ObtenirLargeurContenuListe()
+        {
+            int largeur = panelGlobalListe.ClientSize.Width - 5;
+
+            if (largeur < 900)
+            {
+                largeur = 900;
+            }
+
+            return largeur;
+        }
+
+        private void AdapterZoneFiltres(int largeurContenu)
+        {
+            int margeEntreBlocs = 12;
+            int largeurDisponible = largeurContenu - (margeEntreBlocs * 3);
+            int largeurBloc = largeurDisponible / 4;
+
+            if (largeurBloc < 200)
+            {
+                largeurBloc = 200;
+            }
+
+            blocDateFiltre.Width = largeurBloc;
+            blocOrigineFiltre.Width = largeurBloc;
+            blocStatutFiltre.Width = largeurBloc;
+            blocBoutonFiltre.Width = largeurBloc;
+
+            blocDateFiltre.Margin = new Padding(0, 0, margeEntreBlocs, 0);
+            blocOrigineFiltre.Margin = new Padding(0, 0, margeEntreBlocs, 0);
+            blocStatutFiltre.Margin = new Padding(0, 0, margeEntreBlocs, 0);
+            blocBoutonFiltre.Margin = new Padding(0);
+
+            dtpDate.Width = blocDateFiltre.Width;
+            cboOrigine.Width = blocOrigineFiltre.Width;
+            cboStatut.Width = blocStatutFiltre.Width;
+
+            btnRechercher.Width = blocBoutonFiltre.Width;
+            btnRechercher.Height = cboStatut.Height;
+            btnRechercher.Location = new Point(0, 25);
+        }
+
         public void AfficherExecutions(List<HistoriqueExecutionModel> executions)
         {
             tableauExecutions.Controls.Clear();
@@ -216,7 +301,7 @@ namespace SaimDataCopy.Views.Historique
             {
                 Label lblVide = new Label();
                 lblVide.Text = "Aucune exécution trouvée avec ces filtres.";
-                lblVide.Width = 993;
+                lblVide.Width = ObtenirLargeurTableauInterieur();
                 lblVide.Height = 70;
                 lblVide.TextAlign = ContentAlignment.MiddleCenter;
                 lblVide.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
@@ -227,6 +312,7 @@ namespace SaimDataCopy.Views.Historique
                 tableauExecutions.Controls.Add(lblVide);
                 tableauExecutions.Controls.Add(CreerSeparateur());
 
+                MettreAJourLargeursTableau();
                 return;
             }
 
@@ -236,6 +322,8 @@ namespace SaimDataCopy.Views.Historique
                 tableauExecutions.Controls.Add(ligne);
                 tableauExecutions.Controls.Add(CreerSeparateur());
             }
+
+            MettreAJourLargeursTableau();
         }
 
         private TableLayoutPanel CreerLigneEntete()
@@ -253,10 +341,12 @@ namespace SaimDataCopy.Views.Historique
             AjouterCelluleEntete(ligne, "Date/heure de\nlancement", 0);
             AjouterCelluleEntete(ligne, "Origine", 1);
             AjouterCelluleEntete(ligne, "Bases traitées", 2);
-            AjouterCelluleEntete(ligne, "Lignes avant\n→ après", 3);
+            AjouterCelluleEntete(ligne, "Lignes\navant", 3);
             AjouterCelluleEntete(ligne, "Durée", 4);
             AjouterCelluleEntete(ligne, "Statut", 5);
             AjouterCelluleEntete(ligne, "Actions", 6);
+
+            ligne.Width = ObtenirLargeurTableauInterieur();
 
             return ligne;
         }
@@ -281,6 +371,8 @@ namespace SaimDataCopy.Views.Historique
             AjouterCelluleBadgeStatut(ligne, execution.Statut, 5);
             AjouterCelluleBoutonDetail(ligne, execution.Id, 6);
 
+            ligne.Width = ObtenirLargeurTableauInterieur();
+
             return ligne;
         }
 
@@ -288,23 +380,51 @@ namespace SaimDataCopy.Views.Historique
         {
             ligne.ColumnStyles.Clear();
 
-            // Total = 993.
-            // On réduit un peu "Bases traitées" et "Lignes",
-            // puis on donne plus d'espace à la colonne Actions.
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155)); // Date / heure
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 135)); // Origine
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 195)); // Bases traitées
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125)); // Lignes
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));  // Durée
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 135)); // Statut
-            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 153)); // Actions
+            // Les colonnes utilisent des pourcentages.
+            // Comme ça, le tableau s'adapte quand la fenêtre devient plus grande.
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F)); // Date / heure
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14F)); // Origine
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F)); // Bases traitées
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14F)); // Lignes
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 10F)); // Durée
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 13F)); // Statut
+            ligne.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 13F)); // Actions
         }
 
         private Panel CreerSeparateur()
         {
             Panel separateur = new Panel();
             HistoriqueStyle.AppliquerSeparateur(separateur);
+            separateur.Width = ObtenirLargeurTableauInterieur();
+
             return separateur;
+        }
+
+        private int ObtenirLargeurTableauInterieur()
+        {
+            int largeur = panelTableau.ClientSize.Width - panelTableau.Padding.Left - panelTableau.Padding.Right;
+
+            if (largeur < 850)
+            {
+                largeur = 850;
+            }
+
+            return largeur;
+        }
+
+        private void MettreAJourLargeursTableau()
+        {
+            int largeur = ObtenirLargeurTableauInterieur();
+
+            foreach (Control controle in tableauExecutions.Controls)
+            {
+                controle.Width = largeur;
+
+                if (controle is TableLayoutPanel ligne)
+                {
+                    ligne.Width = largeur;
+                }
+            }
         }
 
         private void CentrerDansCellule(Panel panel, Control controle, int margeGauche)
@@ -401,6 +521,11 @@ namespace SaimDataCopy.Views.Historique
             contenuDetail.Margin = new Padding(0);
 
             pageDetailExecution.Controls.Add(contenuDetail);
+
+            pageDetailExecution.Resize += (sender, e) =>
+            {
+                AdapterDispositionDetail();
+            };
         }
 
         public void AfficherDetail(HistoriqueExecutionModel execution)
@@ -458,13 +583,80 @@ namespace SaimDataCopy.Views.Historique
 
             contenuDetail.Controls.Add(zoneBoutonsBas);
 
+            AdapterDispositionDetail();
             AfficherPageDetail();
+        }
+
+        private int ObtenirLargeurDetail()
+        {
+            int largeur = pageDetailExecution.ClientSize.Width
+                - pageDetailExecution.Padding.Left
+                - pageDetailExecution.Padding.Right
+                - SystemInformation.VerticalScrollBarWidth;
+
+            if (largeur < 850)
+            {
+                largeur = 850;
+            }
+
+            return largeur;
+        }
+
+        private void AdapterDispositionDetail()
+        {
+            int largeur = ObtenirLargeurDetail();
+
+            contenuDetail.Width = largeur;
+
+            foreach (Control controle in contenuDetail.Controls)
+            {
+                switch (controle.Tag)
+                {
+                    case "CarteResume":
+                        controle.Width = largeur;
+                        AdapterCarteResume((Panel)controle);
+                        break;
+
+                    case "ZoneCartes":
+                        controle.Width = largeur;
+                        AdapterZoneCartesInformation((FlowLayoutPanel)controle, largeur);
+                        break;
+
+                    case "CarteBase":
+                        controle.Width = largeur;
+                        AdapterCarteBase((Panel)controle);
+                        break;
+                }
+            }
+        }
+
+        private void AdapterZoneCartesInformation(FlowLayoutPanel zoneCartes, int largeurDisponible)
+        {
+            // On veut 3 cartes par ligne comme dans la maquette.
+            int espaceEntreCartes = 14;
+            int nombreColonnes = 3;
+
+            int largeurCarte = (largeurDisponible - (espaceEntreCartes * (nombreColonnes - 1))) / nombreColonnes;
+
+            if (largeurCarte < 280)
+            {
+                largeurCarte = 280;
+            }
+
+            foreach (Control controle in zoneCartes.Controls)
+            {
+                controle.Width = largeurCarte;
+                controle.Height = 92;
+                controle.Margin = new Padding(0, 0, espaceEntreCartes, 14);
+            }
         }
 
         private Panel CreerCarteResumeExecution(HistoriqueExecutionModel execution)
         {
             Panel panel = new Panel();
+            panel.Tag = "CarteResume";
             HistoriqueDetailStyle.AppliquerCarteResume(panel);
+            panel.Width = ObtenirLargeurDetail();
 
             IconPictureBox icone = new IconPictureBox();
             icone.IconChar = ObtenirIconeStatut(execution.Statut);
@@ -487,21 +679,44 @@ namespace SaimDataCopy.Views.Historique
             HistoriqueDetailStyle.AppliquerSousTitreResume(lblSousTitre);
 
             Label badge = new Label();
+            badge.Tag = "BadgeResume";
             HistoriqueDetailStyle.AppliquerBadgeStatut(badge, execution.Statut);
-            badge.Location = new Point(890, 24);
 
             panel.Controls.Add(icone);
             panel.Controls.Add(lblTitre);
             panel.Controls.Add(lblSousTitre);
             panel.Controls.Add(badge);
 
+            panel.Resize += (sender, e) =>
+            {
+                AdapterCarteResume(panel);
+            };
+
+            AdapterCarteResume(panel);
+
             return panel;
+        }
+
+        private void AdapterCarteResume(Panel panel)
+        {
+            foreach (Control controle in panel.Controls)
+            {
+                if (controle.Tag?.ToString() == "BadgeResume")
+                {
+                    controle.Location = new Point(
+                        panel.Width - controle.Width - 20,
+                        24
+                    );
+                }
+            }
         }
 
         private FlowLayoutPanel CreerZoneCartesInformation(HistoriqueExecutionModel execution)
         {
             FlowLayoutPanel zoneCartes = new FlowLayoutPanel();
+            zoneCartes.Tag = "ZoneCartes";
             HistoriqueDetailStyle.AppliquerZoneCartes(zoneCartes);
+            zoneCartes.Width = ObtenirLargeurDetail();
 
             zoneCartes.Controls.Add(CreerCarteInfo(
                 IconChar.Server,
@@ -560,6 +775,7 @@ namespace SaimDataCopy.Views.Historique
 
             return panel;
         }
+
         private List<HistoriqueEtapeExecutionModel> ObtenirEtapesPourAffichage(
             HistoriqueExecutionModel execution)
         {
@@ -580,12 +796,12 @@ namespace SaimDataCopy.Views.Historique
                     Statut = execution.Statut,
                     Message = "Détail non disponible pour cette ancienne exécution.",
                     Logs = new List<string>
-            {
-                $"[{execution.DateHeureLancement:HH:mm:ss}] Exécution enregistrée dans l'historique.",
-                $"[{execution.DateHeureLancement:HH:mm:ss}] Base traitée : {nomBase}",
-                $"[{execution.DateHeureLancement:HH:mm:ss}] Statut : {execution.Statut}",
-                $"[{execution.DateHeureLancement:HH:mm:ss}] Lignes : {execution.LignesAvant} → {execution.LignesApres}"
-            }
+                    {
+                        $"[{execution.DateHeureLancement:HH:mm:ss}] Exécution enregistrée dans l'historique.",
+                        $"[{execution.DateHeureLancement:HH:mm:ss}] Base traitée : {nomBase}",
+                        $"[{execution.DateHeureLancement:HH:mm:ss}] Statut : {execution.Statut}",
+                        $"[{execution.DateHeureLancement:HH:mm:ss}] Lignes : {execution.LignesAvant} → {execution.LignesApres}"
+                    }
                 };
 
                 etapes.Add(etape);
@@ -612,7 +828,8 @@ namespace SaimDataCopy.Views.Historique
             int hauteurTotale = hauteurEntete + hauteurMessage + hauteurLogs;
 
             Panel carte = new Panel();
-            carte.Width = 975;
+            carte.Tag = "CarteBase";
+            carte.Width = ObtenirLargeurDetail();
             carte.Height = hauteurTotale;
             carte.Margin = new Padding(0, 0, 0, 12);
             carte.BackColor = Color.White;
@@ -628,9 +845,11 @@ namespace SaimDataCopy.Views.Historique
             if (afficherMessage)
             {
                 Label lblMessage = new Label();
+                lblMessage.Tag = "MessageErreur";
                 lblMessage.Text = $"{etape.Statut} : {etape.Message}";
                 HistoriqueDetailStyle.AppliquerMessageErreur(lblMessage);
                 lblMessage.Location = new Point(0, positionY);
+                lblMessage.Width = carte.Width;
 
                 carte.Controls.Add(lblMessage);
 
@@ -638,11 +857,20 @@ namespace SaimDataCopy.Views.Historique
             }
 
             RichTextBox zoneLogs = new RichTextBox();
+            zoneLogs.Tag = "ZoneLogs";
             HistoriqueDetailStyle.AppliquerZoneLogs(zoneLogs);
             zoneLogs.Location = new Point(0, positionY);
+            zoneLogs.Width = carte.Width;
             zoneLogs.Text = ConstruireTexteLogs(etape);
 
             carte.Controls.Add(zoneLogs);
+
+            carte.Resize += (sender, e) =>
+            {
+                AdapterCarteBase(carte);
+            };
+
+            AdapterCarteBase(carte);
 
             return carte;
         }
@@ -650,6 +878,9 @@ namespace SaimDataCopy.Views.Historique
         private Panel CreerEnteteBase(HistoriqueEtapeExecutionModel etape)
         {
             Panel entete = new Panel();
+            entete.Tag = "EnteteBase";
+            entete.Width = ObtenirLargeurDetail();
+
             HistoriqueDetailStyle.AppliquerEnteteBase(entete, etape.Statut);
 
             IconPictureBox icone = new IconPictureBox();
@@ -665,19 +896,84 @@ namespace SaimDataCopy.Views.Historique
             HistoriqueDetailStyle.AppliquerTitreBase(lblNomBase);
 
             Label lblLignes = new Label();
+            lblLignes.Tag = "LignesBase";
             lblLignes.Text = etape.LignesAffichage;
             HistoriqueDetailStyle.AppliquerLignesBase(lblLignes);
 
             Label badge = new Label();
+            badge.Tag = "BadgeBase";
             HistoriqueDetailStyle.AppliquerBadgeStatut(badge, etape.Statut);
-            badge.Location = new Point(908, 8);
 
             entete.Controls.Add(icone);
             entete.Controls.Add(lblNomBase);
             entete.Controls.Add(lblLignes);
             entete.Controls.Add(badge);
 
+            AdapterEnteteBase(entete);
+
+            entete.Resize += (sender, e) =>
+            {
+                AdapterEnteteBase(entete);
+            };
+
             return entete;
+        }
+
+        private void AdapterCarteBase(Panel carte)
+        {
+            foreach (Control controle in carte.Controls)
+            {
+                switch (controle.Tag)
+                {
+                    case "EnteteBase":
+                        controle.Width = carte.Width;
+                        AdapterEnteteBase((Panel)controle);
+                        break;
+
+                    case "MessageErreur":
+                        controle.Width = carte.Width;
+                        break;
+
+                    case "ZoneLogs":
+                        controle.Width = carte.Width;
+                        break;
+                }
+            }
+        }
+
+        private void AdapterEnteteBase(Panel entete)
+        {
+            Control? badge = null;
+            Control? lignes = null;
+
+            foreach (Control controle in entete.Controls)
+            {
+                if (controle.Tag?.ToString() == "BadgeBase")
+                {
+                    badge = controle;
+                }
+
+                if (controle.Tag?.ToString() == "LignesBase")
+                {
+                    lignes = controle;
+                }
+            }
+
+            if (badge != null)
+            {
+                badge.Location = new Point(
+                    entete.Width - badge.Width - 16,
+                    8
+                );
+            }
+
+            if (lignes != null && badge != null)
+            {
+                lignes.Location = new Point(
+                    badge.Left - lignes.Width - 15,
+                    11
+                );
+            }
         }
 
         private string ConstruireTexteLogs(HistoriqueEtapeExecutionModel etape)
@@ -730,6 +1026,8 @@ namespace SaimDataCopy.Views.Historique
             pageDetailExecution.Visible = false;
             pageListeHistorique.Visible = true;
             pageListeHistorique.BringToFront();
+
+            AdapterDispositionListe();
         }
 
         private void AfficherPageDetail()
@@ -737,6 +1035,8 @@ namespace SaimDataCopy.Views.Historique
             pageListeHistorique.Visible = false;
             pageDetailExecution.Visible = true;
             pageDetailExecution.BringToFront();
+
+            AdapterDispositionDetail();
         }
 
         public DateTime? ObtenirDateFiltre()

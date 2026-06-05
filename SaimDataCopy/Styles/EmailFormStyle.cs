@@ -26,14 +26,14 @@ namespace SaimDataCopy.Styles
 
         public static void AppliquerTitre(Label label)
         {
-            label.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+            label.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             label.ForeColor = CouleurTexte;
             label.AutoSize = true;
         }
 
         public static void AppliquerTitreSection(Label label)
         {
-            label.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            label.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             label.ForeColor = CouleurTexte;
             label.AutoSize = true;
         }

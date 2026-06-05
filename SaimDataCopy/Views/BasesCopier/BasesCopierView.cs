@@ -8,6 +8,11 @@ namespace SaimDataCopy.Views.BasesCopier
 {
     public class BasesCopierView : UserControl, IBasesCopierView
     {
+        private const int MargePage = 24;
+        private const int LargeurMinimumContenu = 900;
+
+        private readonly Panel panelContenu = new Panel();
+
         private readonly Label lblTitre = new Label();
         private readonly Panel panelInfo = new Panel();
         private readonly IconPictureBox iconeInfo = new IconPictureBox();
@@ -35,9 +40,8 @@ namespace SaimDataCopy.Views.BasesCopier
             Dock = DockStyle.Fill;
             BackColor = Color.White;
 
-            Panel panelContenu = new Panel();
             panelContenu.Dock = DockStyle.Fill;
-            panelContenu.Padding = new Padding(24, 26, 24, 24);
+            panelContenu.Padding = new Padding(MargePage, 26, MargePage, 24);
             panelContenu.AutoScroll = true;
             panelContenu.BackColor = Color.White;
             Controls.Add(panelContenu);
@@ -46,11 +50,11 @@ namespace SaimDataCopy.Views.BasesCopier
             lblTitre.Font = new Font("Segoe UI", 14, FontStyle.Bold);
             lblTitre.ForeColor = Color.Black;
             lblTitre.AutoSize = true;
-            lblTitre.Location = new Point(24, 26);
+            lblTitre.Location = new Point(MargePage, 26);
             panelContenu.Controls.Add(lblTitre);
 
-            panelInfo.Location = new Point(24, 72);
-            panelInfo.Size = new Size(995, 48);
+            panelInfo.Location = new Point(MargePage, 72);
+            panelInfo.Height = 48;
             panelInfo.BackColor = Color.FromArgb(235, 242, 255);
             panelContenu.Controls.Add(panelInfo);
 
@@ -65,19 +69,31 @@ namespace SaimDataCopy.Views.BasesCopier
             lblInfo.Text = "Les bases sont chargées depuis le serveur source. Cochez seulement celles à copier.";
             lblInfo.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             lblInfo.ForeColor = Color.Black;
-            lblInfo.AutoSize = true;
-            lblInfo.Location = new Point(48, 14);
+            lblInfo.AutoSize = false;
+            lblInfo.Height = 24;
+            lblInfo.TextAlign = ContentAlignment.MiddleLeft;
+            lblInfo.Location = new Point(48, 12);
             lblInfo.BackColor = panelInfo.BackColor;
             panelInfo.Controls.Add(lblInfo);
 
             CreerGrille();
             panelContenu.Controls.Add(grilleBases);
 
-            panelBoutons.Location = new Point(24, 445);
-            panelBoutons.Size = new Size(500, 45);
             panelBoutons.BackColor = Color.White;
             panelContenu.Controls.Add(panelBoutons);
 
+            ConfigurerBoutons();
+
+            panelContenu.Resize += (sender, e) =>
+            {
+                AdapterDisposition();
+            };
+
+            AdapterDisposition();
+        }
+
+        private void ConfigurerBoutons()
+        {
             btnCocherTout.Text = " Cocher toutes les bases";
             btnCocherTout.IconChar = IconChar.CheckDouble;
             btnCocherTout.IconSize = 18;
@@ -117,9 +133,8 @@ namespace SaimDataCopy.Views.BasesCopier
 
         private void CreerGrille()
         {
-            grilleBases.Location = new Point(24, 145);
-            grilleBases.Width = 995;
-            grilleBases.ScrollBars = ScrollBars.None;
+            grilleBases.Location = new Point(MargePage, 145);
+            grilleBases.ScrollBars = ScrollBars.Vertical;
             grilleBases.EditMode = DataGridViewEditMode.EditOnEnter;
 
             TableGridStyle.AppliquerStyle(grilleBases);
@@ -186,6 +201,26 @@ namespace SaimDataCopy.Views.BasesCopier
             grilleBases.CellClick += GrilleBases_CellClick;
 
             grilleBases.DataError += (s, e) => e.ThrowException = false;
+        }
+
+        private void AdapterDisposition()
+        {
+            int largeurContenu = panelContenu.ClientSize.Width - (MargePage * 2);
+
+            if (largeurContenu < LargeurMinimumContenu)
+            {
+                largeurContenu = LargeurMinimumContenu;
+            }
+
+            panelInfo.Width = largeurContenu;
+
+            lblInfo.Width = panelInfo.Width - lblInfo.Left - 15;
+
+            grilleBases.Width = largeurContenu;
+
+            AjusterHauteurTableau();
+
+            panelBoutons.Width = largeurContenu;
         }
 
         public void AfficherModesCopie(List<string> modesCopie)
@@ -255,13 +290,38 @@ namespace SaimDataCopy.Views.BasesCopier
             int hauteurLignes = grilleBases.Rows.Count * grilleBases.RowTemplate.Height;
             int margeTableau = 3;
 
-            grilleBases.Height = hauteurEntete + hauteurLignes + margeTableau;
+            int hauteurNecessaire = hauteurEntete + hauteurLignes + margeTableau;
+
+            int hauteurDisponible = panelContenu.ClientSize.Height
+                - panelContenu.Padding.Top
+                - panelContenu.Padding.Bottom
+                - grilleBases.Top
+                - 80;
+
+            if (hauteurDisponible < 220)
+            {
+                hauteurDisponible = 220;
+            }
+
+            int hauteurFinale = hauteurNecessaire;
+
+            if (hauteurFinale < 220)
+            {
+                hauteurFinale = 220;
+            }
+
+            if (hauteurFinale > hauteurDisponible)
+            {
+                hauteurFinale = hauteurDisponible;
+            }
+
+            grilleBases.Height = hauteurFinale;
 
             int positionBoutonsY = grilleBases.Bottom + 18;
             int hauteurBouton = 38;
 
-            panelBoutons.Location = new Point(24, positionBoutonsY);
-            panelBoutons.Size = new Size(530, 45);
+            panelBoutons.Location = new Point(MargePage, positionBoutonsY);
+            panelBoutons.Size = new Size(grilleBases.Width, 45);
 
             btnCocherTout.SetBounds(0, 0, 260, hauteurBouton);
             btnSupprimer.SetBounds(275, 0, 240, hauteurBouton);

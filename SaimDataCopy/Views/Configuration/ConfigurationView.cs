@@ -11,6 +11,11 @@ namespace SaimDataCopy.Views.Configuration
     // Elle ne contient pas la logique métier.
     public class ConfigurationView : UserControl
     {
+        private const int LargeurMinimumContenu = 1000;
+
+        private readonly Panel panelContenu = new Panel();
+        private readonly TableLayoutPanel layoutPrincipal = new TableLayoutPanel();
+
         // Champs du serveur source.
         private TextBox txtSourceNomServeur = new TextBox();
         private TextBox txtSourceChaineConnexion = new TextBox();
@@ -35,144 +40,99 @@ namespace SaimDataCopy.Views.Configuration
 
         public ConfigurationView()
         {
+            Dock = DockStyle.Fill;
             BackColor = Color.White;
-            AutoScroll = true;
+            AutoScroll = false;
 
             CreerInterface();
         }
 
         private void CreerInterface()
         {
-            Panel panelContenu = new Panel();
-
-            panelContenu.Dock = DockStyle.Top;
-            panelContenu.Height = 850;
+            panelContenu.Dock = DockStyle.Fill;
             panelContenu.BackColor = Color.White;
+            panelContenu.AutoScroll = true;
+            panelContenu.Padding = new Padding(25, 25, 25, 25);
 
             Controls.Add(panelContenu);
 
-            Label lblTitre = new Label();
-            lblTitre.Text = "Paramètres de configuration";
-            lblTitre.Location = new Point(25, 25);
+            layoutPrincipal.ColumnCount = 2;
+            layoutPrincipal.RowCount = 0;
+            layoutPrincipal.Dock = DockStyle.Top;
+            layoutPrincipal.AutoSize = true;
+            layoutPrincipal.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            layoutPrincipal.BackColor = Color.White;
+            layoutPrincipal.Margin = new Padding(0);
+            layoutPrincipal.Padding = new Padding(0);
 
-            PageFormStyle.AppliquerTitre(lblTitre);
-            panelContenu.Controls.Add(lblTitre);
+            layoutPrincipal.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layoutPrincipal.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
-            CreerSectionServeurSource(
-                panelContenu,
-                "Serveur source (production)",
-                25,
-                85
+            panelContenu.Controls.Add(layoutPrincipal);
+
+            int ligne = 0;
+
+            AjouterTitrePrincipal(ref ligne, "Paramètres de configuration");
+
+            AjouterTitreSection(ref ligne, "Serveur source (production)");
+
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Nom du serveur", "PROD-SRV-01", true, out txtSourceNomServeur),
+                CreerChampTexte("Chaîne de connexion", "Server=...", false, out txtSourceChaineConnexion)
             );
 
-            CreerSectionServeurCible(
-                panelContenu,
-                "Serveur cible (staging)",
-                25,
-                365
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Identifiant", "sa", false, out txtSourceIdentifiant),
+                CreerChampMotDePasse("Mot de passe", "12345678", false, out txtSourceMotDePasse)
             );
 
-            CreerSectionErreur(panelContenu, 650);
-        }
+            AjouterChampPleineLargeur(
+                ref ligne,
+                CreerChampTexte("Port", "1433", false, out txtSourcePort)
+            );
 
-        private void CreerSectionServeurSource(Panel parent, string titre, int x, int y)
-        {
-            Label lblSection = new Label();
-            lblSection.Text = titre;
-            lblSection.Location = new Point(x, y);
+            AjouterTitreSection(ref ligne, "Serveur cible (staging)");
 
-            PageFormStyle.AppliquerSousTitre(lblSection);
-            parent.Controls.Add(lblSection);
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Nom du serveur", "STAGING-SRV-01", true, out txtCibleNomServeur),
+                CreerChampTexte("Chaîne de connexion", "Server=...", false, out txtCibleChaineConnexion)
+            );
 
-            AjouterLabelChamp(parent, "Nom du serveur", x, y + 45, true);
-            txtSourceNomServeur = AjouterTextBox(parent, "PROD-SRV-01", x, y + 70, 475);
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Identifiant", "sa", false, out txtCibleIdentifiant),
+                CreerChampMotDePasse("Mot de passe", "12345678", false, out txtCibleMotDePasse)
+            );
 
-            AjouterLabelChamp(parent, "Chaîne de connexion", x + 500, y + 45, false);
-            txtSourceChaineConnexion = AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
+            cmbModeCopie = CreerComboBox("Écraser", "Mise à jour");
 
-            AjouterLabelChamp(parent, "Identifiant", x, y + 130, false);
-            txtSourceIdentifiant = AjouterTextBox(parent, "sa", x, y + 155, 475);
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Port", "1433", false, out txtCiblePort),
+                CreerChampComboBox("Mode de copie", cmbModeCopie)
+            );
 
-            AjouterLabelChamp(parent, "Mot de passe", x + 500, y + 130, false);
-            txtSourceMotDePasse = AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
+            AjouterTitreSection(ref ligne, "Comportement en cas d'erreur");
 
-            AjouterLabelChamp(parent, "Port", x, y + 215, false);
-            txtSourcePort = AjouterTextBox(parent, "1433", x, y + 240, 980);
-        }
+            cmbErreur = CreerComboBox(
+                "Continuer avec les autres",
+                "Arrêter tous les traitements"
+            );
 
-        private void CreerSectionServeurCible(Panel parent, string titre, int x, int y)
-        {
-            Label lblSection = new Label();
-            lblSection.Text = titre;
-            lblSection.Location = new Point(x, y);
+            cmbTentatives = CreerComboBox(
+                "1 tentative",
+                "2 tentatives",
+                "3 tentatives"
+            );
 
-            PageFormStyle.AppliquerSousTitre(lblSection);
-            parent.Controls.Add(lblSection);
-
-            AjouterLabelChamp(parent, "Nom du serveur", x, y + 45, true);
-            txtCibleNomServeur = AjouterTextBox(parent, "STAGING-SRV-01", x, y + 70, 475);
-
-            AjouterLabelChamp(parent, "Chaîne de connexion", x + 500, y + 45, false);
-            txtCibleChaineConnexion = AjouterTextBox(parent, "Server=...", x + 500, y + 70, 475);
-
-            AjouterLabelChamp(parent, "Identifiant", x, y + 130, false);
-            txtCibleIdentifiant = AjouterTextBox(parent, "sa", x, y + 155, 475);
-
-            AjouterLabelChamp(parent, "Mot de passe", x + 500, y + 130, false);
-            txtCibleMotDePasse = AjouterPasswordBox(parent, "12345678", x + 500, y + 155, 475);
-
-            AjouterLabelChamp(parent, "Port", x, y + 215, false);
-            txtCiblePort = AjouterTextBox(parent, "1433", x, y + 240, 475);
-
-            AjouterLabelChamp(parent, "Mode de copie", x + 500, y + 215, false);
-
-            cmbModeCopie = new ComboBox();
-            cmbModeCopie.Location = new Point(x + 500, y + 240);
-            cmbModeCopie.Width = 475;
-
-            cmbModeCopie.Items.Add("Écraser");
-            cmbModeCopie.Items.Add("Mise à jour");
-            cmbModeCopie.SelectedIndex = 0;
-
-            PageFormStyle.AppliquerComboBox(cmbModeCopie);
-            parent.Controls.Add(cmbModeCopie);
-        }
-
-        private void CreerSectionErreur(Panel parent, int y)
-        {
-            Label lblSection = new Label();
-            lblSection.Text = "Comportement en cas d'erreur";
-            lblSection.Location = new Point(25, y);
-
-            PageFormStyle.AppliquerSousTitre(lblSection);
-            parent.Controls.Add(lblSection);
-
-            AjouterLabelChamp(parent, "Si une base échoue", 25, y + 45, false);
-
-            cmbErreur = new ComboBox();
-            cmbErreur.Location = new Point(25, y + 70);
-            cmbErreur.Width = 475;
-
-            cmbErreur.Items.Add("Continuer avec les autres");
-            cmbErreur.Items.Add("Arrêter tous les traitements");
-            cmbErreur.SelectedIndex = 0;
-
-            PageFormStyle.AppliquerComboBox(cmbErreur);
-            parent.Controls.Add(cmbErreur);
-
-            AjouterLabelChamp(parent, "Tentatives de reprise", 525, y + 45, false);
-
-            cmbTentatives = new ComboBox();
-            cmbTentatives.Location = new Point(525, y + 70);
-            cmbTentatives.Width = 475;
-
-            cmbTentatives.Items.Add("1 tentative");
-            cmbTentatives.Items.Add("2 tentatives");
-            cmbTentatives.Items.Add("3 tentatives");
-            cmbTentatives.SelectedIndex = 0;
-
-            PageFormStyle.AppliquerComboBox(cmbTentatives);
-            parent.Controls.Add(cmbTentatives);
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampComboBox("Si une base échoue", cmbErreur),
+                CreerChampComboBox("Tentatives de reprise", cmbTentatives)
+            );
 
             cmbErreur.SelectedIndexChanged += (sender, e) =>
             {
@@ -182,72 +142,158 @@ namespace SaimDataCopy.Views.Configuration
                 cmbTentatives.Enabled = !arreterTraitements;
                 cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
             };
+
+            panelContenu.Resize += (sender, e) =>
+            {
+                AdapterLargeurContenu();
+            };
+
+            AdapterLargeurContenu();
         }
 
-        private void AjouterLabelChamp(Panel parent, string texte, int x, int y, bool requis)
+        private void AdapterLargeurContenu()
+        {
+            int largeur = panelContenu.ClientSize.Width
+                - panelContenu.Padding.Left
+                - panelContenu.Padding.Right
+                - SystemInformation.VerticalScrollBarWidth;
+
+            if (largeur < LargeurMinimumContenu)
+            {
+                largeur = LargeurMinimumContenu;
+            }
+
+            layoutPrincipal.Width = largeur;
+        }
+
+        private void AjouterTitrePrincipal(ref int ligne, string texte)
         {
             Label label = new Label();
-
             label.Text = texte;
-            label.Location = new Point(x, y);
+            label.Margin = new Padding(0, 0, 0, 25);
 
-            PageFormStyle.AppliquerLabelChamp(label);
-            parent.Controls.Add(label);
+            PageFormStyle.AppliquerTitre(label);
 
-            if (requis)
-            {
-                Label badge = PageFormStyle.CreerBadgeRequis();
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(label, 0, ligne);
+            layoutPrincipal.SetColumnSpan(label, 2);
 
-                badge.Location = new Point(x + label.Width + 10, y - 2);
-
-                parent.Controls.Add(badge);
-            }
+            ligne++;
         }
 
-        private TextBox AjouterTextBox(Panel parent, string textePlaceholder, int x, int y, int largeur)
+        private void AjouterTitreSection(ref int ligne, string texte)
         {
-            TextBox textBox = new TextBox();
+            Label label = new Label();
+            label.Text = texte;
+            label.Margin = new Padding(0, 8, 0, 16);
 
-            textBox.Location = new Point(x, y);
-            textBox.Width = largeur;
+            PageFormStyle.AppliquerSousTitre(label);
 
-            // Le texte est seulement un exemple pour guider l'utilisateur.
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(label, 0, ligne);
+            layoutPrincipal.SetColumnSpan(label, 2);
+
+            ligne++;
+        }
+
+        private void AjouterDeuxChamps(ref int ligne, Panel champGauche, Panel champDroite)
+        {
+            AjouterLigneAuto();
+
+            champGauche.Dock = DockStyle.Fill;
+            champGauche.Margin = new Padding(0, 0, 12, 20);
+
+            champDroite.Dock = DockStyle.Fill;
+            champDroite.Margin = new Padding(12, 0, 0, 20);
+
+            layoutPrincipal.Controls.Add(champGauche, 0, ligne);
+            layoutPrincipal.Controls.Add(champDroite, 1, ligne);
+
+            ligne++;
+        }
+
+        private void AjouterChampPleineLargeur(ref int ligne, Panel champ)
+        {
+            AjouterLigneAuto();
+
+            champ.Dock = DockStyle.Fill;
+            champ.Margin = new Padding(0, 0, 0, 20);
+
+            layoutPrincipal.Controls.Add(champ, 0, ligne);
+            layoutPrincipal.SetColumnSpan(champ, 2);
+
+            ligne++;
+        }
+
+        private void AjouterLigneAuto()
+        {
+            layoutPrincipal.RowCount++;
+            layoutPrincipal.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
+
+        private Panel CreerChampTexte(
+            string texteLabel,
+            string textePlaceholder,
+            bool requis,
+            out TextBox textBox)
+        {
+            Panel panel = CreerPanelChamp();
+
+            AjouterLabelChamp(panel, texteLabel, requis);
+
+            textBox = new TextBox();
+            textBox.Location = new Point(0, 28);
+            textBox.Width = panel.Width;
+            textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             textBox.PlaceholderText = textePlaceholder;
             textBox.Text = "";
 
             PageFormStyle.AppliquerTextBox(textBox);
 
-            parent.Controls.Add(textBox);
+            textBox.AutoSize = false;
+            textBox.Height = 38;
 
-            return textBox;
+            panel.Controls.Add(textBox);
+
+            return panel;
         }
 
-        private TextBox AjouterPasswordBox(Panel parent, string textePlaceholder, int x, int y, int largeur)
+        private Panel CreerChampMotDePasse(
+    string texteLabel,
+    string textePlaceholder,
+    bool requis,
+    out TextBox txtPassword)
         {
-            Panel panelPassword = new Panel();
+            Panel panel = CreerPanelChamp();
 
-            panelPassword.Location = new Point(x, y);
-            panelPassword.Width = largeur;
+            AjouterLabelChamp(panel, texteLabel, requis);
+
+            Panel panelPassword = new Panel();
+            panelPassword.Location = new Point(0, 28);
+            panelPassword.Width = panel.Width;
             panelPassword.Height = 38;
+            panelPassword.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panelPassword.BackColor = Color.White;
             panelPassword.BorderStyle = BorderStyle.FixedSingle;
 
-            parent.Controls.Add(panelPassword);
+            panel.Controls.Add(panelPassword);
 
-            TextBox txtPassword = new TextBox();
+            // On crée une variable locale.
+            // C'est cette variable qu'on utilise dans les événements.
+            TextBox txtPasswordLocal = new TextBox();
 
-            txtPassword.PlaceholderText = textePlaceholder;
-            txtPassword.Text = "";
-            txtPassword.UseSystemPasswordChar = false;
-            txtPassword.BorderStyle = BorderStyle.None;
-            txtPassword.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            txtPassword.Location = new Point(10, 9);
-            txtPassword.Width = largeur - 55;
+            txtPasswordLocal.PlaceholderText = textePlaceholder;
+            txtPasswordLocal.Text = "";
+            txtPasswordLocal.UseSystemPasswordChar = false;
+            txtPasswordLocal.BorderStyle = BorderStyle.None;
+            txtPasswordLocal.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            txtPasswordLocal.Location = new Point(10, 9);
+            txtPasswordLocal.Width = panelPassword.Width - 55;
+            txtPasswordLocal.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-            panelPassword.Controls.Add(txtPassword);
+            panelPassword.Controls.Add(txtPasswordLocal);
 
             IconButton btnVoirPassword = new IconButton();
-
             btnVoirPassword.IconChar = IconChar.Eye;
             btnVoirPassword.IconSize = 18;
             btnVoirPassword.IconColor = Color.FromArgb(80, 80, 80);
@@ -256,19 +302,20 @@ namespace SaimDataCopy.Views.Configuration
             btnVoirPassword.BackColor = Color.White;
             btnVoirPassword.Width = 40;
             btnVoirPassword.Height = 34;
-            btnVoirPassword.Location = new Point(largeur - 43, 1);
+            btnVoirPassword.Location = new Point(panelPassword.Width - 43, 1);
+            btnVoirPassword.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
             bool motDePasseVisible = false;
 
-            txtPassword.TextChanged += (sender, e) =>
+            txtPasswordLocal.TextChanged += (sender, e) =>
             {
-                if (string.IsNullOrWhiteSpace(txtPassword.Text))
+                if (string.IsNullOrWhiteSpace(txtPasswordLocal.Text))
                 {
-                    txtPassword.UseSystemPasswordChar = false;
+                    txtPasswordLocal.UseSystemPasswordChar = false;
                 }
                 else
                 {
-                    txtPassword.UseSystemPasswordChar = !motDePasseVisible;
+                    txtPasswordLocal.UseSystemPasswordChar = !motDePasseVisible;
                 }
             };
 
@@ -276,17 +323,92 @@ namespace SaimDataCopy.Views.Configuration
             {
                 motDePasseVisible = !motDePasseVisible;
 
-                if (!string.IsNullOrWhiteSpace(txtPassword.Text))
+                if (!string.IsNullOrWhiteSpace(txtPasswordLocal.Text))
                 {
-                    txtPassword.UseSystemPasswordChar = !motDePasseVisible;
+                    txtPasswordLocal.UseSystemPasswordChar = !motDePasseVisible;
                 }
 
-                btnVoirPassword.IconChar = motDePasseVisible ? IconChar.EyeSlash : IconChar.Eye;
+                btnVoirPassword.IconChar = motDePasseVisible
+                    ? IconChar.EyeSlash
+                    : IconChar.Eye;
             };
 
             panelPassword.Controls.Add(btnVoirPassword);
 
-            return txtPassword;
+            panelPassword.Resize += (sender, e) =>
+            {
+                txtPasswordLocal.Width = panelPassword.Width - 55;
+                btnVoirPassword.Left = panelPassword.Width - 43;
+            };
+
+            // À la fin seulement, on affecte la variable locale au paramètre out.
+            txtPassword = txtPasswordLocal;
+
+            return panel;
+        }
+
+        private Panel CreerChampComboBox(string texteLabel, ComboBox comboBox)
+        {
+            Panel panel = CreerPanelChamp();
+
+            AjouterLabelChamp(panel, texteLabel, false);
+
+            comboBox.Location = new Point(0, 28);
+            comboBox.Width = panel.Width;
+            comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            PageFormStyle.AppliquerComboBox(comboBox);
+
+            panel.Controls.Add(comboBox);
+
+            return panel;
+        }
+
+        private Panel CreerPanelChamp()
+        {
+            Panel panel = new Panel();
+            panel.Height = 75;
+            panel.BackColor = Color.White;
+            panel.Margin = new Padding(0);
+
+            return panel;
+        }
+
+        private void AjouterLabelChamp(Panel parent, string texte, bool requis)
+        {
+            Label label = new Label();
+
+            label.Text = texte;
+            label.Location = new Point(0, 0);
+
+            PageFormStyle.AppliquerLabelChamp(label);
+            parent.Controls.Add(label);
+
+            if (requis)
+            {
+                Label badge = PageFormStyle.CreerBadgeRequis();
+
+                badge.Location = new Point(label.Right + 10, 0);
+
+                parent.Controls.Add(badge);
+            }
+        }
+
+        private ComboBox CreerComboBox(params string[] valeurs)
+        {
+            ComboBox comboBox = new ComboBox();
+
+            foreach (string valeur in valeurs)
+            {
+                comboBox.Items.Add(valeur);
+            }
+
+            if (comboBox.Items.Count > 0)
+            {
+                comboBox.SelectedIndex = 0;
+            }
+
+            return comboBox;
         }
 
         // Affiche une configuration sauvegardée dans l'interface.

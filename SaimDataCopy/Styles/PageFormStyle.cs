@@ -22,7 +22,7 @@ namespace SaimDataCopy.Styles
         public static void AppliquerTitre(Label label)
         {
             label.AutoSize = true;
-            label.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            label.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             label.ForeColor = Color.Black;
         }
 
@@ -32,7 +32,7 @@ namespace SaimDataCopy.Styles
         public static void AppliquerSousTitre(Label label)
         {
             label.AutoSize = true;
-            label.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            label.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             label.ForeColor = Color.Black;
         }
 

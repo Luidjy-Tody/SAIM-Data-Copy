@@ -1,6 +1,8 @@
 ﻿using FontAwesome.Sharp;
 using SaimDataCopy.Models.Email;
 using SaimDataCopy.Styles;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace SaimDataCopy.Views.Email
 {
@@ -10,10 +12,13 @@ namespace SaimDataCopy.Views.Email
     /// </summary>
     public class EmailView : UserControl, IEmailView
     {
+        private const int LargeurMinimumContenu = 1000;
+
         public event EventHandler? EnregistrementDemande;
         public event EventHandler? TestEmailDemande;
 
         private readonly Panel panelContenu = new Panel();
+        private readonly TableLayoutPanel layoutPrincipal = new TableLayoutPanel();
 
         private readonly TextBox txtServeurSmtp = new TextBox();
         private readonly TextBox txtPort = new TextBox();
@@ -43,39 +48,127 @@ namespace SaimDataCopy.Views.Email
         private void InitialiserInterface()
         {
             EmailFormStyle.AppliquerPage(this);
+            AutoScroll = false;
 
-            panelContenu.Dock = DockStyle.Top;
-            panelContenu.Height = 1170;
+            panelContenu.Dock = DockStyle.Fill;
             panelContenu.Padding = new Padding(25, 25, 25, 30);
             panelContenu.BackColor = Color.White;
+            panelContenu.AutoScroll = true;
 
             Controls.Add(panelContenu);
 
-            AjouterTitre();
-            AjouterBarreInfo();
-            AjouterSectionSmtp();
-            AjouterSectionDestinataires();
-            AjouterSectionMessage();
-            AjouterOptions();
+            layoutPrincipal.ColumnCount = 6;
+            layoutPrincipal.RowCount = 0;
+            layoutPrincipal.Dock = DockStyle.Top;
+            layoutPrincipal.AutoSize = true;
+            layoutPrincipal.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            layoutPrincipal.BackColor = Color.White;
+            layoutPrincipal.Margin = new Padding(0);
+            layoutPrincipal.Padding = new Padding(0);
+
+            for (int i = 0; i < 6; i++)
+            {
+                layoutPrincipal.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66F));
+            }
+
+            panelContenu.Controls.Add(layoutPrincipal);
+
+            int ligne = 0;
+
+            AjouterTitre(ref ligne);
+            AjouterBarreInfo(ref ligne);
+
+            AjouterTitreSection(ref ligne, "Serveur SMTP");
+
+            AjouterTroisChamps(
+                ref ligne,
+                CreerChampTexte("Serveur SMTP", txtServeurSmtp, true),
+                CreerChampTexte("Port", txtPort, false),
+                CreerChampSecurite()
+            );
+
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Identifiant SMTP", txtIdentifiantSmtp, false),
+                CreerChampMotDePasse("Mot de passe SMTP")
+            );
+
+            AjouterTitreSection(ref ligne, "Destinataires");
+
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Expéditeur from", txtExpediteurFrom, false),
+                CreerChampTexte("Destinataire To", txtDestinataireTo, true)
+            );
+
+            AjouterDeuxChamps(
+                ref ligne,
+                CreerChampTexte("Copie CC", txtCopieCc, false),
+                CreerChampTexte("Copie cachée BCC", txtCopieCacheeBcc, false)
+            );
+
+            AjouterTitreSection(ref ligne, "Contenu du message");
+
+            AjouterChampPleineLargeur(
+                ref ligne,
+                CreerChampTexte("Objet", txtObjet, false)
+            );
+
+            AjouterChampPleineLargeur(
+                ref ligne,
+                CreerChampMessage()
+            );
+
+            AjouterOptions(ref ligne);
+            AjouterAlerte(ref ligne);
+            AjouterBoutonTest(ref ligne);
+
             AjouterPlaceholders();
+
+            panelContenu.Resize += (sender, e) =>
+            {
+                AdapterLargeurContenu();
+            };
+
+            AdapterLargeurContenu();
         }
 
-        private void AjouterTitre()
+        private void AdapterLargeurContenu()
+        {
+            int largeur = panelContenu.ClientSize.Width
+                - panelContenu.Padding.Left
+                - panelContenu.Padding.Right
+                - SystemInformation.VerticalScrollBarWidth;
+
+            if (largeur < LargeurMinimumContenu)
+            {
+                largeur = LargeurMinimumContenu;
+            }
+
+            layoutPrincipal.Width = largeur;
+        }
+
+        private void AjouterTitre(ref int ligne)
         {
             Label lblTitre = new Label();
             lblTitre.Text = "Paramètres de notification e-mail";
-            lblTitre.Location = new Point(25, 30);
+            lblTitre.Margin = new Padding(0, 0, 0, 24);
 
             EmailFormStyle.AppliquerTitre(lblTitre);
 
-            panelContenu.Controls.Add(lblTitre);
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(lblTitre, 0, ligne);
+            layoutPrincipal.SetColumnSpan(lblTitre, 6);
+
+            ligne++;
         }
 
-        private void AjouterBarreInfo()
+        private void AjouterBarreInfo(ref int ligne)
         {
             Panel panelInfo = new Panel();
-            panelInfo.Location = new Point(25, 78);
-            panelInfo.Size = new Size(975, 48);
+            panelInfo.Height = 48;
+            panelInfo.Margin = new Padding(0, 0, 0, 28);
+            panelInfo.Dock = DockStyle.Fill;
 
             EmailFormStyle.AppliquerBarreInfo(panelInfo);
 
@@ -89,170 +182,166 @@ namespace SaimDataCopy.Views.Email
 
             Label lblInfo = new Label();
             lblInfo.Text = "Un e-mail de confirmation est envoyé après chaque copie réussie.";
-            lblInfo.Location = new Point(50, 15);
+            lblInfo.Location = new Point(50, 14);
+            lblInfo.Height = 24;
+            lblInfo.AutoSize = false;
+            lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerTexteInfo(lblInfo);
 
             panelInfo.Controls.Add(iconeInfo);
             panelInfo.Controls.Add(lblInfo);
 
-            panelContenu.Controls.Add(panelInfo);
+            panelInfo.Resize += (sender, e) =>
+            {
+                lblInfo.Width = panelInfo.Width - lblInfo.Left - 15;
+            };
+
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(panelInfo, 0, ligne);
+            layoutPrincipal.SetColumnSpan(panelInfo, 6);
+
+            ligne++;
         }
 
-        private void AjouterSectionSmtp()
-        {
-            AjouterTitreSection("Serveur SMTP", 25, 157);
-
-            AjouterChampTexte("Serveur SMTP", txtServeurSmtp, 25, 200, 310, true);
-            AjouterChampTexte("Port", txtPort, 360, 200, 310, false);
-            AjouterComboSecurite(695, 200, 305);
-
-            AjouterChampTexte("Identifiant SMTP", txtIdentifiantSmtp, 25, 292, 475, false);
-            AjouterChampMotDePasse("Mot de passe SMTP", 525, 292, 475);
-        }
-
-        private void AjouterSectionDestinataires()
-        {
-            AjouterTitreSection("Destinataires", 25, 395);
-
-            AjouterChampTexte("Expéditeur from", txtExpediteurFrom, 25, 438, 475, false);
-            AjouterChampTexte("Destinataire To", txtDestinataireTo, 525, 438, 475, true);
-
-            AjouterChampTexte("Copie CC", txtCopieCc, 25, 530, 475, false);
-            AjouterChampTexte("Copie cachée BCC", txtCopieCacheeBcc, 525, 530, 475, false);
-        }
-
-        private void AjouterSectionMessage()
-        {
-            AjouterTitreSection("Contenu du message", 25, 625);
-
-            AjouterChampTexte("Objet", txtObjet, 25, 668, 975, false);
-
-            Label lblCorps = CreerLabel("Corps du message");
-            lblCorps.Location = new Point(25, 760);
-            panelContenu.Controls.Add(lblCorps);
-
-            txtCorpsMessage.Location = new Point(25, 787);
-            txtCorpsMessage.Size = new Size(975, 150);
-
-            EmailFormStyle.AppliquerTextBoxMultiligne(txtCorpsMessage);
-
-            panelContenu.Controls.Add(txtCorpsMessage);
-        }
-
-        private void AjouterOptions()
-        {
-            chkActiverEnvoiEmail.Text = "Activer l'envoi des e-mails";
-            chkActiverEnvoiEmail.Location = new Point(25, 955);
-
-            EmailFormStyle.AppliquerCheckBox(chkActiverEnvoiEmail);
-
-            chkJoindreFichierLog.Text = "Joindre le fichier de log";
-            chkJoindreFichierLog.Location = new Point(25, 985);
-
-            EmailFormStyle.AppliquerCheckBox(chkJoindreFichierLog);
-
-            Panel panelAlerte = new Panel();
-            panelAlerte.Location = new Point(25, 1030);
-            panelAlerte.Size = new Size(975, 48);
-
-            EmailFormStyle.AppliquerAlerte(panelAlerte);
-
-            IconPictureBox iconeAlerte = new IconPictureBox();
-            iconeAlerte.IconChar = IconChar.TriangleExclamation;
-            iconeAlerte.IconColor = Color.FromArgb(230, 140, 30);
-            iconeAlerte.IconSize = 18;
-            iconeAlerte.Size = new Size(22, 22);
-            iconeAlerte.Location = new Point(16, 13);
-            iconeAlerte.BackColor = Color.FromArgb(255, 245, 225);
-
-            Label lblAlerte = new Label();
-            lblAlerte.Text = "Alerte en cas d'échec — disponible dans une version ultérieure";
-            lblAlerte.Location = new Point(45, 15);
-            lblAlerte.AutoSize = true;
-            lblAlerte.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            lblAlerte.ForeColor = Color.FromArgb(20, 20, 20);
-            lblAlerte.BackColor = Color.FromArgb(255, 245, 225);
-
-            panelAlerte.Controls.Add(iconeAlerte);
-            panelAlerte.Controls.Add(lblAlerte);
-
-            btnTesterEmail.Text = "  Envoyer un e-mail de test";
-            btnTesterEmail.Location = new Point(25, 1095);
-            btnTesterEmail.Size = new Size(245, 38);
-            btnTesterEmail.TextAlign = ContentAlignment.MiddleCenter;
-            btnTesterEmail.Click += BtnTesterEmail_Click;
-
-            EmailFormStyle.AppliquerBoutonTest(btnTesterEmail);
-
-            panelContenu.Controls.Add(chkActiverEnvoiEmail);
-            panelContenu.Controls.Add(chkJoindreFichierLog);
-            panelContenu.Controls.Add(panelAlerte);
-            panelContenu.Controls.Add(btnTesterEmail);
-        }
-
-        private void AjouterTitreSection(string texte, int x, int y)
+        private void AjouterTitreSection(ref int ligne, string texte)
         {
             Label label = new Label();
             label.Text = texte;
-            label.Location = new Point(x, y);
+            label.Margin = new Padding(0, 6, 0, 16);
 
             EmailFormStyle.AppliquerTitreSection(label);
 
-            panelContenu.Controls.Add(label);
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(label, 0, ligne);
+            layoutPrincipal.SetColumnSpan(label, 6);
+
+            ligne++;
         }
 
-        private void AjouterChampTexte(
-            string libelle,
-            TextBox textBox,
-            int x,
-            int y,
-            int largeur,
-            bool requis)
+        private void AjouterTroisChamps(ref int ligne, Panel champ1, Panel champ2, Panel champ3)
         {
+            AjouterLigneAuto();
+
+            champ1.Dock = DockStyle.Fill;
+            champ2.Dock = DockStyle.Fill;
+            champ3.Dock = DockStyle.Fill;
+
+            champ1.Margin = new Padding(0, 0, 12, 22);
+            champ2.Margin = new Padding(12, 0, 12, 22);
+            champ3.Margin = new Padding(12, 0, 0, 22);
+
+            layoutPrincipal.Controls.Add(champ1, 0, ligne);
+            layoutPrincipal.SetColumnSpan(champ1, 2);
+
+            layoutPrincipal.Controls.Add(champ2, 2, ligne);
+            layoutPrincipal.SetColumnSpan(champ2, 2);
+
+            layoutPrincipal.Controls.Add(champ3, 4, ligne);
+            layoutPrincipal.SetColumnSpan(champ3, 2);
+
+            ligne++;
+        }
+
+        private void AjouterDeuxChamps(ref int ligne, Panel champGauche, Panel champDroite)
+        {
+            AjouterLigneAuto();
+
+            champGauche.Dock = DockStyle.Fill;
+            champDroite.Dock = DockStyle.Fill;
+
+            champGauche.Margin = new Padding(0, 0, 12, 22);
+            champDroite.Margin = new Padding(12, 0, 0, 22);
+
+            layoutPrincipal.Controls.Add(champGauche, 0, ligne);
+            layoutPrincipal.SetColumnSpan(champGauche, 3);
+
+            layoutPrincipal.Controls.Add(champDroite, 3, ligne);
+            layoutPrincipal.SetColumnSpan(champDroite, 3);
+
+            ligne++;
+        }
+
+        private void AjouterChampPleineLargeur(ref int ligne, Panel champ)
+        {
+            AjouterLigneAuto();
+
+            champ.Dock = DockStyle.Fill;
+            champ.Margin = new Padding(0, 0, 0, 22);
+
+            layoutPrincipal.Controls.Add(champ, 0, ligne);
+            layoutPrincipal.SetColumnSpan(champ, 6);
+
+            ligne++;
+        }
+
+        private void AjouterLigneAuto()
+        {
+            layoutPrincipal.RowCount++;
+            layoutPrincipal.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
+
+        private Panel CreerChampTexte(string libelle, TextBox textBox, bool requis)
+        {
+            Panel panel = CreerPanelChamp(75);
+
             Label label = CreerLabel(libelle);
-            label.Location = new Point(x, y);
-            panelContenu.Controls.Add(label);
+            label.Location = new Point(0, 0);
+            panel.Controls.Add(label);
 
             if (requis)
             {
                 Label badge = new Label();
-                badge.Location = new Point(x + label.PreferredWidth + 8, y - 2);
+                badge.Location = new Point(label.PreferredWidth + 8, 0);
 
                 EmailFormStyle.AppliquerBadgeRequis(badge);
 
-                panelContenu.Controls.Add(badge);
+                panel.Controls.Add(badge);
             }
 
             Panel panelBordure = new Panel();
-            panelBordure.Location = new Point(x, y + 27);
-            panelBordure.Size = new Size(largeur, 40);
+            panelBordure.Location = new Point(0, 27);
+            panelBordure.Height = 40;
+            panelBordure.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerPanelBordure(panelBordure);
 
             textBox.Location = new Point(10, 9);
-            textBox.Size = new Size(largeur - 20, 22);
+            textBox.Height = 22;
+            textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerTextBoxDansBordure(textBox);
 
             panelBordure.Controls.Add(textBox);
-            panelContenu.Controls.Add(panelBordure);
+            panel.Controls.Add(panelBordure);
+
+            panel.Resize += (sender, e) =>
+            {
+                panelBordure.Width = panel.Width;
+                textBox.Width = panelBordure.Width - 20;
+            };
+
+            return panel;
         }
 
-        private void AjouterComboSecurite(int x, int y, int largeur)
+        private Panel CreerChampSecurite()
         {
+            Panel panel = CreerPanelChamp(75);
+
             Label label = CreerLabel("Sécurité");
-            label.Location = new Point(x, y);
-            panelContenu.Controls.Add(label);
+            label.Location = new Point(0, 0);
+            panel.Controls.Add(label);
 
             Panel panelBordure = new Panel();
-            panelBordure.Location = new Point(x, y + 27);
-            panelBordure.Size = new Size(largeur, 40);
+            panelBordure.Location = new Point(0, 27);
+            panelBordure.Height = 40;
+            panelBordure.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerPanelBordure(panelBordure);
 
             cmbSecurite.Location = new Point(6, 7);
-            cmbSecurite.Size = new Size(largeur - 12, 26);
+            cmbSecurite.Height = 26;
+            cmbSecurite.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerComboBoxDansBordure(cmbSecurite);
 
@@ -266,24 +355,36 @@ namespace SaimDataCopy.Views.Email
             cmbSecurite.SelectedIndex = 0;
 
             panelBordure.Controls.Add(cmbSecurite);
-            panelContenu.Controls.Add(panelBordure);
+            panel.Controls.Add(panelBordure);
+
+            panel.Resize += (sender, e) =>
+            {
+                panelBordure.Width = panel.Width;
+                cmbSecurite.Width = panelBordure.Width - 12;
+            };
+
+            return panel;
         }
 
-        private void AjouterChampMotDePasse(string libelle, int x, int y, int largeur)
+        private Panel CreerChampMotDePasse(string libelle)
         {
+            Panel panel = CreerPanelChamp(75);
+
             Label label = CreerLabel(libelle);
-            label.Location = new Point(x, y);
-            panelContenu.Controls.Add(label);
+            label.Location = new Point(0, 0);
+            panel.Controls.Add(label);
 
             Panel panelBordure = new Panel();
-            panelBordure.Location = new Point(x, y + 27);
-            panelBordure.Size = new Size(largeur, 40);
+            panelBordure.Location = new Point(0, 27);
+            panelBordure.Height = 40;
+            panelBordure.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerPanelBordure(panelBordure);
 
             txtMotDePasseSmtp.Location = new Point(10, 9);
-            txtMotDePasseSmtp.Size = new Size(largeur - 55, 22);
+            txtMotDePasseSmtp.Height = 22;
             txtMotDePasseSmtp.PasswordChar = '●';
+            txtMotDePasseSmtp.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             EmailFormStyle.AppliquerTextBoxDansBordure(txtMotDePasseSmtp);
 
@@ -291,16 +392,58 @@ namespace SaimDataCopy.Views.Email
             btnAfficherMotDePasse.IconColor = Color.FromArgb(90, 90, 90);
             btnAfficherMotDePasse.IconSize = 16;
             btnAfficherMotDePasse.Size = new Size(35, 30);
-            btnAfficherMotDePasse.Location = new Point(largeur - 42, 4);
             btnAfficherMotDePasse.FlatStyle = FlatStyle.Flat;
             btnAfficherMotDePasse.FlatAppearance.BorderSize = 0;
             btnAfficherMotDePasse.BackColor = Color.White;
             btnAfficherMotDePasse.Cursor = Cursors.Hand;
+            btnAfficherMotDePasse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnAfficherMotDePasse.Click += BtnAfficherMotDePasse_Click;
 
             panelBordure.Controls.Add(txtMotDePasseSmtp);
             panelBordure.Controls.Add(btnAfficherMotDePasse);
-            panelContenu.Controls.Add(panelBordure);
+            panel.Controls.Add(panelBordure);
+
+            panel.Resize += (sender, e) =>
+            {
+                panelBordure.Width = panel.Width;
+                txtMotDePasseSmtp.Width = panelBordure.Width - 55;
+                btnAfficherMotDePasse.Location = new Point(panelBordure.Width - 42, 4);
+            };
+
+            return panel;
+        }
+
+        private Panel CreerChampMessage()
+        {
+            Panel panel = CreerPanelChamp(185);
+
+            Label lblCorps = CreerLabel("Corps du message");
+            lblCorps.Location = new Point(0, 0);
+            panel.Controls.Add(lblCorps);
+
+            txtCorpsMessage.Location = new Point(0, 27);
+            txtCorpsMessage.Height = 150;
+            txtCorpsMessage.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            EmailFormStyle.AppliquerTextBoxMultiligne(txtCorpsMessage);
+
+            panel.Controls.Add(txtCorpsMessage);
+
+            panel.Resize += (sender, e) =>
+            {
+                txtCorpsMessage.Width = panel.Width;
+            };
+
+            return panel;
+        }
+
+        private Panel CreerPanelChamp(int hauteur)
+        {
+            Panel panel = new Panel();
+            panel.Height = hauteur;
+            panel.BackColor = Color.White;
+
+            return panel;
         }
 
         private Label CreerLabel(string texte)
@@ -311,6 +454,99 @@ namespace SaimDataCopy.Views.Email
             EmailFormStyle.AppliquerLabel(label);
 
             return label;
+        }
+
+        private void AjouterOptions(ref int ligne)
+        {
+            Panel panelOptions = new Panel();
+            panelOptions.Height = 60;
+            panelOptions.BackColor = Color.White;
+            panelOptions.Margin = new Padding(0, 0, 0, 18);
+
+            chkActiverEnvoiEmail.Text = "Activer l'envoi des e-mails";
+            chkActiverEnvoiEmail.Location = new Point(0, 0);
+
+            EmailFormStyle.AppliquerCheckBox(chkActiverEnvoiEmail);
+
+            chkJoindreFichierLog.Text = "Joindre le fichier de log";
+            chkJoindreFichierLog.Location = new Point(0, 30);
+
+            EmailFormStyle.AppliquerCheckBox(chkJoindreFichierLog);
+
+            panelOptions.Controls.Add(chkActiverEnvoiEmail);
+            panelOptions.Controls.Add(chkJoindreFichierLog);
+
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(panelOptions, 0, ligne);
+            layoutPrincipal.SetColumnSpan(panelOptions, 6);
+
+            ligne++;
+        }
+
+        private void AjouterAlerte(ref int ligne)
+        {
+            Panel panelAlerte = new Panel();
+            panelAlerte.Height = 48;
+            panelAlerte.Dock = DockStyle.Fill;
+            panelAlerte.Margin = new Padding(0, 0, 0, 18);
+
+            EmailFormStyle.AppliquerAlerte(panelAlerte);
+
+            IconPictureBox iconeAlerte = new IconPictureBox();
+            iconeAlerte.IconChar = IconChar.TriangleExclamation;
+            iconeAlerte.IconColor = Color.FromArgb(230, 140, 30);
+            iconeAlerte.IconSize = 18;
+            iconeAlerte.Size = new Size(22, 22);
+            iconeAlerte.Location = new Point(16, 13);
+            iconeAlerte.BackColor = Color.FromArgb(255, 245, 225);
+
+            Label lblAlerte = new Label();
+            lblAlerte.Text = "Alerte en cas d'échec — disponible dans une version ultérieure";
+            lblAlerte.Location = new Point(45, 14);
+            lblAlerte.Height = 24;
+            lblAlerte.AutoSize = false;
+            lblAlerte.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            lblAlerte.ForeColor = Color.FromArgb(20, 20, 20);
+            lblAlerte.BackColor = Color.FromArgb(255, 245, 225);
+            lblAlerte.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            panelAlerte.Controls.Add(iconeAlerte);
+            panelAlerte.Controls.Add(lblAlerte);
+
+            panelAlerte.Resize += (sender, e) =>
+            {
+                lblAlerte.Width = panelAlerte.Width - lblAlerte.Left - 15;
+            };
+
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(panelAlerte, 0, ligne);
+            layoutPrincipal.SetColumnSpan(panelAlerte, 6);
+
+            ligne++;
+        }
+
+        private void AjouterBoutonTest(ref int ligne)
+        {
+            Panel panelBouton = new Panel();
+            panelBouton.Height = 45;
+            panelBouton.BackColor = Color.White;
+            panelBouton.Margin = new Padding(0, 0, 0, 30);
+
+            btnTesterEmail.Text = "  Envoyer un e-mail de test";
+            btnTesterEmail.Location = new Point(0, 0);
+            btnTesterEmail.Size = new Size(245, 38);
+            btnTesterEmail.TextAlign = ContentAlignment.MiddleCenter;
+            btnTesterEmail.Click += BtnTesterEmail_Click;
+
+            EmailFormStyle.AppliquerBoutonTest(btnTesterEmail);
+
+            panelBouton.Controls.Add(btnTesterEmail);
+
+            AjouterLigneAuto();
+            layoutPrincipal.Controls.Add(panelBouton, 0, ligne);
+            layoutPrincipal.SetColumnSpan(panelBouton, 6);
+
+            ligne++;
         }
 
         private void AjouterPlaceholders()
@@ -404,4 +640,4 @@ namespace SaimDataCopy.Views.Email
             }
         }
     }
-}  
+}
