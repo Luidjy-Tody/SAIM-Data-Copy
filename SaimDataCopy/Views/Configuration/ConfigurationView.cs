@@ -12,6 +12,7 @@ namespace SaimDataCopy.Views.Configuration
     public class ConfigurationView : UserControl
     {
         private const int LargeurMinimumContenu = 1000;
+        private const int HauteurChamp = 38;
 
         private readonly Panel panelContenu = new Panel();
         private readonly TableLayoutPanel layoutPrincipal = new TableLayoutPanel();
@@ -78,8 +79,13 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Nom du serveur", "PROD-SRV-01", true, out txtSourceNomServeur),
-                CreerChampTexte("Chaîne de connexion", "Server=...", false, out txtSourceChaineConnexion)
+                CreerChampTexte("Nom ou adresse IP du serveur", "Ex : PROD-SRV-01 ou 192.168.1.50", true, out txtSourceNomServeur),
+                CreerChampTexte(
+                    "Chaîne de connexion complète (optionnel)",
+                    "Ex : Server=192.168.1.50,1433;Database=master;User Id=sa;Password=VotreMotDePasse;TrustServerCertificate=True;",
+                    false,
+                    out txtSourceChaineConnexion
+                )
             );
 
             AjouterDeuxChamps(
@@ -97,8 +103,13 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Nom du serveur", "STAGING-SRV-01", true, out txtCibleNomServeur),
-                CreerChampTexte("Chaîne de connexion", "Server=...", false, out txtCibleChaineConnexion)
+                CreerChampTexte("Nom ou adresse IP du serveur", "Ex : STAGING-SRV-01 ou 192.168.1.60", true, out txtCibleNomServeur),
+                CreerChampTexte(
+                    "Chaîne de connexion complète (optionnel)",
+                    "Ex : Server=192.168.1.50,1433;Database=master;User Id=sa;Password=VotreMotDePasse;TrustServerCertificate=True;",
+                    false,
+                    out txtCibleChaineConnexion
+                )
             );
 
             AjouterDeuxChamps(
@@ -241,28 +252,63 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterLabelChamp(panel, texteLabel, requis);
 
-            textBox = new TextBox();
-            textBox.Location = new Point(0, 28);
-            textBox.Width = panel.Width;
-            textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            textBox.PlaceholderText = textePlaceholder;
-            textBox.Text = "";
+            // Panel qui représente le cadre du champ.
+            // Le cadre garde la même hauteur que les autres champs.
+            Panel panelBordure = new Panel();
+            panelBordure.Location = new Point(0, 28);
+            panelBordure.Width = panel.Width;
+            panelBordure.Height = HauteurChamp;
+            panelBordure.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelBordure.BackColor = Color.White;
+            panelBordure.BorderStyle = BorderStyle.FixedSingle;
 
-            PageFormStyle.AppliquerTextBox(textBox);
+            panel.Controls.Add(panelBordure);
 
-            textBox.AutoSize = false;
-            textBox.Height = 38;
+            TextBox textBoxLocal = new TextBox();
+            textBoxLocal.PlaceholderText = textePlaceholder;
+            textBoxLocal.Text = "";
+            textBoxLocal.BorderStyle = BorderStyle.None;
+            textBoxLocal.BackColor = Color.White;
+            textBoxLocal.ForeColor = Color.Black;
+            textBoxLocal.Anchor = AnchorStyles.Left | AnchorStyles.Right;
 
-            panel.Controls.Add(textBox);
+            if (texteLabel.Contains("Chaîne de connexion", StringComparison.OrdinalIgnoreCase))
+            {
+                // Texte plus petit seulement pour la chaîne de connexion.
+                textBoxLocal.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            }
+            else
+            {
+                // Texte normal pour les autres champs.
+                textBoxLocal.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
+            }
+
+            textBoxLocal.Height = textBoxLocal.PreferredHeight;
+            textBoxLocal.Location = new Point(
+                8,
+                CalculerPositionVerticale(panelBordure, textBoxLocal)
+            );
+
+            textBoxLocal.Width = panelBordure.Width - 16;
+
+            panelBordure.Controls.Add(textBoxLocal);
+
+            panelBordure.Resize += (sender, e) =>
+            {
+                textBoxLocal.Width = panelBordure.Width - 16;
+                textBoxLocal.Top = CalculerPositionVerticale(panelBordure, textBoxLocal);
+            };
+
+            textBox = textBoxLocal;
 
             return panel;
         }
 
         private Panel CreerChampMotDePasse(
-    string texteLabel,
-    string textePlaceholder,
-    bool requis,
-    out TextBox txtPassword)
+            string texteLabel,
+            string textePlaceholder,
+            bool requis,
+            out TextBox txtPassword)
         {
             Panel panel = CreerPanelChamp();
 
@@ -271,15 +317,13 @@ namespace SaimDataCopy.Views.Configuration
             Panel panelPassword = new Panel();
             panelPassword.Location = new Point(0, 28);
             panelPassword.Width = panel.Width;
-            panelPassword.Height = 38;
+            panelPassword.Height = HauteurChamp;
             panelPassword.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panelPassword.BackColor = Color.White;
             panelPassword.BorderStyle = BorderStyle.FixedSingle;
 
             panel.Controls.Add(panelPassword);
 
-            // On crée une variable locale.
-            // C'est cette variable qu'on utilise dans les événements.
             TextBox txtPasswordLocal = new TextBox();
 
             txtPasswordLocal.PlaceholderText = textePlaceholder;
@@ -287,9 +331,13 @@ namespace SaimDataCopy.Views.Configuration
             txtPasswordLocal.UseSystemPasswordChar = false;
             txtPasswordLocal.BorderStyle = BorderStyle.None;
             txtPasswordLocal.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-            txtPasswordLocal.Location = new Point(10, 9);
+            txtPasswordLocal.Height = txtPasswordLocal.PreferredHeight;
+            txtPasswordLocal.Location = new Point(
+                10,
+                CalculerPositionVerticale(panelPassword, txtPasswordLocal)
+            );
             txtPasswordLocal.Width = panelPassword.Width - 55;
-            txtPasswordLocal.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtPasswordLocal.Anchor = AnchorStyles.Left | AnchorStyles.Right;
 
             panelPassword.Controls.Add(txtPasswordLocal);
 
@@ -338,10 +386,10 @@ namespace SaimDataCopy.Views.Configuration
             panelPassword.Resize += (sender, e) =>
             {
                 txtPasswordLocal.Width = panelPassword.Width - 55;
+                txtPasswordLocal.Top = CalculerPositionVerticale(panelPassword, txtPasswordLocal);
                 btnVoirPassword.Left = panelPassword.Width - 43;
             };
 
-            // À la fin seulement, on affecte la variable locale au paramètre out.
             txtPassword = txtPasswordLocal;
 
             return panel;
@@ -362,6 +410,11 @@ namespace SaimDataCopy.Views.Configuration
             panel.Controls.Add(comboBox);
 
             return panel;
+        }
+
+        private int CalculerPositionVerticale(Control parent, Control enfant)
+        {
+            return (parent.Height - enfant.Height) / 2;
         }
 
         private Panel CreerPanelChamp()

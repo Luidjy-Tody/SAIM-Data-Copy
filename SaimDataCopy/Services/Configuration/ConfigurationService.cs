@@ -35,9 +35,12 @@ namespace SaimDataCopy.Services.Configuration
 
         public bool ValiderConfiguration(ConfigurationModel configuration, out string message)
         {
-            if (string.IsNullOrWhiteSpace(configuration.ServeurSource.NomServeur))
+            // SOURCE :
+            // L'utilisateur peut remplir soit le nom du serveur,
+            // soit une chaîne de connexion complète.
+            if (!ServeurRenseigne(configuration.ServeurSource))
             {
-                message = "Le nom du serveur source est obligatoire.";
+                message = "Pour le serveur source, renseignez soit le nom du serveur, soit la chaîne de connexion complète.";
                 return false;
             }
 
@@ -47,9 +50,11 @@ namespace SaimDataCopy.Services.Configuration
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(configuration.ServeurCible.NomServeur))
+            // CIBLE :
+            // Même règle : soit nom serveur, soit chaîne complète.
+            if (!ServeurRenseigne(configuration.ServeurCible))
             {
-                message = "Le nom du serveur cible est obligatoire.";
+                message = "Pour le serveur cible, renseignez soit le nom du serveur, soit la chaîne de connexion complète.";
                 return false;
             }
 
@@ -109,9 +114,32 @@ namespace SaimDataCopy.Services.Configuration
             message = "Les paramètres de configuration ont été enregistrés.";
             return true;
         }
+        private bool ServeurRenseigne(ServeurConfigModel serveur)
+        {
+            // Si la chaîne de connexion complète est remplie,
+            // on n'oblige pas le champ NomServeur.
+            if (!string.IsNullOrWhiteSpace(serveur.ChaineConnexion))
+            {
+                return true;
+            }
 
+            // Sinon, le nom du serveur devient obligatoire.
+            return !string.IsNullOrWhiteSpace(serveur.NomServeur);
+        }
+
+        private bool ChaineConnexionRenseignee(ServeurConfigModel serveur)
+        {
+            return !string.IsNullOrWhiteSpace(serveur.ChaineConnexion);
+        }
         private bool PortValide(ServeurConfigModel serveur)
         {
+            // Si une chaîne de connexion complète est utilisée,
+            // le port peut être vide car il est déjà dans la chaîne.
+            if (ChaineConnexionRenseignee(serveur))
+            {
+                return true;
+            }
+
             // Un port négatif est toujours invalide.
             if (serveur.Port < 0)
             {
@@ -126,7 +154,7 @@ namespace SaimDataCopy.Services.Configuration
             }
 
             // Pour un vrai serveur réseau, le port doit être supérieur à 0.
-            // Exemple : localhost,1433
+            // Exemple : 192.168.1.50 avec port 1433.
             return serveur.Port > 0;
         }
 
