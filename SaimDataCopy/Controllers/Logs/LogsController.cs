@@ -1,6 +1,7 @@
 ﻿using SaimDataCopy.Models.Logs;
 using SaimDataCopy.Services.Logs;
 using SaimDataCopy.Views.Logs;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Controllers.Logs
 {
@@ -52,28 +53,44 @@ namespace SaimDataCopy.Controllers.Logs
 
         public void DemanderEnregistrement()
         {
+            EnregistrerDepuisMainForm();
+        }
+
+        /// <summary>
+        /// Enregistre les paramètres logs et retourne true si l'enregistrement réussit.
+        /// Cette méthode sera utilisée par MainForm avant de changer de page.
+        /// </summary>
+        public bool EnregistrerDepuisMainForm()
+        {
             try
             {
                 LogConfigModel configuration = _view.RecupererConfiguration();
 
                 _service.EnregistrerConfiguration(configuration);
 
-                _view.AfficherMessage(
-                    "Paramètres logs enregistrés avec succès.", 
-                    true
-                 );
-            }
+                // Si la View gère les modifications non enregistrées,
+                // on indique que les paramètres actuels sont maintenant sauvegardés.
+                if (_view is IPageEnregistrable pageEnregistrable)
+                {
+                    pageEnregistrable.MarquerCommeEnregistre();
+                }
 
-            catch(Exception ex)
+                _view.AfficherMessage(
+                    "Paramètres logs enregistrés avec succès.",
+                    true
+                );
+
+                return true;
+            }
+            catch (Exception ex)
             {
                 _view.AfficherMessage(
                     "Erreur de l'enregistrement : " + ex.Message,
                     false
-                    
-            );
+                );
 
+                return false;
             }
-
         }
 
     }

@@ -4,6 +4,7 @@ using SaimDataCopy.Styles;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Views.Logs
 {
@@ -11,7 +12,7 @@ namespace SaimDataCopy.Views.Logs
     /// Interface graphique de la page Paramètres Logs.
     /// Cette View contient seulement l'affichage.
     /// </summary>
-    public class LogsView : UserControl, ILogsView
+    public class LogsView : UserControl, ILogsView, IPageEnregistrable
     {
         private const int LargeurMinimumContenu = 700;
         private const int HauteurChamp = 38;
@@ -26,6 +27,17 @@ namespace SaimDataCopy.Views.Logs
         private readonly TextBox _txtNommageFichiers = new TextBox();
         private readonly NumericUpDown _nudDureeConservation = new NumericUpDown();
         private readonly NumericUpDown _nudTailleMaxFichier = new NumericUpDown();
+
+        // Indique si l'utilisateur a modifié un champ sans enregistrer.
+        private bool _aDesModificationsNonEnregistrees = false;
+
+        // Évite de détecter des modifications pendant le chargement automatique.
+        private bool _chargementEnCours = false;
+
+        // Dernière configuration connue comme enregistrée.
+        private LogConfigModel _configurationEnregistree = new LogConfigModel();
+
+        public bool ADesModificationsNonEnregistrees => _aDesModificationsNonEnregistrees;
 
         public LogsView()
         {
@@ -72,6 +84,8 @@ namespace SaimDataCopy.Views.Logs
             };
 
             AdapterLargeurContenu();
+
+            BrancherDetectionModifications();
         }
 
         private void AdapterLargeurContenu()
@@ -311,6 +325,51 @@ namespace SaimDataCopy.Views.Logs
             return panel;
         }
 
+        /// <summary>
+        /// Branche les événements qui permettent de savoir
+        /// si l'utilisateur a modifié un champ.
+        /// </summary>
+        private void BrancherDetectionModifications()
+        {
+            _txtRepertoireLogs.TextChanged += Champ_Modifie;
+            _txtNommageFichiers.TextChanged += Champ_Modifie;
+
+            _nudDureeConservation.ValueChanged += Champ_Modifie;
+            _nudTailleMaxFichier.ValueChanged += Champ_Modifie;
+        }
+
+        /// <summary>
+        /// Appelé quand un champ est modifié par l'utilisateur.
+        /// </summary>
+        private void Champ_Modifie(object? sender, EventArgs e)
+        {
+            if (_chargementEnCours)
+            {
+                return;
+            }
+
+            _aDesModificationsNonEnregistrees = true;
+        }
+
+        /// <summary>
+        /// Appelé par le Controller après un enregistrement réussi.
+        /// </summary>
+        public void MarquerCommeEnregistre()
+        {
+            _configurationEnregistree = RecupererConfiguration();
+            _aDesModificationsNonEnregistrees = false;
+        }
+
+        /// <summary>
+        /// Appelé si l'utilisateur choisit "Non".
+        /// On remet les valeurs comme elles étaient lors du dernier enregistrement.
+        /// </summary>
+        public void AnnulerModificationsNonEnregistrees()
+        {
+            AfficherConfiguration(_configurationEnregistree);
+            _aDesModificationsNonEnregistrees = false;
+        }
+
         public LogConfigModel RecupererConfiguration()
         {
             return new LogConfigModel
@@ -324,6 +383,8 @@ namespace SaimDataCopy.Views.Logs
 
         public void AfficherConfiguration(LogConfigModel configuration)
         {
+            _chargementEnCours = true;
+
             _txtRepertoireLogs.Text = configuration.RepertoireLogs;
             _txtNommageFichiers.Text = configuration.NommageFichiers;
 
@@ -338,6 +399,10 @@ namespace SaimDataCopy.Views.Logs
                 _nudTailleMaxFichier.Minimum,
                 _nudTailleMaxFichier.Maximum
             );
+
+            _configurationEnregistree = RecupererConfiguration();
+            _aDesModificationsNonEnregistrees = false;
+            _chargementEnCours = false;
         }
 
         public void ModifierRepertoireLogs(string chemin)

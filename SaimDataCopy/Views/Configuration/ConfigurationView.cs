@@ -3,13 +3,15 @@ using SaimDataCopy.Models.Configuration;
 using SaimDataCopy.Styles;
 using System.Drawing;
 using System.Windows.Forms;
+using SaimDataCopy.Views.Commun;
+
 
 namespace SaimDataCopy.Views.Configuration
 {
     // View de la page Configuration.
     // Elle affiche l'interface et récupère les valeurs saisies.
     // Elle ne contient pas la logique métier.
-    public class ConfigurationView : UserControl
+    public class ConfigurationView : UserControl, IPageEnregistrable
     {
         private const int LargeurMinimumContenu = 1000;
         private const int HauteurChamp = 38;
@@ -35,6 +37,17 @@ namespace SaimDataCopy.Views.Configuration
         private ComboBox cmbModeCopie = new ComboBox();
         private ComboBox cmbErreur = new ComboBox();
         private ComboBox cmbTentatives = new ComboBox();
+
+        // Indique si l'utilisateur a modifié un champ sans enregistrer.
+        private bool _aDesModificationsNonEnregistrees = false;
+
+        // Évite de détecter des modifications pendant le chargement automatique.
+        private bool _chargementEnCours = false;
+
+        // Dernière configuration connue comme enregistrée.
+        private ConfigurationModel _configurationEnregistree = new ConfigurationModel();
+
+        public bool ADesModificationsNonEnregistrees => _aDesModificationsNonEnregistrees;
 
         // Événement envoyé au Controller quand l'utilisateur veut enregistrer.
         public event EventHandler? EnregistrerConfigurationDemande;
@@ -160,6 +173,7 @@ namespace SaimDataCopy.Views.Configuration
             };
 
             AdapterLargeurContenu();
+            BrancherDetectionModifications();
         }
 
         private void AdapterLargeurContenu()
@@ -175,6 +189,60 @@ namespace SaimDataCopy.Views.Configuration
             }
 
             layoutPrincipal.Width = largeur;
+        }
+        /// <summary>
+        /// Branche les événements qui permettent de savoir
+        /// si l'utilisateur a modifié un champ.
+        /// </summary>
+        private void BrancherDetectionModifications()
+        {
+            txtSourceNomServeur.TextChanged += Champ_Modifie;
+            txtSourceChaineConnexion.TextChanged += Champ_Modifie;
+            txtSourceIdentifiant.TextChanged += Champ_Modifie;
+            txtSourceMotDePasse.TextChanged += Champ_Modifie;
+            txtSourcePort.TextChanged += Champ_Modifie;
+
+            txtCibleNomServeur.TextChanged += Champ_Modifie;
+            txtCibleChaineConnexion.TextChanged += Champ_Modifie;
+            txtCibleIdentifiant.TextChanged += Champ_Modifie;
+            txtCibleMotDePasse.TextChanged += Champ_Modifie;
+            txtCiblePort.TextChanged += Champ_Modifie;
+
+            cmbModeCopie.SelectedIndexChanged += Champ_Modifie;
+            cmbErreur.SelectedIndexChanged += Champ_Modifie;
+            cmbTentatives.SelectedIndexChanged += Champ_Modifie;
+        }
+
+        /// <summary>
+        /// Appelé quand un champ est modifié par l'utilisateur.
+        /// </summary>
+        private void Champ_Modifie(object? sender, EventArgs e)
+        {
+            if (_chargementEnCours)
+            {
+                return;
+            }
+
+            _aDesModificationsNonEnregistrees = true;
+        }
+
+        /// <summary>
+        /// Appelé par le Controller après un enregistrement réussi.
+        /// </summary>
+        public void MarquerCommeEnregistre()
+        {
+            _configurationEnregistree = RecupererConfiguration();
+            _aDesModificationsNonEnregistrees = false;
+        }
+
+        /// <summary>
+        /// Appelé si l'utilisateur choisit "Non".
+        /// On remet les valeurs comme elles étaient lors du dernier enregistrement.
+        /// </summary>
+        public void AnnulerModificationsNonEnregistrees()
+        {
+            AfficherConfiguration(_configurationEnregistree);
+            _aDesModificationsNonEnregistrees = false;
         }
 
         private void AjouterTitrePrincipal(ref int ligne, string texte)
@@ -467,6 +535,7 @@ namespace SaimDataCopy.Views.Configuration
         // Affiche une configuration sauvegardée dans l'interface.
         public void AfficherConfiguration(ConfigurationModel configuration)
         {
+            _chargementEnCours = true;
             txtSourceNomServeur.Text = configuration.ServeurSource.NomServeur;
             txtSourceChaineConnexion.Text = configuration.ServeurSource.ChaineConnexion;
             txtSourceIdentifiant.Text = configuration.ServeurSource.Identifiant;
@@ -506,6 +575,10 @@ namespace SaimDataCopy.Views.Configuration
 
             cmbTentatives.Enabled = !arreterTraitements;
             cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
+
+            _configurationEnregistree = RecupererConfiguration();
+            _aDesModificationsNonEnregistrees = false;
+            _chargementEnCours = false;
         }
 
         // Cette méthode transforme les champs de l'interface en Model.

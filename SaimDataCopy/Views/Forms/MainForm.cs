@@ -23,6 +23,7 @@ using SaimDataCopy.Views.Logs;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -302,6 +303,13 @@ namespace SaimDataCopy.Views.Forms
 
             bouton.Click += (sender, e) =>
             {
+                // Avant de changer de page, on vérifie si la page actuelle
+                // contient des modifications non enregistrées.
+                if (!VerifierAvantChangementPage())
+                {
+                    return;
+                }
+
                 AfficherPage(creerPage());
             };
 
@@ -436,6 +444,69 @@ namespace SaimDataCopy.Views.Forms
             return historiqueView;
         }
 
+        /// <summary>
+        /// Vérifie si la page actuelle contient des modifications non enregistrées.
+        /// Retourne true si on peut changer de page.
+        /// Retourne false si on doit rester sur la page actuelle.
+        /// </summary>
+        private bool VerifierAvantChangementPage()
+        {
+            if (pageActuelle is not IPageEnregistrable pageEnregistrable)
+            {
+                return true;
+            }
+
+            if (!pageEnregistrable.ADesModificationsNonEnregistrees)
+            {
+                return true;
+            }
+
+            DialogResult choix = MessageBox.Show(
+                "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer avant de quitter cette page ?",
+                "Modifications non enregistrées",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning
+            );
+
+            switch (choix)
+            {
+                case DialogResult.Yes:
+                    return EnregistrerPageActuelleAvantChangement();
+
+                case DialogResult.No:
+                    pageEnregistrable.AnnulerModificationsNonEnregistrees();
+                    return true;
+
+                case DialogResult.Cancel:
+                    return false;
+
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Enregistre la page actuelle selon son type.
+        /// Retourne true seulement si l'enregistrement réussit.
+        /// </summary>
+        private bool EnregistrerPageActuelleAvantChangement()
+        {
+            switch (pageActuelle)
+            {
+                case ConfigurationView:
+                    return configurationController?.EnregistrerDepuisMainForm() == true;
+
+                case EmailView:
+                    return emailController?.EnregistrerDepuisMainForm() == true;
+
+                case LogsView:
+                    return logsController?.EnregistrerDepuisMainForm() == true;
+
+                default:
+                    return true;
+            }
+        }
+
         // Affiche une page dans panelMain.
         // Le menu gauche et le bottom ne sont pas supprimés.
         private void AfficherPage(UserControl page)
@@ -476,8 +547,8 @@ namespace SaimDataCopy.Views.Forms
             {
                 // Si la page actuelle est Configuration,
                 // on demande à la View de déclencher l'enregistrement.
-                case ConfigurationView configurationView:
-                    configurationView.DemanderEnregistrement();
+                case ConfigurationView:
+                    configurationController?.EnregistrerDepuisMainForm();
                     break;
 
                 // Si la page actuelle est Bases à copier,
@@ -488,14 +559,14 @@ namespace SaimDataCopy.Views.Forms
 
                 // Si la page actuelle est Paramètres Email,
                 // on demande à la View de déclencher l'enregistrement.
-                case EmailView emailView:
-                    emailView.DemanderEnregistrement();
+                case EmailView:
+                    emailController?.EnregistrerDepuisMainForm();
                     break;
 
                 // Si la page actuelle est Paramètres Logs,
                 // on appelle le Controller pour enregistrer.
                 case LogsView:
-                    logsController?.DemanderEnregistrement();
+                    logsController?.EnregistrerDepuisMainForm();
                     break;
 
                 // La page Exécution n'a pas de paramètres à enregistrer.

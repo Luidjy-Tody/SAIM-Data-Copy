@@ -1,6 +1,7 @@
 ﻿using SaimDataCopy.Models.Email;
 using SaimDataCopy.Services.Email;
 using SaimDataCopy.Views.Email;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Controllers.Email
 {
@@ -53,6 +54,15 @@ namespace SaimDataCopy.Controllers.Email
         /// </summary>
         private void View_EnregistrementDemande(object? sender, EventArgs e)
         {
+            EnregistrerDepuisMainForm();
+        }
+
+        /// <summary>
+        /// Enregistre les paramètres email et retourne true si l'enregistrement réussit.
+        /// Cette méthode sera utilisée par MainForm avant de changer de page.
+        /// </summary>
+        public bool EnregistrerDepuisMainForm()
+        {
             EmailConfigModel configuration = _view.RecupererConfiguration();
 
             bool resultat = _emailService.Enregistrer(configuration, out string message);
@@ -63,6 +73,20 @@ namespace SaimDataCopy.Controllers.Email
                 MessageBoxButtons.OK,
                 resultat ? MessageBoxIcon.Information : MessageBoxIcon.Warning
             );
+
+            if (!resultat)
+            {
+                return false;
+            }
+
+            // Si la View gère les modifications non enregistrées,
+            // on indique que les paramètres actuels sont maintenant sauvegardés.
+            if (_view is IPageEnregistrable pageEnregistrable)
+            {
+                pageEnregistrable.MarquerCommeEnregistre();
+            }
+
+            return true;
         }
 
         /// <summary>

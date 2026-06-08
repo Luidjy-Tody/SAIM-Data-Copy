@@ -2,6 +2,7 @@
 using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Services.Configuration;
 using SaimDataCopy.Views.Configuration;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Controllers.Configuration
 {
@@ -70,6 +71,15 @@ namespace SaimDataCopy.Controllers.Configuration
 
         private void EnregistrerConfiguration(object? sender, EventArgs e)
         {
+            EnregistrerDepuisMainForm();
+        }
+
+        /// <summary>
+        /// Enregistre la configuration et retourne true si tout s'est bien passé.
+        /// Cette méthode sera utilisée par MainForm avant de changer de page.
+        /// </summary>
+        public bool EnregistrerDepuisMainForm()
+        {
             // La View récupère les valeurs saisies
             // et les transforme en Model.
             ConfigurationModel configuration = _view.RecupererConfiguration();
@@ -82,7 +92,7 @@ namespace SaimDataCopy.Controllers.Configuration
             if (!estEnregistre)
             {
                 _view.AfficherMessageErreur(message);
-                return;
+                return false;
             }
 
             try
@@ -94,10 +104,19 @@ namespace SaimDataCopy.Controllers.Configuration
                 // On prévient MainForm pour rafraîchir Bases à copier si la page existe déjà.
                 ModeCopieGlobalModifie?.Invoke(configuration.ModeCopie);
 
+                // Si la View gère les modifications non enregistrées,
+                // on indique que l'état actuel est maintenant sauvegardé.
+                if (_view is IPageEnregistrable pageEnregistrable)
+                {
+                    pageEnregistrable.MarquerCommeEnregistre();
+                }
+
                 _view.AfficherMessageSucces(
                     message + Environment.NewLine +
                     "Le mode de copie global a été appliqué aux bases à copier."
                 );
+
+                return true;
             }
             catch (Exception ex)
             {
@@ -105,6 +124,8 @@ namespace SaimDataCopy.Controllers.Configuration
                     "La configuration a été enregistrée, mais la synchronisation avec les bases a échoué : "
                     + ex.Message
                 );
+
+                return false;
             }
         }
     }
