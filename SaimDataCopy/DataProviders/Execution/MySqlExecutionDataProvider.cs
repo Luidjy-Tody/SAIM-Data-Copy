@@ -43,7 +43,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string chaineConnexion = CreerChaineConnexionBaseSource(nomBase);
 
             using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
-            connexion.Open();
+            OuvrirConnexionMySql(connexion);
 
             using MySqlCommand commande = connexion.CreateCommand();
 
@@ -82,7 +82,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string nomTableSql = ProtegerNomMySql(nomTable);
 
             using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
-            connexion.Open();
+            OuvrirConnexionMySql(connexion);
 
             using MySqlCommand commande = connexion.CreateCommand();
 
@@ -107,7 +107,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string nomTableSql = ProtegerNomMySql(nomTable);
 
             using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
-            connexion.Open();
+            OuvrirConnexionMySql(connexion);
 
             using MySqlCommand commande = connexion.CreateCommand();
 
@@ -141,7 +141,7 @@ namespace SaimDataCopy.DataProviders.Execution
                 ChaineConnexionHelper.ConstruireChaineConnexionCible(configuration);
 
             using MySqlConnection connexion = new MySqlConnection(chaineConnexionCible);
-            connexion.Open();
+            OuvrirConnexionMySql(connexion);
 
             using MySqlCommand commandeVerification = connexion.CreateCommand();
 
@@ -187,22 +187,27 @@ namespace SaimDataCopy.DataProviders.Execution
             }
 
             string nomBaseCible = ObtenirNomBaseCible(nomBase);
+
+            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
             string chaineConnexionCible = CreerChaineConnexionBaseCible(nomBaseCible);
 
+            using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
             using MySqlConnection connexionCible = new MySqlConnection(chaineConnexionCible);
-            connexionCible.Open();
+
+            OuvrirConnexionMySql(connexionSource);
+            OuvrirConnexionMySql(connexionCible);
 
             using MySqlCommand commandeVerification = connexionCible.CreateCommand();
 
             // Cette requête vérifie si la table cible existe déjà.
             commandeVerification.CommandText =
                 """
-                SELECT COUNT(*)
-                FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_SCHEMA = @NomBase
-                AND TABLE_NAME = @NomTable
-                AND TABLE_TYPE = 'BASE TABLE';
-                """;
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = @NomBase
+        AND TABLE_NAME = @NomTable
+        AND TABLE_TYPE = 'BASE TABLE';
+        """;
 
             commandeVerification.Parameters.AddWithValue("@NomBase", nomBaseCible);
             commandeVerification.Parameters.AddWithValue("@NomTable", nomTable);
@@ -218,14 +223,35 @@ namespace SaimDataCopy.DataProviders.Execution
                 return false;
             }
 
-            using MySqlCommand commandeCreation = connexionCible.CreateCommand();
-
-            string nomBaseSourceSql = ProtegerNomMySql(nomBase);
             string nomTableSql = ProtegerNomMySql(nomTable);
 
-            // Cette requête crée la table cible avec la même structure que la table source.
-            commandeCreation.CommandText =
-                $"CREATE TABLE {nomTableSql} LIKE {nomBaseSourceSql}.{nomTableSql};";
+            using MySqlCommand commandeStructure = connexionSource.CreateCommand();
+
+            // Cette requête récupère le script CREATE TABLE de la table source.
+            commandeStructure.CommandText = $"SHOW CREATE TABLE {nomTableSql};";
+
+            using MySqlDataReader lecteur = commandeStructure.ExecuteReader();
+
+            if (!lecteur.Read())
+            {
+                throw new InvalidOperationException(
+                    $"Impossible de récupérer la structure de la table source {nomTable}.");
+            }
+
+            string scriptCreationTable = lecteur.GetString(1);
+
+            // Certains anciens serveurs MySQL ne connaissent pas utf8mb4_0900_ai_ci.
+            // On remplace par une collation plus compatible.
+            scriptCreationTable = scriptCreationTable.Replace(
+                "utf8mb4_0900_ai_ci",
+                "utf8mb4_general_ci");
+
+            lecteur.Close();
+
+            using MySqlCommand commandeCreation = connexionCible.CreateCommand();
+
+            // Cette requête recrée la même table sur le serveur cible.
+            commandeCreation.CommandText = scriptCreationTable;
 
             commandeCreation.ExecuteNonQuery();
 
@@ -244,10 +270,7 @@ namespace SaimDataCopy.DataProviders.Execution
             {
                 "Écraser" => CopierModeEcraser(nomBase, nomTable, cancellationToken),
                 "Ecraser" => CopierModeEcraser(nomBase, nomTable, cancellationToken),
-
                 "Mise à jour" => CopierModeMiseAJour(nomBase, nomTable, cancellationToken),
-
-
                 "Mettre à jour" => CopierModeMiseAJour(nomBase, nomTable, cancellationToken),
 
                 _ => throw new InvalidOperationException(
@@ -320,6 +343,7 @@ namespace SaimDataCopy.DataProviders.Execution
 
             return builder.ConnectionString;
         }
+
         private int CopierModeMiseAJour(
             string nomBase,
             string nomTable,
@@ -350,6 +374,7 @@ namespace SaimDataCopy.DataProviders.Execution
                 colonnesCles,
                 cancellationToken);
         }
+
         private int CopierModeEcraser(
             string nomBase,
             string nomTable,
@@ -373,8 +398,8 @@ namespace SaimDataCopy.DataProviders.Execution
             using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
             using MySqlConnection connexionCible = new MySqlConnection(chaineConnexionCible);
 
-            connexionSource.Open();
-            connexionCible.Open();
+            OuvrirConnexionMySql(connexionSource);
+            OuvrirConnexionMySql(connexionCible);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -434,8 +459,8 @@ namespace SaimDataCopy.DataProviders.Execution
             using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
             using MySqlConnection connexionCible = new MySqlConnection(chaineConnexionCible);
 
-            connexionSource.Open();
-            connexionCible.Open();
+            OuvrirConnexionMySql(connexionSource);
+            OuvrirConnexionMySql(connexionCible);
 
             using MySqlCommand commandeLecture = connexionSource.CreateCommand();
 
@@ -464,11 +489,11 @@ namespace SaimDataCopy.DataProviders.Execution
         }
 
         private void InsererOuMettreAJourLigneCible(
-    MySqlConnection connexionCible,
-    string nomTable,
-    List<string> colonnes,
-    List<string> colonnesCles,
-    MySqlDataReader lecteur)
+            MySqlConnection connexionCible,
+            string nomTable,
+            List<string> colonnes,
+            List<string> colonnesCles,
+            MySqlDataReader lecteur)
         {
             string nomTableSql = ProtegerNomMySql(nomTable);
 
@@ -566,6 +591,57 @@ namespace SaimDataCopy.DataProviders.Execution
             return nomBaseSource + "_cible";
         }
 
+        private void OuvrirConnexionMySql(MySqlConnection connexion)
+        {
+            try
+            {
+                connexion.Open();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    TraduireErreurMySql(ex),
+                    ex);
+            }
+        }
+
+        private string TraduireErreurMySql(Exception exception)
+        {
+            if (exception is MySqlException erreurMySql)
+            {
+                return erreurMySql.Number switch
+                {
+                    1045 => "Nom d'utilisateur ou mot de passe MySQL incorrect.",
+                    1042 => "Serveur MySQL introuvable ou port incorrect.",
+                    1049 => "La base de données MySQL demandée n'existe pas.",
+                    2003 => "Impossible de se connecter au serveur MySQL. Vérifiez le nom du serveur et le port.",
+                    2005 => "Nom du serveur MySQL invalide.",
+                    1146 => "Table MySQL introuvable.",
+                    1064 => "Erreur de syntaxe SQL MySQL.",
+                    _ => $"Erreur MySQL ({erreurMySql.Number}) : {erreurMySql.Message}"
+                };
+            }
+
+            string message = exception.Message;
+
+            if (message.Contains("Unable to connect to any of the specified MySQL hosts", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Impossible de se connecter au serveur MySQL. Vérifiez le nom du serveur, le port et que MySQL est démarré.";
+            }
+
+            if (message.Contains("Access denied", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Nom d'utilisateur ou mot de passe MySQL incorrect.";
+            }
+
+            if (message.Contains("Unknown database", StringComparison.OrdinalIgnoreCase))
+            {
+                return "La base de données MySQL demandée n'existe pas.";
+            }
+
+            return message;
+        }
+
         private string ProtegerNomMySql(string nom)
         {
             string nomSecurise = nom.Replace("`", "``");
@@ -606,7 +682,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
 
             using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
-            connexionSource.Open();
+            OuvrirConnexionMySql(connexionSource);
 
             using MySqlCommand commande = connexionSource.CreateCommand();
 
@@ -614,12 +690,12 @@ namespace SaimDataCopy.DataProviders.Execution
             // ORDINAL_POSITION garde l'ordre réel des colonnes.
             commande.CommandText =
                 """
-        SELECT COLUMN_NAME
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = @NomBase
-        AND TABLE_NAME = @NomTable
-        ORDER BY ORDINAL_POSITION;
-        """;
+                SELECT COLUMN_NAME
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = @NomBase
+                AND TABLE_NAME = @NomTable
+                ORDER BY ORDINAL_POSITION;
+                """;
 
             commande.Parameters.AddWithValue("@NomBase", nomBase);
             commande.Parameters.AddWithValue("@NomTable", nomTable);
@@ -641,7 +717,7 @@ namespace SaimDataCopy.DataProviders.Execution
             string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
 
             using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
-            connexionSource.Open();
+            OuvrirConnexionMySql(connexionSource);
 
             using MySqlCommand commande = connexionSource.CreateCommand();
 
@@ -649,13 +725,13 @@ namespace SaimDataCopy.DataProviders.Execution
             // Le mode Mise à jour MySQL a besoin d'une clé primaire ou unique.
             commande.CommandText =
                 """
-        SELECT COLUMN_NAME
-        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE TABLE_SCHEMA = @NomBase
-        AND TABLE_NAME = @NomTable
-        AND CONSTRAINT_NAME = 'PRIMARY'
-        ORDER BY ORDINAL_POSITION;
-        """;
+                SELECT COLUMN_NAME
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = @NomBase
+                AND TABLE_NAME = @NomTable
+                AND CONSTRAINT_NAME = 'PRIMARY'
+                ORDER BY ORDINAL_POSITION;
+                """;
 
             commande.Parameters.AddWithValue("@NomBase", nomBase);
             commande.Parameters.AddWithValue("@NomTable", nomTable);

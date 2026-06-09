@@ -1,4 +1,3 @@
-using SaimDataCopy.DataProviders.Execution;
 using SaimDataCopy.Models.Execution;
 using SaimDataCopy.Services.Execution;
 using SaimDataCopy.Views.Forms;
@@ -56,19 +55,10 @@ namespace SaimDataCopy
 
         private static async Task LancerExecutionAutomatiqueAsync()
         {
-            // Le DataProvider lit les paramètres JSON déjà sauvegardés :
-            // configuration_execution.json,
-            // bases_copier.json,
-            // logs_parametres.json,
-            // email_parametres.json.
-            ExecutionDataProvider executionDataProvider = new ExecutionDataProvider();
+            // Le Service choisit automatiquement SQL Server ou MySQL
+            // grâce à ExecutionDataProviderFactory.
+            ExecutionService executionService = new ExecutionService();
 
-            // Le Service contient déjà la logique de copie,
-            // les logs, l'e-mail automatique et l'historique.
-            ExecutionService executionService = new ExecutionService(executionDataProvider);
-
-            // En mode automatique, il n'y a pas d'interface à mettre à jour.
-            // On garde quand même un objet Progress pour respecter la méthode existante.
             Progress<ExecutionProgressionModel> progression =
                 new Progress<ExecutionProgressionModel>();
 

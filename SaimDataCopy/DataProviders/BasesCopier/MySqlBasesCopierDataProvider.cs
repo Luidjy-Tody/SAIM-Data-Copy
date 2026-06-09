@@ -48,12 +48,12 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             List<BaseCopieModel> bases = new List<BaseCopieModel>();
 
             using MySqlConnection connexion = new MySqlConnection(chaineConnexionSource);
-            connexion.Open();
+            OuvrirConnexionMySql(connexion);
 
             using MySqlCommand commande = connexion.CreateCommand();
 
             // Cette requête lit les bases MySQL disponibles.
-            // On ignore les bases système de MySQL.
+            // On ignore les bases système de MySQL et les bases cibles.
             commande.CommandText =
                 """
                 SELECT SCHEMA_NAME
@@ -235,6 +235,57 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             return resultat
                 .OrderBy(b => b.OrdreTraitement)
                 .ToList();
+        }
+
+        private void OuvrirConnexionMySql(MySqlConnection connexion)
+        {
+            try
+            {
+                connexion.Open();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    TraduireErreurMySql(ex),
+                    ex);
+            }
+        }
+
+        private string TraduireErreurMySql(Exception exception)
+        {
+            if (exception is MySqlException erreurMySql)
+            {
+                return erreurMySql.Number switch
+                {
+                    1045 => "Nom d'utilisateur ou mot de passe MySQL incorrect.",
+                    1042 => "Serveur MySQL introuvable ou port incorrect.",
+                    1049 => "La base de données MySQL demandée n'existe pas.",
+                    2003 => "Impossible de se connecter au serveur MySQL. Vérifiez le nom du serveur et le port.",
+                    2005 => "Nom du serveur MySQL invalide.",
+                    1146 => "Table MySQL introuvable.",
+                    1064 => "Erreur de syntaxe SQL MySQL.",
+                    _ => $"Erreur MySQL ({erreurMySql.Number}) : {erreurMySql.Message}"
+                };
+            }
+
+            string message = exception.Message;
+
+            if (message.Contains("Unable to connect to any of the specified MySQL hosts", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Impossible de se connecter au serveur MySQL. Vérifiez le nom du serveur, le port et que MySQL est démarré.";
+            }
+
+            if (message.Contains("Access denied", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Nom d'utilisateur ou mot de passe MySQL incorrect.";
+            }
+
+            if (message.Contains("Unknown database", StringComparison.OrdinalIgnoreCase))
+            {
+                return "La base de données MySQL demandée n'existe pas.";
+            }
+
+            return message;
         }
 
         private string NormaliserModeCopie(string modeCopie)
