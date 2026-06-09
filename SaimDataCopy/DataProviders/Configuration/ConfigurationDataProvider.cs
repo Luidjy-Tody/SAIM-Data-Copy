@@ -31,6 +31,7 @@ namespace SaimDataCopy.DataProviders.Configuration
             {
                 ServeurSource = new ServeurConfigModel
                 {
+                    TypeServeur = configuration.ServeurSource.TypeServeur,
                     NomServeur = configuration.ServeurSource.NomServeur,
                     ChaineConnexion = configuration.ServeurSource.ChaineConnexion,
                     Identifiant = configuration.ServeurSource.Identifiant,
@@ -44,6 +45,7 @@ namespace SaimDataCopy.DataProviders.Configuration
 
                 ServeurCible = new ServeurConfigModel
                 {
+                    TypeServeur = configuration.ServeurCible.TypeServeur,
                     NomServeur = configuration.ServeurCible.NomServeur,
                     ChaineConnexion = configuration.ServeurCible.ChaineConnexion,
                     Identifiant = configuration.ServeurCible.Identifiant,

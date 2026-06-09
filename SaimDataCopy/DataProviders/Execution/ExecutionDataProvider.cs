@@ -120,6 +120,38 @@ namespace SaimDataCopy.DataProviders.Execution
             return Convert.ToInt32(resultat);
         }
 
+        public int CompterLignesTableCible(string nomBase, string nomTable)
+        {
+            if (string.IsNullOrWhiteSpace(nomBase) || string.IsNullOrWhiteSpace(nomTable))
+            {
+                return 0;
+            }
+
+            string nomBaseCible = ObtenirNomBaseCible(nomBase);
+
+            string chaineConnexion = CreerChaineConnexionBaseCible(nomBaseCible);
+
+            string nomTableSql = ConstruireNomTableSql(nomTable);
+
+            // Cette requête compte le nombre de lignes déjà présentes
+            // dans la table cible.
+            string requete = $"SELECT COUNT(*) FROM {nomTableSql};";
+
+            using SqlConnection connexion = new SqlConnection(chaineConnexion);
+            connexion.Open();
+
+            using SqlCommand commande = new SqlCommand(requete, connexion);
+
+            object? resultat = commande.ExecuteScalar();
+
+            if (resultat == null)
+            {
+                return 0;
+            }
+
+            return Convert.ToInt32(resultat);
+        }
+
         public bool VerifierOuCreerBaseCible(string nomBase)
         {
             if (string.IsNullOrWhiteSpace(nomBase))

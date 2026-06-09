@@ -82,7 +82,7 @@ namespace SaimDataCopy.Controllers.Execution
                 {
                     // - la lecture des tables d'une base source
                     // - le comptage des lignes de chaque table
-                    TesterLectureTablesBaseSource();
+                    //TesterLectureTablesBaseSource();
 
                     
 
@@ -273,7 +273,7 @@ namespace SaimDataCopy.Controllers.Execution
                     Type = "Succes"
                 });
             }
-        }
+        } 
 
         
     }

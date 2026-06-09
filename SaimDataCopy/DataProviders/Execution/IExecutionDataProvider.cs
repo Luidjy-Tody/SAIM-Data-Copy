@@ -18,6 +18,10 @@ namespace SaimDataCopy.DataProviders.Execution
         // Exemple : DB_TestRH + dbo.EmployesTest retourne 2.
         int CompterLignesTableSource(string nomBase, string nomTable);
 
+        // Compte le nombre de lignes dans une table de la base cible.
+        // Exemple : DB_TestRH + dbo.EmployesTest retourne le nombre de lignes déjà présentes côté cible.
+        int CompterLignesTableCible(string nomBase, string nomTable);
+
         // Vérifie si une base existe sur le serveur cible.
         // Si elle n'existe pas, elle est créée.
         // Retourne true si la base a été créée, false si elle existait déjà.

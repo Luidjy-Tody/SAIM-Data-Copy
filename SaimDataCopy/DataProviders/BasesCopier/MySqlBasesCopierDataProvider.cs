@@ -1,31 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MySqlConnector;
 using Newtonsoft.Json;
-using SaimDataCopy.DataAccess;
 using SaimDataCopy.DataProviders.Configuration;
+using SaimDataCopy.Helpers;
 using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Models.Configuration;
-using SaimDataCopy.Helpers;
 
 namespace SaimDataCopy.DataProviders.BasesCopier
 {
-    // DataProvider pour la page Bases à copier.
-    // Il lit les bases depuis le serveur source
-    // et sauvegarde les choix de l'utilisateur dans un fichier JSON.
-    public class BasesCopierDataProvider : IBasesCopierDataProvider
+    // DataProvider MySQL pour la page Bases à copier.
+    // Il lit les bases MySQL depuis le serveur source.
+    public class MySqlBasesCopierDataProvider : IBasesCopierDataProvider
     {
         private readonly string _cheminFichierBases;
         private readonly IConfigurationDataProvider _configurationDataProvider;
 
-        public BasesCopierDataProvider()
+        public MySqlBasesCopierDataProvider()
             : this(new ConfigurationDataProvider())
         {
         }
 
-        public BasesCopierDataProvider(IConfigurationDataProvider configurationDataProvider)
+        public MySqlBasesCopierDataProvider(IConfigurationDataProvider configurationDataProvider)
         {
             _configurationDataProvider = configurationDataProvider;
 
-            // Le fichier JSON sera stocké dans le dossier Data de l'application.
             string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
             if (!Directory.Exists(dossierData))
@@ -38,7 +35,6 @@ namespace SaimDataCopy.DataProviders.BasesCopier
 
         public List<BaseCopieModel> ChargerBasesDepuisServeurSource()
         {
-            // On récupère la configuration depuis configuration_execution.json.
             ConfigurationModel? configuration = _configurationDataProvider.ChargerConfiguration();
 
             if (configuration == null)
@@ -46,37 +42,40 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                 return new List<BaseCopieModel>();
             }
 
-            string chaineConnexionSource = ChaineConnexionHelper.ConstruireChaineConnexionSource(configuration);
-
-            DbContextOptions<SaimDbContext> optionsSource =
-                new DbContextOptionsBuilder<SaimDbContext>()
-                    .UseSqlServer(chaineConnexionSource)
-                    .Options;
-
-            // Ici, on crée un DbContext connecté au serveur source.
-            using SaimDbContext dbContextSource = new SaimDbContext(optionsSource);
-
-            // Cette requête lit les bases disponibles sur le serveur source.
-            // On ignore les bases système, la base interne de l'application,
-            // et les anciennes bases temporaires qui commencent par CIBLE_.
-            List<string> nomsBases = dbContextSource.Database
-                .SqlQueryRaw<string>(
-                    """
-                    SELECT name AS Value
-                    FROM sys.databases
-                    WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb', 'SaimDataCopyDb')
-                    AND name NOT LIKE 'CIBLE[_]%'
-                    ORDER BY name
-                    """
-                )
-                .ToList();
+            string chaineConnexionSource =
+                ChaineConnexionHelper.ConstruireChaineConnexionSource(configuration);
 
             List<BaseCopieModel> bases = new List<BaseCopieModel>();
 
+            using MySqlConnection connexion = new MySqlConnection(chaineConnexionSource);
+            connexion.Open();
+
+            using MySqlCommand commande = connexion.CreateCommand();
+
+            // Cette requête lit les bases MySQL disponibles.
+            // On ignore les bases système de MySQL.
+            commande.CommandText =
+                """
+                SELECT SCHEMA_NAME
+                FROM INFORMATION_SCHEMA.SCHEMATA
+                WHERE SCHEMA_NAME NOT IN (
+                    'information_schema',
+                    'mysql',
+                    'performance_schema',
+                    'sys'
+                )
+                AND SCHEMA_NAME NOT LIKE '%_cible%'
+                ORDER BY SCHEMA_NAME;
+                """;
+
+            using MySqlDataReader lecteur = commande.ExecuteReader();
+
             int ordre = 1;
 
-            foreach (string nomBase in nomsBases)
+            while (lecteur.Read())
             {
+                string nomBase = lecteur.GetString("SCHEMA_NAME");
+
                 bases.Add(new BaseCopieModel
                 {
                     Inclure = true,
@@ -98,28 +97,18 @@ namespace SaimDataCopy.DataProviders.BasesCopier
         public List<BaseCopieModel> ChargerBasesSauvegardees()
         {
             List<BaseCopieModel> basesServeur = ChargerBasesDepuisServeurSource();
-
-            // On charge les choix sauvegardés dans bases_copier.json.
             List<BaseCopieModel> basesJson = ChargerBasesJson();
 
-            // Si aucune sauvegarde JSON n'existe encore,
-            // on retourne les bases du serveur source cochées par défaut.
             if (basesJson.Count == 0)
             {
                 return basesServeur;
             }
 
-            // On fusionne les vraies bases du serveur source
-            // avec les choix sauvegardés dans le fichier JSON.
-            return FusionnerBasesServeurEtSauvegarde(
-                basesServeur,
-                basesJson
-            );
+            return FusionnerBasesServeurEtSauvegarde(basesServeur, basesJson);
         }
 
         public void EnregistrerBases(List<BaseCopieModel> bases)
         {
-            // Sauvegarde uniquement dans le fichier JSON.
             EnregistrerBasesJson(bases);
         }
 
@@ -224,14 +213,10 @@ namespace SaimDataCopy.DataProviders.BasesCopier
 
                 if (baseSauvegardee == null)
                 {
-                    // Nouvelle base trouvée sur le serveur source.
-                    // Par défaut, elle est cochée.
                     resultat.Add(baseServeur);
                     continue;
                 }
 
-                // La base existe déjà dans le fichier JSON.
-                // On garde les choix de l'utilisateur.
                 resultat.Add(new BaseCopieModel
                 {
                     Inclure = baseSauvegardee.Inclure,

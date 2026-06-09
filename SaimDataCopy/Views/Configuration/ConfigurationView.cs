@@ -20,11 +20,13 @@ namespace SaimDataCopy.Views.Configuration
         private readonly TableLayoutPanel layoutPrincipal = new TableLayoutPanel();
 
         // Champs du serveur source.
+        private ComboBox cmbSourceTypeServeur = new ComboBox();
         private TextBox txtSourceNomServeur = new TextBox();
         private TextBox txtSourceChaineConnexion = new TextBox();
         private TextBox txtSourceIdentifiant = new TextBox();
         private TextBox txtSourceMotDePasse = new TextBox();
         private TextBox txtSourcePort = new TextBox();
+
 
         // Champs du serveur cible.
         private TextBox txtCibleNomServeur = new TextBox();
@@ -32,6 +34,7 @@ namespace SaimDataCopy.Views.Configuration
         private TextBox txtCibleIdentifiant = new TextBox();
         private TextBox txtCibleMotDePasse = new TextBox();
         private TextBox txtCiblePort = new TextBox();
+        private ComboBox cmbCibleTypeServeur = new ComboBox();
 
         // Listes déroulantes.
         private ComboBox cmbModeCopie = new ComboBox();
@@ -90,6 +93,7 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterTitreSection(ref ligne, "Serveur source (production)");
 
+
             AjouterDeuxChamps(
                 ref ligne,
                 CreerChampTexte("Nom ou adresse IP du serveur", "Ex : PROD-SRV-01 ou 192.168.1.50", true, out txtSourceNomServeur),
@@ -107,12 +111,22 @@ namespace SaimDataCopy.Views.Configuration
                 CreerChampMotDePasse("Mot de passe", "12345678", false, out txtSourceMotDePasse)
             );
 
-            AjouterChampPleineLargeur(
+            cmbSourceTypeServeur = CreerComboBox("SQL Server", "MySQL");
+
+            AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Port", "1433", false, out txtSourcePort)
+                CreerChampTexte("Port", "1433", false, out txtSourcePort),
+                CreerChampComboBox("Type de serveur source", cmbSourceTypeServeur)
             );
 
             AjouterTitreSection(ref ligne, "Serveur cible (staging)");
+
+            cmbCibleTypeServeur = CreerComboBox("SQL Server", "MySQL");
+
+            AjouterChampPleineLargeur(
+                ref ligne,
+                CreerChampComboBox("Type de serveur cible", cmbCibleTypeServeur)
+            );
 
             AjouterDeuxChamps(
                 ref ligne,
@@ -167,6 +181,16 @@ namespace SaimDataCopy.Views.Configuration
                 cmbTentatives.Cursor = arreterTraitements ? Cursors.No : Cursors.Default;
             };
 
+            cmbSourceTypeServeur.SelectedIndexChanged += (sender, e) =>
+            {
+                MettreAJourPortParDefaut(cmbSourceTypeServeur, txtSourcePort);
+            };
+
+            cmbCibleTypeServeur.SelectedIndexChanged += (sender, e) =>
+            {
+                MettreAJourPortParDefaut(cmbCibleTypeServeur, txtCiblePort);
+            };
+
             panelContenu.Resize += (sender, e) =>
             {
                 AdapterLargeurContenu();
@@ -211,6 +235,9 @@ namespace SaimDataCopy.Views.Configuration
             cmbModeCopie.SelectedIndexChanged += Champ_Modifie;
             cmbErreur.SelectedIndexChanged += Champ_Modifie;
             cmbTentatives.SelectedIndexChanged += Champ_Modifie;
+
+            cmbSourceTypeServeur.SelectedIndexChanged += Champ_Modifie;
+            cmbCibleTypeServeur.SelectedIndexChanged += Champ_Modifie;
         }
 
         /// <summary>
@@ -536,6 +563,14 @@ namespace SaimDataCopy.Views.Configuration
         public void AfficherConfiguration(ConfigurationModel configuration)
         {
             _chargementEnCours = true;
+
+            SelectionnerComboBox(
+                cmbSourceTypeServeur,
+                NormaliserTypeServeur(configuration.ServeurSource.TypeServeur),
+                "SQL Server"
+            );
+
+
             txtSourceNomServeur.Text = configuration.ServeurSource.NomServeur;
             txtSourceChaineConnexion.Text = configuration.ServeurSource.ChaineConnexion;
             txtSourceIdentifiant.Text = configuration.ServeurSource.Identifiant;
@@ -543,6 +578,13 @@ namespace SaimDataCopy.Views.Configuration
             txtSourcePort.Text = configuration.ServeurSource.Port > 0
                 ? configuration.ServeurSource.Port.ToString()
                 : "";
+
+            SelectionnerComboBox(
+                cmbCibleTypeServeur,
+                NormaliserTypeServeur(configuration.ServeurCible.TypeServeur),
+                "SQL Server"
+            );
+
 
             txtCibleNomServeur.Text = configuration.ServeurCible.NomServeur;
             txtCibleChaineConnexion.Text = configuration.ServeurCible.ChaineConnexion;
@@ -589,6 +631,8 @@ namespace SaimDataCopy.Views.Configuration
 
             configuration.ServeurSource = new ServeurConfigModel
             {
+
+                TypeServeur = cmbSourceTypeServeur.SelectedItem?.ToString() ?? "SQL Server",
                 NomServeur = txtSourceNomServeur.Text.Trim(),
                 ChaineConnexion = txtSourceChaineConnexion.Text.Trim(),
                 Identifiant = txtSourceIdentifiant.Text.Trim(),
@@ -598,6 +642,8 @@ namespace SaimDataCopy.Views.Configuration
 
             configuration.ServeurCible = new ServeurConfigModel
             {
+
+                TypeServeur = cmbCibleTypeServeur.SelectedItem?.ToString() ?? "SQL Server",
                 NomServeur = txtCibleNomServeur.Text.Trim(),
                 ChaineConnexion = txtCibleChaineConnexion.Text.Trim(),
                 Identifiant = txtCibleIdentifiant.Text.Trim(),
@@ -704,6 +750,33 @@ namespace SaimDataCopy.Views.Configuration
                 "Mise à jour" => "Mise à jour",
                 "Écraser" => "Écraser",
                 _ => "Écraser"
+            };
+        }
+
+        private string NormaliserTypeServeur(string typeServeur)
+        {
+            return typeServeur switch
+            {
+                "SQL Server" => "SQL Server",
+                "MySQL" => "MySQL",
+                _ => "SQL Server"
+            };
+        }
+
+        private void MettreAJourPortParDefaut(ComboBox comboBoxTypeServeur, TextBox txtPort)
+        {
+            if (_chargementEnCours)
+            {
+                return;
+            }
+
+            string typeServeur = comboBoxTypeServeur.SelectedItem?.ToString() ?? "SQL Server";
+
+            txtPort.Text = typeServeur switch
+            {
+                "MySQL" => "3306",
+                "SQL Server" => "1433",
+                _ => "1433"
             };
         }
     }

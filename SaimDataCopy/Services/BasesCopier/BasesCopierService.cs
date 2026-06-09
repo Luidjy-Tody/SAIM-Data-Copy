@@ -14,7 +14,7 @@ namespace SaimDataCopy.Services.BasesCopier
         // Il crée directement le DataProvider.
         public BasesCopierService()
         {
-            _basesCopierDataProvider = new BasesCopierDataProvider();
+            _basesCopierDataProvider = BasesCopierDataProviderFactory.Creer() ;
         }
 
         // Constructeur utile plus tard pour les tests ou pour changer la source de données.

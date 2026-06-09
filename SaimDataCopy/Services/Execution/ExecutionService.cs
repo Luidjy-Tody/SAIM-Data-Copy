@@ -25,6 +25,12 @@ namespace SaimDataCopy.Services.Execution
         private readonly IHistoriqueDataProvider _historiqueDataProvider;
         private readonly IConfigurationDataProvider _configurationDataProvider;
 
+        public ExecutionService()
+
+            : this(ExecutionDataProviderFactory.Creer())
+        {
+        }
+
         public ExecutionService(IExecutionDataProvider executionDataProvider)
             : this(
                 executionDataProvider,
@@ -307,6 +313,8 @@ namespace SaimDataCopy.Services.Execution
                         NomBase = baseCopie.NomBase,
                         LignesAvant = 0,
                         LignesApres = 0,
+                        LignesCopiees = 0,
+
                         Resultat = "Avertissement",
                         Message = ex.Message
                     };
@@ -314,7 +322,7 @@ namespace SaimDataCopy.Services.Execution
                 catch (Exception ex)
                 {
                     // On transforme l'erreur technique SQL en message simple pour l'utilisateur.
-                    string messageSimple = MessageErreurSqlHelper.ObtenirMessageSimple(ex);
+                    string messageSimple = ObtenirMessageErreurExecution(ex, baseCopie.NomBase);
 
                     // Dans le fichier log, on garde aussi le détail technique avec l'exception.
                     _journalisationService.EcrireErreur(
@@ -325,6 +333,8 @@ namespace SaimDataCopy.Services.Execution
                         NomBase = baseCopie.NomBase,
                         LignesAvant = 0,
                         LignesApres = 0,
+                        LignesCopiees = 0,
+
                         Resultat = "Erreur",
                         Message = messageSimple
                     };
@@ -334,10 +344,8 @@ namespace SaimDataCopy.Services.Execution
 
                 EcrireResultatDansFichier(baseCopie.NomBase, resultat);
 
-                int lignesPourCetteBase =
-                    Math.Max(0, resultat.LignesApres - resultat.LignesAvant);
-
-                totalLignesCopiees += lignesPourCetteBase;
+                // On utilise le nombre réel de lignes copiées pendant l'exécution.
+                totalLignesCopiees += resultat.LignesCopiees;
 
                 int basesDejaTraitees = i + 1;
                 int pourcentage = CalculerPourcentage(basesDejaTraitees, totalBases);
@@ -403,8 +411,46 @@ namespace SaimDataCopy.Services.Execution
             return resultats;
         }
 
-        private ExecutionResultatBaseModel CreerResultatLectureReelle(
-            BaseCopieModel baseCopie,
+        private string ObtenirMessageErreurExecution(Exception ex, string nomBase)
+        {
+            string message = ex.Message;
+
+            if (message.Contains("syntax", StringComparison.OrdinalIgnoreCase))
+            {
+                return
+                    $"Erreur de syntaxe SQL pendant le traitement de la base {nomBase}. " +
+                    "Cela veut dire qu'une requête envoyée à MySQL n'est pas correcte. " +
+                    $"Détail technique : {message}";
+            }
+
+            if (message.Contains("Access denied", StringComparison.OrdinalIgnoreCase))
+            {
+                return
+                    $"Accès refusé pendant le traitement de la base {nomBase}. " +
+                    "Vérifiez l'identifiant, le mot de passe ou les droits de l'utilisateur MySQL.";
+            }
+
+            if (message.Contains("Unknown database", StringComparison.OrdinalIgnoreCase))
+            {
+                return
+                    $"Base de données introuvable pendant le traitement de {nomBase}. " +
+                    "Vérifiez que la base source ou cible existe bien.";
+            }
+
+            if (message.Contains("Table", StringComparison.OrdinalIgnoreCase) &&
+                message.Contains("doesn't exist", StringComparison.OrdinalIgnoreCase))
+            {
+                return
+                    $"Table introuvable pendant le traitement de la base {nomBase}. " +
+                    "Vérifiez que la table existe bien dans la base source ou cible.";
+            }
+
+            return
+                $"Erreur pendant le traitement de la base {nomBase}. " +
+                $"Détail technique : {message}";
+        }
+
+        private ExecutionResultatBaseModel CreerResultatLectureReelle(BaseCopieModel baseCopie,
             CancellationToken cancellationToken)
         {
             _journalisationService.EcrireInformation(
@@ -441,6 +487,7 @@ namespace SaimDataCopy.Services.Execution
                     NomBase = baseCopie.NomBase,
                     LignesAvant = 0,
                     LignesApres = 0,
+                    LignesCopiees = 0,
                     Resultat = "Avertissement",
                     Message = $"Mode : {modeCopie}. {messageBaseCible} Aucune table trouvée dans cette base."
                 };
@@ -449,7 +496,10 @@ namespace SaimDataCopy.Services.Execution
             _journalisationService.EcrireInformation(
                 $"{baseCopie.NomBase} : {tables.Count} table(s) trouvée(s).");
 
-            int totalLignes = 0;
+            int totalLignesAvant = 0;
+            int totalLignesApres = 0;
+            int totalLignesCopiees = 0;
+
             int nombreTablesCreees = 0;
             int nombreTablesDejaExistantes = 0;
 
@@ -480,6 +530,14 @@ namespace SaimDataCopy.Services.Execution
                         $"{baseCopie.NomBase}.{table} : table cible déjà existante.");
                 }
 
+                // Important :
+                // On compte les lignes de la cible AVANT la copie.
+                // En mode Écraser, cela doit être fait avant le DELETE.
+                int lignesAvantTable =
+                    _executionDataProvider.CompterLignesTableCible(
+                        baseCopie.NomBase,
+                        table);
+
                 int lignesCopiees =
                     _executionDataProvider.CopierLignesTableSourceVersCible(
                         baseCopie.NomBase,
@@ -487,28 +545,40 @@ namespace SaimDataCopy.Services.Execution
                         modeCopie,
                         cancellationToken);
 
-                totalLignes += lignesCopiees;
+                // Après la copie, on recompte les lignes réellement présentes côté cible.
+                int lignesApresTable =
+                    _executionDataProvider.CompterLignesTableCible(
+                        baseCopie.NomBase,
+                        table);
+
+                totalLignesAvant += lignesAvantTable;
+                totalLignesApres += lignesApresTable;
+                totalLignesCopiees += lignesCopiees;
 
                 _journalisationService.EcrireSucces(
-                    $"{baseCopie.NomBase}.{table} : {lignesCopiees} ligne(s) copiée(s).");
+                    $"{baseCopie.NomBase}.{table} : {lignesCopiees} ligne(s) copiée(s). " +
+                    $"Lignes avant : {lignesAvantTable}, lignes après : {lignesApresTable}.");
             }
 
             _journalisationService.EcrireSucces(
                 $"{baseCopie.NomBase} : copie terminée avec succès. " +
-                $"{tables.Count} table(s), {totalLignes} ligne(s) copiée(s).");
+                $"{tables.Count} table(s), {totalLignesCopiees} ligne(s) copiée(s). " +
+                $"Lignes avant : {totalLignesAvant}, lignes après : {totalLignesApres}.");
 
             return new ExecutionResultatBaseModel
             {
                 NomBase = baseCopie.NomBase,
-                LignesAvant = 0,
-                LignesApres = totalLignes,
+                LignesAvant = totalLignesAvant,
+                LignesApres = totalLignesApres,
+                LignesCopiees = totalLignesCopiees,
                 Resultat = "Succès",
                 Message =
                     $"Mode : {modeCopie}. " +
                     $"{messageBaseCible} " +
                     $"Préparation cible terminée : {nombreTablesCreees} table(s) créée(s), " +
                     $"{nombreTablesDejaExistantes} table(s) déjà existante(s). " +
-                    $"Copie terminée : {tables.Count} table(s), {totalLignes} ligne(s) copiée(s)."
+                    $"Copie terminée : {tables.Count} table(s), {totalLignesCopiees} ligne(s) copiée(s). " +
+                    $"Lignes avant : {totalLignesAvant}, lignes après : {totalLignesApres}."
             };
         }
 

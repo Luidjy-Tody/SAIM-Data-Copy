@@ -12,6 +12,26 @@ namespace SaimDataCopy.Services.Configuration
 
         // Constructeur simple.
         // Il crée directement le DataProvider de configuration.
+
+        private bool TypeServeurValide(string typeServeur)
+        {
+            return typeServeur switch
+            {
+                "SQL Server" => true,
+                "MySQL" => true,
+                _ => false
+            };
+        }
+
+        private string NormaliserTypeServeur(string typeServeur)
+        {
+            return typeServeur switch
+            {
+                "SQL Server" => "SQL Server",
+                "MySQL" => "MySQL",
+                _ => "SQL Server"
+            };
+        }
         public ConfigurationService()
         {
             _configurationDataProvider = new ConfigurationDataProvider();
@@ -43,6 +63,11 @@ namespace SaimDataCopy.Services.Configuration
                 message = "Pour le serveur source, renseignez soit le nom du serveur, soit la chaîne de connexion complète.";
                 return false;
             }
+            if (!TypeServeurValide(configuration.ServeurSource.TypeServeur))
+            {
+                message = "Le type du serveur source est invalide.";
+                return false;
+            }
 
             if (!PortValide(configuration.ServeurSource))
             {
@@ -55,6 +80,12 @@ namespace SaimDataCopy.Services.Configuration
             if (!ServeurRenseigne(configuration.ServeurCible))
             {
                 message = "Pour le serveur cible, renseignez soit le nom du serveur, soit la chaîne de connexion complète.";
+                return false;
+            }
+
+            if (!TypeServeurValide(configuration.ServeurCible.TypeServeur))
+            {
+                message = "Le type du serveur cible est invalide.";
                 return false;
             }
 
@@ -99,6 +130,10 @@ namespace SaimDataCopy.Services.Configuration
 
         public bool EnregistrerConfiguration(ConfigurationModel configuration, out string message)
         {
+            configuration.ServeurSource.TypeServeur = NormaliserTypeServeur(configuration.ServeurSource.TypeServeur);
+
+            configuration.ServeurCible.TypeServeur = NormaliserTypeServeur(configuration.ServeurCible.TypeServeur);
+
             // On normalise avant validation et sauvegarde.
             configuration.ModeCopie = NormaliserModeCopie(configuration.ModeCopie);
 

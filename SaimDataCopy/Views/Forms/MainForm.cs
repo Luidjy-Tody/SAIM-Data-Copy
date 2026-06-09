@@ -410,15 +410,12 @@ namespace SaimDataCopy.Views.Forms
             {
                 executionView = new ExecutionView();
 
-                // Le DataProvider charge les bases sélectionnées
-                // et sauvegarde la dernière exécution.
-                ExecutionDataProvider executionDataProvider = new ExecutionDataProvider();
-
-                // Le Service contient la logique métier de l'exécution.
-                ExecutionService executionService = new ExecutionService(executionDataProvider);
+                // Le Service choisit automatiquement
+                // SQL Server ou MySQL via la Factory.
+                ExecutionService executionService = new ExecutionService();
 
                 // Le Controller reçoit la View et le Service.
-                executionController = new ExecutionController(executionView, executionService);
+                executionController = new ExecutionController( executionView, executionService );
             }
 
             return executionView;

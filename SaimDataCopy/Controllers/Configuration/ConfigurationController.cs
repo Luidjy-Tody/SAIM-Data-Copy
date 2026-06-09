@@ -99,7 +99,7 @@ namespace SaimDataCopy.Controllers.Configuration
             {
                 // Quand Configuration est enregistrée,
                 // le mode global est appliqué à toutes les bases.
-                _basesCopierService.AppliquerModeCopieGlobal(configuration.ModeCopie);
+                //_basesCopierService.AppliquerModeCopieGlobal(configuration.ModeCopie);
 
                 // On prévient MainForm pour rafraîchir Bases à copier si la page existe déjà.
                 ModeCopieGlobalModifie?.Invoke(configuration.ModeCopie);
