@@ -548,8 +548,10 @@ namespace SaimDataCopy.Views.Email
 
             btnTesterEmail.Text = "  Envoyer un e-mail de test";
             btnTesterEmail.Location = new Point(0, 0);
-            btnTesterEmail.Size = new Size(245, 38);
+            btnTesterEmail.Size = new Size(200, 38);
             btnTesterEmail.TextAlign = ContentAlignment.MiddleCenter;
+            btnTesterEmail.Padding = new Padding(0);
+
             btnTesterEmail.Click += BtnTesterEmail_Click;
 
             EmailFormStyle.AppliquerBoutonTest(btnTesterEmail);

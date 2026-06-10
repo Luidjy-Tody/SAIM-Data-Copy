@@ -120,7 +120,7 @@ namespace SaimDataCopy.Services.Email
             if (!configuration.ActiverEnvoiEmail)
             {
                 message = "Envoi email désactivé dans les paramètres.";
-                return true;
+                return false;
             }
 
             if (!ValiderConfigurationPourEnvoi(configuration, out message))

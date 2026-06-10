@@ -147,7 +147,7 @@ namespace SaimDataCopy.Views.Forms
             lblTitre.Location = new Point(66, 14);
 
             Label lblSousTitre = new Label();
-            lblSousTitre.Text = "Application de synchronisation SQL Server";
+            lblSousTitre.Text = "Application de synchronisation MySQL et SQL Server";
             lblSousTitre.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             lblSousTitre.ForeColor = Color.FromArgb(100, 100, 100);
             lblSousTitre.AutoSize = true;
