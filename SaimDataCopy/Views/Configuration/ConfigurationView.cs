@@ -107,21 +107,21 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Identifiant", "sa", false, out txtSourceIdentifiant),
+                CreerChampTexte("Identifiant", "Ex : root ou sa", false, out txtSourceIdentifiant),
                 CreerChampMotDePasse("Mot de passe", "12345678", false, out txtSourceMotDePasse)
             );
 
-            cmbSourceTypeServeur = CreerComboBox("SQL Server", "MySQL");
+            cmbSourceTypeServeur = CreerComboBox("MySQL", "SQL Server");
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Port", "1433", false, out txtSourcePort),
+                CreerChampTexte("Port", "Ex : 3306 ou 1433", false, out txtSourcePort),
                 CreerChampComboBox("Type de serveur source", cmbSourceTypeServeur)
             );
 
             AjouterTitreSection(ref ligne, "Serveur cible (staging)");
 
-            cmbCibleTypeServeur = CreerComboBox("SQL Server", "MySQL");
+            cmbCibleTypeServeur = CreerComboBox("MySQL", "SQL Server");
 
             AjouterChampPleineLargeur(
                 ref ligne,
@@ -141,7 +141,7 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Identifiant", "sa", false, out txtCibleIdentifiant),
+                CreerChampTexte("Identifiant", "Ex : root ou sa", false, out txtCibleIdentifiant),
                 CreerChampMotDePasse("Mot de passe", "12345678", false, out txtCibleMotDePasse)
             );
 
@@ -149,7 +149,7 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterDeuxChamps(
                 ref ligne,
-                CreerChampTexte("Port", "1433", false, out txtCiblePort),
+                CreerChampTexte("Port", "Ex : 3306 ou 1433", false, out txtCiblePort),
                 CreerChampComboBox("Mode de copie", cmbModeCopie)
             );
 
@@ -375,7 +375,7 @@ namespace SaimDataCopy.Views.Configuration
             else
             {
                 // Texte normal pour les autres champs.
-                textBoxLocal.Font = new Font("Segoe UI", 14F, FontStyle.Regular);
+                textBoxLocal.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             }
 
             textBoxLocal.Height = textBoxLocal.PreferredHeight;

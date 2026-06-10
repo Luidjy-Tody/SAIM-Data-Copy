@@ -28,7 +28,7 @@ namespace SaimDataCopy.Views.BasesCopier
         private List<string> _modesCopie = new List<string>();
 
         public event EventHandler? CocherToutesBasesDemandee;
-        public event EventHandler? SupprimerSelectionDemandee;
+        public event EventHandler? DecocherToutesBasesDemandee;
 
         public BasesCopierView()
         {
@@ -95,7 +95,7 @@ namespace SaimDataCopy.Views.BasesCopier
         private void ConfigurerBoutons()
         {
             btnCocherTout.Text = " Cocher toutes les bases";
-            btnCocherTout.IconChar = IconChar.CheckDouble;
+            btnCocherTout.IconChar = IconChar.CheckSquare;
             btnCocherTout.IconSize = 18;
             btnCocherTout.IconColor = Color.FromArgb(40, 40, 40);
             btnCocherTout.TextImageRelation = TextImageRelation.ImageBeforeText;
@@ -112,8 +112,8 @@ namespace SaimDataCopy.Views.BasesCopier
             btnCocherTout.Click += BtnCocherTout_Click;
             panelBoutons.Controls.Add(btnCocherTout);
 
-            btnSupprimer.Text = " Supprimer la sélection";
-            btnSupprimer.IconChar = IconChar.Trash;
+            btnSupprimer.Text = " Decocher toutes les bases";
+            btnSupprimer.IconChar = IconChar.CircleMinus;
             btnSupprimer.IconSize = 18;
             btnSupprimer.IconColor = Color.FromArgb(40, 40, 40);
             btnSupprimer.TextImageRelation = TextImageRelation.ImageBeforeText;
@@ -417,7 +417,7 @@ namespace SaimDataCopy.Views.BasesCopier
 
         private void BtnSupprimer_Click(object? sender, EventArgs e)
         {
-            SupprimerSelectionDemandee?.Invoke(this, EventArgs.Empty);
+            DecocherToutesBasesDemandee?.Invoke(this, EventArgs.Empty);
         }
 
         private void GrilleBases_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)

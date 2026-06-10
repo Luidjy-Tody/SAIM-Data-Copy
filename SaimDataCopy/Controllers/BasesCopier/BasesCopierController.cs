@@ -41,7 +41,7 @@ namespace SaimDataCopy.Controllers.BasesCopier
             // La View déclenche ces événements.
             // Le Controller décide ensuite quelle action faire.
             _view.CocherToutesBasesDemandee += CocherToutesBases;
-            _view.SupprimerSelectionDemandee += SupprimerSelection;
+            _view.DecocherToutesBasesDemandee += DecocherSelection;
         }
 
         private void ChargerPage()
@@ -73,10 +73,9 @@ namespace SaimDataCopy.Controllers.BasesCopier
             _view.AfficherBases(_bases);
         }
 
-        private void SupprimerSelection(object? sender, EventArgs e)
+        private void DecocherSelection(object? sender, EventArgs e)
         {
-            // Dans la nouvelle logique, "Supprimer la sélection"
-            // veut dire décocher les bases cochées.
+            // décocher les bases cochées.
             List<string> nomsSelectionnes = _view.RecupererNomsBasesCochees();
 
             if (nomsSelectionnes.Count == 0)

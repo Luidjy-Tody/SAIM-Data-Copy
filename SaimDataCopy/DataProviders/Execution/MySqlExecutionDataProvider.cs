@@ -580,15 +580,7 @@ namespace SaimDataCopy.DataProviders.Execution
 
         private string ObtenirNomBaseCible(string nomBaseSource)
         {
-            // Pour les tests MySQL sur le même serveur :
-            // Source : mysql_source_test
-            // Cible  : mysql_cible_test
-            if (nomBaseSource.Equals("mysql_source_test", StringComparison.OrdinalIgnoreCase))
-            {
-                return "mysql_cible_test";
-            }
-
-            return nomBaseSource + "_cible";
+            return nomBaseSource;
         }
 
         private void OuvrirConnexionMySql(MySqlConnection connexion)
@@ -651,25 +643,26 @@ namespace SaimDataCopy.DataProviders.Execution
 
         private bool SourceEtCibleIdentiques(string nomBaseSource, string nomBaseCible)
         {
-            ConfigurationModel? configuration =
-                _configurationDataProvider.ChargerConfiguration();
+            string chaineSource = CreerChaineConnexionBaseSource(nomBaseSource);
+            string chaineCible = CreerChaineConnexionBaseCible(nomBaseCible);
 
-            if (configuration == null)
-            {
-                return false;
-            }
+            MySqlConnectionStringBuilder builderSource =
+                new MySqlConnectionStringBuilder(chaineSource);
+
+            MySqlConnectionStringBuilder builderCible =
+                new MySqlConnectionStringBuilder(chaineCible);
 
             bool memeServeur =
-                configuration.ServeurSource.NomServeur.Equals(
-                    configuration.ServeurCible.NomServeur,
+                builderSource.Server.Equals(
+                    builderCible.Server,
                     StringComparison.OrdinalIgnoreCase);
 
             bool memePort =
-                configuration.ServeurSource.Port == configuration.ServeurCible.Port;
+                builderSource.Port == builderCible.Port;
 
             bool memeBase =
-                nomBaseSource.Equals(
-                    nomBaseCible,
+                builderSource.Database.Equals(
+                    builderCible.Database,
                     StringComparison.OrdinalIgnoreCase);
 
             return memeServeur && memePort && memeBase;

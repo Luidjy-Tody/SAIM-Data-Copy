@@ -6,14 +6,13 @@ namespace SaimDataCopy.DataProviders.Configuration
 {
     // DataProvider de configuration.
     // Il sauvegarde et charge les paramètres depuis un fichier JSON.
-    // Les mots de passe source et cible sont chiffrés avec DPAPI.
+    // Les mots de passe et les chaînes de connexion sont chiffrés avec DPAPI.
     public class ConfigurationDataProvider : IConfigurationDataProvider
     {
         private readonly string _cheminFichierConfiguration;
 
         public ConfigurationDataProvider()
         {
-            // Le fichier JSON sera stocké dans le dossier Data de l'application.
             string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
             if (!Directory.Exists(dossierData))
@@ -26,17 +25,20 @@ namespace SaimDataCopy.DataProviders.Configuration
 
         public void EnregistrerConfiguration(ConfigurationModel configuration)
         {
-            // On crée une copie pour éviter de modifier directement l'objet utilisé par la View.
             ConfigurationModel configurationASauvegarder = new ConfigurationModel
             {
                 ServeurSource = new ServeurConfigModel
                 {
                     TypeServeur = configuration.ServeurSource.TypeServeur,
                     NomServeur = configuration.ServeurSource.NomServeur,
-                    ChaineConnexion = configuration.ServeurSource.ChaineConnexion,
+
+                    // On chiffre toute la chaîne de connexion si elle est remplie.
+                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(
+                        configuration.ServeurSource.ChaineConnexion),
+
                     Identifiant = configuration.ServeurSource.Identifiant,
 
-                    // On chiffre le mot de passe source avant de l'écrire dans le JSON.
+                    // On chiffre aussi le mot de passe séparé.
                     MotDePasse = SecuriteMotDePasseHelper.Chiffrer(
                         configuration.ServeurSource.MotDePasse),
 
@@ -47,10 +49,14 @@ namespace SaimDataCopy.DataProviders.Configuration
                 {
                     TypeServeur = configuration.ServeurCible.TypeServeur,
                     NomServeur = configuration.ServeurCible.NomServeur,
-                    ChaineConnexion = configuration.ServeurCible.ChaineConnexion,
+
+                    // On chiffre toute la chaîne de connexion si elle est remplie.
+                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(
+                        configuration.ServeurCible.ChaineConnexion),
+
                     Identifiant = configuration.ServeurCible.Identifiant,
 
-                    // On chiffre le mot de passe cible avant de l'écrire dans le JSON.
+                    // On chiffre aussi le mot de passe séparé.
                     MotDePasse = SecuriteMotDePasseHelper.Chiffrer(
                         configuration.ServeurCible.MotDePasse),
 
@@ -62,7 +68,6 @@ namespace SaimDataCopy.DataProviders.Configuration
                 TentativesReprise = configuration.TentativesReprise
             };
 
-            // Sauvegarde principale dans le fichier JSON.
             string contenuJson = JsonConvert.SerializeObject(
                 configurationASauvegarder,
                 Formatting.Indented
@@ -95,12 +100,22 @@ namespace SaimDataCopy.DataProviders.Configuration
                     return null;
                 }
 
-                // On déchiffre le mot de passe source après lecture du JSON.
+                // On déchiffre la chaîne de connexion source.
+                configuration.ServeurSource.ChaineConnexion =
+                    SecuriteMotDePasseHelper.Dechiffrer(
+                        configuration.ServeurSource.ChaineConnexion);
+
+                // On déchiffre le mot de passe source.
                 configuration.ServeurSource.MotDePasse =
                     SecuriteMotDePasseHelper.Dechiffrer(
                         configuration.ServeurSource.MotDePasse);
 
-                // On déchiffre le mot de passe cible après lecture du JSON.
+                // On déchiffre la chaîne de connexion cible.
+                configuration.ServeurCible.ChaineConnexion =
+                    SecuriteMotDePasseHelper.Dechiffrer(
+                        configuration.ServeurCible.ChaineConnexion);
+
+                // On déchiffre le mot de passe cible.
                 configuration.ServeurCible.MotDePasse =
                     SecuriteMotDePasseHelper.Dechiffrer(
                         configuration.ServeurCible.MotDePasse);

@@ -9,7 +9,7 @@ namespace SaimDataCopy.Views.BasesCopier
 
         // Événement déclenché quand l'utilisateur clique sur "Supprimer la sélection".
         // Attention : maintenant, cela décoche les bases au lieu de les supprimer.
-        event EventHandler? SupprimerSelectionDemandee;
+        event EventHandler? DecocherToutesBasesDemandee;
 
         // Affiche les bases dans le tableau.
         void AfficherBases(List<BaseCopieModel> bases);

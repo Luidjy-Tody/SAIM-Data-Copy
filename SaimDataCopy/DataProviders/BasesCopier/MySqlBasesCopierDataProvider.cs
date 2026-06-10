@@ -64,7 +64,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                     'performance_schema',
                     'sys'
                 )
-                AND SCHEMA_NAME NOT LIKE '%_cible%'
+                
                 ORDER BY SCHEMA_NAME;
                 """;
 

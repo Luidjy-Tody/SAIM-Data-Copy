@@ -5,7 +5,7 @@
     public class ServeurConfigModel
     {
         // SQL Server ou MySQL
-        public string TypeServeur { get; set; } = "SQL Server";
+        public string TypeServeur { get; set; } = "MySQL";
 
         public string NomServeur { get; set; } = string.Empty;
 
