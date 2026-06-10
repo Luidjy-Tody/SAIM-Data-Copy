@@ -924,6 +924,43 @@ namespace SaimDataCopy.DataProviders.Execution
             return $"[{nomSecurise}]";
         }
 
+        public void TesterConnexionSource()
+        {
+            ConfigurationModel? configuration =
+                _configurationDataProvider.ChargerConfiguration();
+
+            if (configuration == null)
+            {
+                throw new InvalidOperationException(
+                    "Aucune configuration n'est enregistrée. Veuillez d'abord enregistrer la page Configuration.");
+            }
+
+            string chaineConnexion =
+                CreerChaineConnexionBaseSource("master");
+
+            using SqlConnection connexion = new SqlConnection(chaineConnexion);
+
+            connexion.Open();
+        }
+
+        public void TesterConnexionCible()
+        {
+            ConfigurationModel? configuration =
+                _configurationDataProvider.ChargerConfiguration();
+
+            if (configuration == null)
+            {
+                throw new InvalidOperationException(
+                    "Aucune configuration n'est enregistrée. Veuillez d'abord enregistrer la page Configuration.");
+            }
+
+            string chaineConnexion =
+                CreerChaineConnexionBaseCible("master");
+
+            using SqlConnection connexion = new SqlConnection(chaineConnexion);
+
+            connexion.Open();
+        }
         public ExecutionTableauBordModel ChargerDernierTableauBord()
         {
             ExecutionSauvegardeModel sauvegarde = ChargerSauvegarde();

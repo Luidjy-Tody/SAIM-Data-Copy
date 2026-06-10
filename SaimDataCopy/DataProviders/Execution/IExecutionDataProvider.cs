@@ -12,6 +12,13 @@ namespace SaimDataCopy.DataProviders.Execution
 
         // Charge les tables d'une base source.
         // Exemple : DB_TestRH peut retourner dbo.EmployesTest.
+        // Teste réellement la connexion au serveur source.
+        // Cela vérifie le serveur, le port, l'identifiant et le mot de passe.
+        void TesterConnexionSource();
+
+        // Teste réellement la connexion au serveur cible.
+        // Cela vérifie le serveur, le port, l'identifiant et le mot de passe.
+        void TesterConnexionCible();
         List<string> ChargerTablesBaseSource(string nomBase);
 
         // Compte le nombre de lignes dans une table d'une base source.

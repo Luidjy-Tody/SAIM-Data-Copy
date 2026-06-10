@@ -135,13 +135,9 @@ namespace SaimDataCopy.Services.Execution
             return _executionDataProvider.VerifierOuCreerTableCible(nomBase, nomTable);
         }
 
-        public async Task<bool> TesterConnexionAsync(
-            IProgress<ExecutionProgressionModel> progression,
+        public async Task<bool> TesterConnexionAsync( IProgress<ExecutionProgressionModel> progression,
             CancellationToken cancellationToken)
         {
-            List<BaseCopieModel> basesSelectionnees =
-                _executionDataProvider.ChargerBasesSelectionnees();
-
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 0,
@@ -149,62 +145,72 @@ namespace SaimDataCopy.Services.Execution
                 Log = CreerLog("Test de connexion lancé par l'utilisateur.", "Info")
             });
 
-            await Task.Delay(500, cancellationToken);
+            await Task.Delay(300, cancellationToken);
 
-            if (basesSelectionnees.Count == 0)
+            try
             {
                 progression.Report(new ExecutionProgressionModel
                 {
-                    Pourcentage = 0,
-                    MessageProgression = "Aucune base sélectionnée.",
-                    Log = CreerLog("Aucune base sélectionnée pour tester la connexion.", "Avertissement"),
+                    Pourcentage = 35,
+                    MessageProgression = "Vérification réelle du serveur source...",
+                    Log = CreerLog("Vérification réelle du serveur source...", "Info")
+                });
+
+                await Task.Run(
+                    () => _executionDataProvider.TesterConnexionSource(),
+                    cancellationToken);
+
+                progression.Report(new ExecutionProgressionModel
+                {
+                    Pourcentage = 60,
+                    MessageProgression = "Connexion serveur source : OK",
+                    Log = CreerLog("Connexion serveur source : OK", "Succes")
+                });
+
+                progression.Report(new ExecutionProgressionModel
+                {
+                    Pourcentage = 75,
+                    MessageProgression = "Vérification réelle du serveur cible...",
+                    Log = CreerLog("Vérification réelle du serveur cible...", "Info")
+                });
+
+                await Task.Run(
+                    () => _executionDataProvider.TesterConnexionCible(),
+                    cancellationToken);
+
+                progression.Report(new ExecutionProgressionModel
+                {
+                    Pourcentage = 90,
+                    MessageProgression = "Connexion serveur cible : OK",
+                    Log = CreerLog("Connexion serveur cible : OK", "Succes")
+                });
+
+                List<BaseCopieModel> basesSelectionnees =
+                    _executionDataProvider.ChargerBasesSelectionnees();
+
+                ExecutionTableauBordModel tableauBordInitial = ChargerTableauBordInitial();
+
+                progression.Report(new ExecutionProgressionModel
+                {
+                    Pourcentage = 100,
+                    MessageProgression = "Test de connexion réussi.",
+                    Log = CreerLog(
+                        $"Test terminé : connexion source et cible validées. {basesSelectionnees.Count} base(s) sélectionnée(s).",
+                        "Succes"),
                     TableauBord = new ExecutionTableauBordModel
                     {
-                        NombreBasesSelectionnees = 0,
-                        NombreLignesCopiees = 0,
-                        DureeDerniereExecution = "-"
+                        NombreBasesSelectionnees = basesSelectionnees.Count,
+                        NombreLignesCopiees = tableauBordInitial.NombreLignesCopiees,
+                        DureeDerniereExecution = tableauBordInitial.DureeDerniereExecution
                     }
                 });
 
-                return false;
+                return true;
             }
-
-            progression.Report(new ExecutionProgressionModel
+            catch
             {
-                Pourcentage = 35,
-                MessageProgression = "Vérification du serveur source...",
-                Log = CreerLog("Connexion serveur source : OK", "Succes")
-            });
-
-            await Task.Delay(500, cancellationToken);
-
-            progression.Report(new ExecutionProgressionModel
-            {
-                Pourcentage = 70,
-                MessageProgression = "Vérification du serveur cible...",
-                Log = CreerLog("Connexion serveur cible : OK", "Succes")
-            });
-
-            await Task.Delay(500, cancellationToken);
-
-            ExecutionTableauBordModel tableauBordInitial = ChargerTableauBordInitial();
-
-            progression.Report(new ExecutionProgressionModel
-            {
-                Pourcentage = 100,
-                MessageProgression = "Test de connexion réussi.",
-                Log = CreerLog(
-                    $"Test terminé : {basesSelectionnees.Count} base(s) prête(s) pour la copie.",
-                    "Succes"),
-                TableauBord = new ExecutionTableauBordModel
-                {
-                    NombreBasesSelectionnees = basesSelectionnees.Count,
-                    NombreLignesCopiees = tableauBordInitial.NombreLignesCopiees,
-                    DureeDerniereExecution = tableauBordInitial.DureeDerniereExecution
-                }
-            });
-
-            return true;
+                throw;
+            }
         }
 
         public async Task<List<ExecutionResultatBaseModel>> LancerCopieAsync(

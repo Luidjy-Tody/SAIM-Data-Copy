@@ -246,6 +246,11 @@ namespace SaimDataCopy.DataProviders.Execution
                 "utf8mb4_0900_ai_ci",
                 "utf8mb4_general_ci");
 
+            // Pour éviter les erreurs de création liées aux clés étrangères,
+            // on crée d'abord les tables sans contraintes FOREIGN KEY.
+            // Exemple : address dépend de city, donc MySQL bloque si city n'existe pas encore.
+            scriptCreationTable = SupprimerContraintesForeignKeyMySql(scriptCreationTable);
+
             lecteur.Close();
 
             using MySqlCommand commandeCreation = connexionCible.CreateCommand();
@@ -276,6 +281,44 @@ namespace SaimDataCopy.DataProviders.Execution
                 _ => throw new InvalidOperationException(
                     $"Mode de copie inconnu : {modeCopie}")
             };
+        }
+
+        public void TesterConnexionSource()
+        {
+            ConfigurationModel? configuration =
+                _configurationDataProvider.ChargerConfiguration();
+
+            if (configuration == null)
+            {
+                throw new InvalidOperationException(
+                    "Aucune configuration n'est enregistrée. Veuillez d'abord enregistrer la page Configuration.");
+            }
+
+            string chaineConnexion =
+                ChaineConnexionHelper.ConstruireChaineConnexionSource(configuration);
+
+            using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
+
+            OuvrirConnexionMySql(connexion);
+        }
+
+        public void TesterConnexionCible()
+        {
+            ConfigurationModel? configuration =
+                _configurationDataProvider.ChargerConfiguration();
+
+            if (configuration == null)
+            {
+                throw new InvalidOperationException(
+                    "Aucune configuration n'est enregistrée. Veuillez d'abord enregistrer la page Configuration.");
+            }
+
+            string chaineConnexion =
+                ChaineConnexionHelper.ConstruireChaineConnexionCible(configuration);
+
+            using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
+
+            OuvrirConnexionMySql(connexion);
         }
 
         public ExecutionTableauBordModel ChargerDernierTableauBord()
@@ -576,6 +619,44 @@ namespace SaimDataCopy.DataProviders.Execution
                 $"INSERT INTO {nomTableSql} ({colonnesSql}) VALUES ({parametresSql});";
 
             commandeInsertion.ExecuteNonQuery();
+        }
+
+        private string SupprimerContraintesForeignKeyMySql(string scriptCreationTable)
+        {
+            List<string> lignes = scriptCreationTable
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Split('\n')
+                .ToList();
+
+            List<string> lignesNettoyees = new List<string>();
+
+            foreach (string ligne in lignes)
+            {
+                string ligneSansEspaces = ligne.Trim();
+
+                bool estContrainteForeignKey =
+                    ligneSansEspaces.StartsWith("CONSTRAINT", StringComparison.OrdinalIgnoreCase) &&
+                    ligneSansEspaces.Contains("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
+
+                bool estForeignKeyDirect =
+                    ligneSansEspaces.StartsWith("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
+
+                if (estContrainteForeignKey || estForeignKeyDirect)
+                {
+                    continue;
+                }
+
+                lignesNettoyees.Add(ligne);
+            }
+
+            string scriptNettoye = string.Join(Environment.NewLine, lignesNettoyees);
+
+            scriptNettoye = scriptNettoye.Replace(
+                "," + Environment.NewLine + ")",
+                Environment.NewLine + ")");
+
+            return scriptNettoye;
         }
 
         private string ObtenirNomBaseCible(string nomBaseSource)
