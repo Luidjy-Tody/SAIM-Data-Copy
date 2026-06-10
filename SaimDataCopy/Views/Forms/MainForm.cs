@@ -25,6 +25,7 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using SaimDataCopy.Views.Commun;
 
+
 namespace SaimDataCopy.Views.Forms
 {
     public partial class MainForm : Form
@@ -493,6 +494,9 @@ namespace SaimDataCopy.Views.Forms
                 case ConfigurationView:
                     return configurationController?.EnregistrerDepuisMainForm() == true;
 
+                case BasesCopierView:
+                    return basesCopierController?.EnregistrerDepuisMainForm() == true;
+
                 case EmailView:
                     return emailController?.EnregistrerDepuisMainForm() == true;
 
@@ -551,7 +555,7 @@ namespace SaimDataCopy.Views.Forms
                 // Si la page actuelle est Bases à copier,
                 // on appelle directement le Controller de cette page.
                 case BasesCopierView:
-                    basesCopierController?.Enregistrer();
+                    basesCopierController?.EnregistrerDepuisMainForm();
                     break;
 
                 // Si la page actuelle est Paramètres Email,

@@ -2,6 +2,7 @@
 using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Views.BasesCopier;
 using System.Windows.Forms;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Controllers.BasesCopier
 {
@@ -59,6 +60,12 @@ namespace SaimDataCopy.Controllers.BasesCopier
 
             // On demande à la View d'afficher les bases dans le tableau.
             _view.AfficherBases(_bases);
+
+            // Après le chargement initial, la page correspond à l'état sauvegardé.
+            if (_view is IPageEnregistrable pageEnregistrable)
+            {
+                pageEnregistrable.MarquerCommeEnregistre();
+            }
         }
 
         private void CocherToutesBases(object? sender, EventArgs e)
@@ -101,6 +108,15 @@ namespace SaimDataCopy.Controllers.BasesCopier
 
         public void Enregistrer()
         {
+            EnregistrerDepuisMainForm();
+        }
+
+        /// <summary>
+        /// Enregistre les bases à copier et retourne true si l'enregistrement réussit.
+        /// Cette méthode est utilisée par MainForm avant de changer de page.
+        /// </summary>
+        public bool EnregistrerDepuisMainForm()
+        {
             // On récupère les données actuelles du tableau.
             _bases = _view.RecupererBases();
 
@@ -109,23 +125,30 @@ namespace SaimDataCopy.Controllers.BasesCopier
 
             if (resultat)
             {
+                if (_view is IPageEnregistrable pageEnregistrable)
+                {
+                    pageEnregistrable.MarquerCommeEnregistre();
+                }
+
                 _view.AfficherMessage(
                     "Enregistrement",
                     "Les bases à copier ont été enregistrées avec succès.",
                     MessageBoxIcon.Information
                 );
-            }
-            else
-            {
-                List<string> erreurs = _service.ValiderBases(_bases);
-                string message = string.Join(Environment.NewLine, erreurs);
 
-                _view.AfficherMessage(
-                    "Validation",
-                    message,
-                    MessageBoxIcon.Warning
-                );
+                return true;
             }
+
+            List<string> erreurs = _service.ValiderBases(_bases);
+            string message = string.Join(Environment.NewLine, erreurs);
+
+            _view.AfficherMessage(
+                "Validation",
+                message,
+                MessageBoxIcon.Warning
+            );
+
+            return false;
         }
 
         public void AppliquerModeCopieGlobal(string modeCopieGlobal)

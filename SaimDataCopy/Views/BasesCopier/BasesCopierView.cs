@@ -3,10 +3,11 @@ using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Styles;
 using System.Drawing;
 using System.Windows.Forms;
+using SaimDataCopy.Views.Commun;
 
 namespace SaimDataCopy.Views.BasesCopier
 {
-    public class BasesCopierView : UserControl, IBasesCopierView
+    public class BasesCopierView : UserControl, IBasesCopierView, IPageEnregistrable
     {
         private const int MargePage = 24;
         private const int LargeurMinimumContenu = 900;
@@ -26,6 +27,17 @@ namespace SaimDataCopy.Views.BasesCopier
         private readonly IconButton btnSupprimer = new IconButton();
 
         private List<string> _modesCopie = new List<string>();
+
+        // Indique si l'utilisateur a modifié la page sans enregistrer.
+        private bool _aDesModificationsNonEnregistrees = false;
+
+        // Évite de détecter des modifications pendant le chargement du tableau.
+        private bool _chargementEnCours = false;
+
+        // Dernier état connu comme enregistré.
+        private List<BaseCopieModel> _basesEnregistrees = new List<BaseCopieModel>();
+
+        public bool ADesModificationsNonEnregistrees => _aDesModificationsNonEnregistrees;
 
         public event EventHandler? CocherToutesBasesDemandee;
         public event EventHandler? DecocherToutesBasesDemandee;
@@ -240,28 +252,37 @@ namespace SaimDataCopy.Views.BasesCopier
 
         public void AfficherBases(List<BaseCopieModel> bases)
         {
-            grilleBases.Rows.Clear();
+            _chargementEnCours = true;
 
-            foreach (BaseCopieModel baseCopie in bases)
+            try
             {
-                int index = grilleBases.Rows.Add(
-                    baseCopie.Inclure,
-                    baseCopie.NomBase,
-                    baseCopie.OrdreTraitement,
-                    baseCopie.ModeCopie,
-                    ObtenirStatutAffiche(baseCopie.Statut),
-                    baseCopie.DerniereCopie.HasValue
-                        ? baseCopie.DerniereCopie.Value.ToString("dd/MM/yyyy HH:mm")
-                        : "—"
-                );
+                grilleBases.Rows.Clear();
 
-                grilleBases.Rows[index].Tag = baseCopie;
+                foreach (BaseCopieModel baseCopie in bases)
+                {
+                    int index = grilleBases.Rows.Add(
+                        baseCopie.Inclure,
+                        baseCopie.NomBase,
+                        baseCopie.OrdreTraitement,
+                        baseCopie.ModeCopie,
+                        ObtenirStatutAffiche(baseCopie.Statut),
+                        baseCopie.DerniereCopie.HasValue
+                            ? baseCopie.DerniereCopie.Value.ToString("dd/MM/yyyy HH:mm")
+                            : "—"
+                    );
 
-                AppliquerStyleLigne(index);
+                    grilleBases.Rows[index].Tag = baseCopie;
+
+                    AppliquerStyleLigne(index);
+                }
+
+                AjusterHauteurTableau();
+                grilleBases.ClearSelection();
             }
-
-            AjusterHauteurTableau();
-            grilleBases.ClearSelection();
+            finally
+            {
+                _chargementEnCours = false;
+            }
         }
 
         private void AppliquerStyleLigne(int index)
@@ -327,6 +348,65 @@ namespace SaimDataCopy.Views.BasesCopier
             btnSupprimer.SetBounds(275, 0, 240, hauteurBouton);
         }
 
+        /// <summary>
+        /// Appelé par le Controller après un chargement ou un enregistrement réussi.
+        /// </summary>
+        public void MarquerCommeEnregistre()
+        {
+            _basesEnregistrees = CopierBases(RecupererBases());
+            _aDesModificationsNonEnregistrees = false;
+        }
+
+        /// <summary>
+        /// Appelé si l'utilisateur choisit "Non".
+        /// On remet les bases comme elles étaient lors du dernier enregistrement.
+        /// </summary>
+        public void AnnulerModificationsNonEnregistrees()
+        {
+            AfficherBases(CopierBases(_basesEnregistrees));
+            _aDesModificationsNonEnregistrees = false;
+        }
+
+        /// <summary>
+        /// Marque la page comme modifiée si le chargement n'est pas en cours.
+        /// </summary>
+        private void MarquerCommeModifie()
+        {
+            if (_chargementEnCours)
+            {
+                return;
+            }
+
+            _aDesModificationsNonEnregistrees = true;
+        }
+
+        /// <summary>
+        /// Copie une liste de bases pour éviter de garder les mêmes références en mémoire.
+        /// </summary>
+        private List<BaseCopieModel> CopierBases(List<BaseCopieModel> bases)
+        {
+            return bases
+                .Select(CopierBase)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Copie une base à copier.
+        /// </summary>
+        private BaseCopieModel CopierBase(BaseCopieModel baseCopie)
+        {
+            return new BaseCopieModel
+            {
+                Inclure = baseCopie.Inclure,
+                NomBase = baseCopie.NomBase,
+                OrdreTraitement = baseCopie.OrdreTraitement,
+                ModeCopie = baseCopie.ModeCopie,
+                Statut = baseCopie.Statut,
+                DerniereCopie = baseCopie.DerniereCopie,
+                ExisteSurServeurSource = baseCopie.ExisteSurServeurSource,
+                NomModifiable = baseCopie.NomModifiable
+            };
+        }
         public List<BaseCopieModel> RecupererBases()
         {
             List<BaseCopieModel> bases = new List<BaseCopieModel>();
@@ -412,12 +492,28 @@ namespace SaimDataCopy.Views.BasesCopier
 
         private void BtnCocherTout_Click(object? sender, EventArgs e)
         {
+            bool auMoinsUneBaseDecochee = RecupererBases()
+                .Any(baseCopie => !baseCopie.Inclure);
+
             CocherToutesBasesDemandee?.Invoke(this, EventArgs.Empty);
+
+            if (auMoinsUneBaseDecochee)
+            {
+                MarquerCommeModifie();
+            }
         }
 
         private void BtnSupprimer_Click(object? sender, EventArgs e)
         {
+            bool auMoinsUneBaseCochee = RecupererBases()
+                .Any(baseCopie => baseCopie.Inclure);
+
             DecocherToutesBasesDemandee?.Invoke(this, EventArgs.Empty);
+
+            if (auMoinsUneBaseCochee)
+            {
+                MarquerCommeModifie();
+            }
         }
 
         private void GrilleBases_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
@@ -452,6 +548,8 @@ namespace SaimDataCopy.Views.BasesCopier
             {
                 return;
             }
+
+            MarquerCommeModifie();
 
             if (grilleBases.Columns[e.ColumnIndex].Name != "colInclure")
             {
