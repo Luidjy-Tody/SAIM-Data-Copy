@@ -12,7 +12,7 @@ using System.Diagnostics;
 using SaimDataCopy.DataProviders.Configuration;
 using SaimDataCopy.Models.Configuration;
 using System.Configuration;
-
+using SaimDataCopy.DataProviders.BasesCopier;
 namespace SaimDataCopy.Services.Execution
 {
     // Service de la page Exécution.
@@ -344,6 +344,12 @@ namespace SaimDataCopy.Services.Execution
 
                 EcrireResultatDansFichier(baseCopie.NomBase, resultat);
 
+                // Si la copie est réussie, on mémorise la date de dernière copie.
+                if (resultat.Resultat == "Succès")
+                {
+                    baseCopie.DerniereCopie = DateTime.Now;
+                }
+
                 // On utilise le nombre réel de lignes copiées pendant l'exécution.
                 totalLignesCopiees += resultat.LignesCopiees;
 
@@ -366,6 +372,12 @@ namespace SaimDataCopy.Services.Execution
                     }
                 });
             }
+
+            // Sauvegarde des nouvelles dates de dernière copie.
+            IBasesCopierDataProvider basesCopierDataProvider = BasesCopierDataProviderFactory.Creer();
+
+            basesCopierDataProvider.EnregistrerBases(basesSelectionnees);
+
 
             chronometre.Stop();
 
