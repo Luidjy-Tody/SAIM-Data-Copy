@@ -97,11 +97,18 @@ namespace SaimDataCopy.Controllers.Configuration
 
             try
             {
-                // Quand Configuration est enregistrée,
-                // le mode global est appliqué à toutes les bases.
-                //_basesCopierService.AppliquerModeCopieGlobal(configuration.ModeCopie);
+                // La configuration globale est le paramètre maître.
+                // Après l'enregistrement, on recrée un nouveau service BasesCopierService
+                // pour qu'il relise la configuration actuelle et choisisse le bon DataProvider
+                // SQL Server ou MySQL.
+                IBasesCopierService basesCopierServiceActuel = new BasesCopierService();
 
-                // On prévient MainForm pour rafraîchir Bases à copier si la page existe déjà.
+                // On applique le mode global à toutes les bases à copier.
+                // Exemple : si Configuration = "Mise à jour",
+                // toutes les bases sauvegardées prennent "Mise à jour".
+                basesCopierServiceActuel.AppliquerModeCopieGlobal(configuration.ModeCopie);
+
+                // On prévient MainForm pour recréer les pages qui dépendent de la configuration.
                 ModeCopieGlobalModifie?.Invoke(configuration.ModeCopie);
 
                 // Si la View gère les modifications non enregistrées,
@@ -113,7 +120,7 @@ namespace SaimDataCopy.Controllers.Configuration
 
                 _view.AfficherMessageSucces(
                     message + Environment.NewLine +
-                    "Les pages dépendantes de la configuration seront rechargées avec les nouveaux paramètres."
+                    "Le mode de copie global a été appliqué aux bases à copier."
                 );
 
                 return true;
