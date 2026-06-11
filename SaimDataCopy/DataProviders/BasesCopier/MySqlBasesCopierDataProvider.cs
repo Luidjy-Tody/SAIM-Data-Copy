@@ -210,10 +210,23 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                             StringComparison.OrdinalIgnoreCase
                         )
                     );
-
                 if (baseSauvegardee == null)
                 {
-                    resultat.Add(baseServeur);
+                    // Nouvelle base trouvée sur le serveur source.
+                    // Comme un fichier JSON existe déjà, on la laisse décochée par défaut
+                    // pour respecter les choix précédemment sauvegardés.
+                    resultat.Add(new BaseCopieModel
+                    {
+                        Inclure = false,
+                        NomBase = baseServeur.NomBase,
+                        OrdreTraitement = baseServeur.OrdreTraitement,
+                        ModeCopie = NormaliserModeCopie(baseServeur.ModeCopie),
+                        Statut = "Non sélectionnée",
+                        DerniereCopie = null,
+                        ExisteSurServeurSource = true,
+                        NomModifiable = false
+                    });
+
                     continue;
                 }
 

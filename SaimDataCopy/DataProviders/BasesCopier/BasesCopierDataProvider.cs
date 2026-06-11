@@ -225,8 +225,20 @@ namespace SaimDataCopy.DataProviders.BasesCopier
                 if (baseSauvegardee == null)
                 {
                     // Nouvelle base trouvée sur le serveur source.
-                    // Par défaut, elle est cochée.
-                    resultat.Add(baseServeur);
+                    // Si un fichier JSON existe déjà, on ne doit pas cocher automatiquement
+                    // une nouvelle base, sinon l'application ne respecte plus la sauvegarde.
+                    resultat.Add(new BaseCopieModel
+                    {
+                        Inclure = false,
+                        NomBase = baseServeur.NomBase,
+                        OrdreTraitement = baseServeur.OrdreTraitement,
+                        ModeCopie = NormaliserModeCopie(baseServeur.ModeCopie),
+                        Statut = "Non sélectionnée",
+                        DerniereCopie = null,
+                        ExisteSurServeurSource = true,
+                        NomModifiable = false
+                    });
+
                     continue;
                 }
 
