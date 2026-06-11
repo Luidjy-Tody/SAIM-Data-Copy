@@ -242,9 +242,7 @@ namespace SaimDataCopy.DataProviders.Execution
 
             // Certains anciens serveurs MySQL ne connaissent pas utf8mb4_0900_ai_ci.
             // On remplace par une collation plus compatible.
-            scriptCreationTable = scriptCreationTable.Replace(
-                "utf8mb4_0900_ai_ci",
-                "utf8mb4_general_ci");
+            scriptCreationTable = scriptCreationTable.Replace("utf8mb4_0900_ai_ci", "utf8mb4_general_ci");
 
             // Pour éviter les erreurs de création liées aux clés étrangères,
             // on crée d'abord les tables sans contraintes FOREIGN KEY.

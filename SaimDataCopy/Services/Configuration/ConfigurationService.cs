@@ -276,8 +276,7 @@ namespace SaimDataCopy.Services.Configuration
         {
             try
             {
-                string chaineConnexion =
-                    ChaineConnexionHelper.ConstruireChaineConnexionServeur(serveur);
+                string chaineConnexion = ChaineConnexionHelper.ConstruireChaineConnexionServeur(serveur);
 
                 using MySqlConnection connexion = new MySqlConnection(chaineConnexion);
                 connexion.Open();
