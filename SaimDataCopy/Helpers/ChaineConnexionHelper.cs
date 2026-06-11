@@ -7,15 +7,19 @@ namespace SaimDataCopy.Helpers
     {
         public static string ConstruireChaineConnexionSource(ConfigurationModel configuration)
         {
-            return ConstruireChaineConnexion(configuration.ServeurSource);
+            return ConstruireChaineConnexionServeur(configuration.ServeurSource);
         }
 
         public static string ConstruireChaineConnexionCible(ConfigurationModel configuration)
         {
-            return ConstruireChaineConnexion(configuration.ServeurCible);
+            return ConstruireChaineConnexionServeur(configuration.ServeurCible);
         }
 
-        private static string ConstruireChaineConnexion(ServeurConfigModel serveur)
+        /// <summary>
+        /// Construit une chaîne de connexion selon le type du serveur.
+        /// Cette méthode est utilisée par la configuration et par les DataProviders.
+        /// </summary>
+        public static string ConstruireChaineConnexionServeur(ServeurConfigModel serveur)
         {
             if (!string.IsNullOrWhiteSpace(serveur.ChaineConnexion))
             {
@@ -74,7 +78,10 @@ namespace SaimDataCopy.Helpers
         private static string ConstruireChaineConnexionMySql(ServeurConfigModel serveur)
         {
             string nomServeur = serveur.NomServeur.Trim();
-            int port = serveur.Port > 0 ? serveur.Port : 3306;
+
+            int port = serveur.Port > 0
+                ? serveur.Port
+                : 3306;
 
             return
                 $"Server={nomServeur};" +

@@ -47,24 +47,42 @@ namespace SaimDataCopy.Controllers.BasesCopier
 
         private void ChargerPage()
         {
-            // On récupère les modes de copie depuis le Service.
-            List<string> modesCopie = _service.ObtenirModesCopie();
-
-            // On donne ces choix à la View pour remplir la ComboBox du tableau.
-            _view.AfficherModesCopie(modesCopie);
-
-            // On charge les bases.
-            // Le Service récupère le dernier état sauvegardé.
-            // Si aucune sauvegarde n'existe, les bases sont cochées par défaut.
-            _bases = _service.ChargerBases();
-
-            // On demande à la View d'afficher les bases dans le tableau.
-            _view.AfficherBases(_bases);
-
-            // Après le chargement initial, la page correspond à l'état sauvegardé.
-            if (_view is IPageEnregistrable pageEnregistrable)
+            try
             {
-                pageEnregistrable.MarquerCommeEnregistre();
+                // On récupère les modes de copie depuis le Service.
+                List<string> modesCopie = _service.ObtenirModesCopie();
+
+                // On donne ces choix à la View pour remplir la ComboBox du tableau.
+                _view.AfficherModesCopie(modesCopie);
+
+                // On charge les bases.
+                // Le Service récupère le dernier état sauvegardé.
+                // Si aucune sauvegarde n'existe, les bases sont cochées par défaut.
+                _bases = _service.ChargerBases();
+
+                // On demande à la View d'afficher les bases dans le tableau.
+                _view.AfficherBases(_bases);
+
+                // Après le chargement initial, la page correspond à l'état sauvegardé.
+                if (_view is IPageEnregistrable pageEnregistrable)
+                {
+                    pageEnregistrable.MarquerCommeEnregistre();
+                }
+            }
+            catch (Exception ex)
+            {
+                _bases = new List<BaseCopieModel>();
+
+                _view.AfficherBases(_bases);
+
+                _view.AfficherMessage(
+                    "Erreur de connexion",
+                    "Impossible de charger les bases depuis le serveur source." + Environment.NewLine +
+                    "Vérifiez d'abord les paramètres de la page Configuration." + Environment.NewLine +
+                    Environment.NewLine +
+                    "Détail : " + ex.Message,
+                    MessageBoxIcon.Error
+                );
             }
         }
 

@@ -62,18 +62,20 @@ namespace SaimDataCopy.Services.Execution
         }
 
         public ExecutionService(
-    IExecutionDataProvider executionDataProvider,
-    IJournalisationService journalisationService,
-    IEmailService emailService,
-    IHistoriqueDataProvider historiqueDataProvider)
-    : this(
-        executionDataProvider,
-        journalisationService,
-        emailService,
-        historiqueDataProvider,
-        new ConfigurationDataProvider())
-        {
-        }
+            IExecutionDataProvider executionDataProvider,
+            IJournalisationService journalisationService,
+            IEmailService emailService,
+            IHistoriqueDataProvider historiqueDataProvider)
+            : this(
+
+                 executionDataProvider,
+                 journalisationService,
+                 emailService,
+                 historiqueDataProvider,
+                 new ConfigurationDataProvider())
+            {
+
+            }
 
         public ExecutionService(
             IExecutionDataProvider executionDataProvider,
@@ -138,6 +140,35 @@ namespace SaimDataCopy.Services.Execution
         public async Task<bool> TesterConnexionAsync( IProgress<ExecutionProgressionModel> progression,
             CancellationToken cancellationToken)
         {
+
+            ConfigurationModel? configuration = _configurationDataProvider.ChargerConfiguration();
+
+            if (configuration != null &&
+                !TypesServeursCompatiblesPourExecution(configuration, out string messageTypes))
+            {
+                progression.Report(new ExecutionProgressionModel
+                {
+                    Pourcentage = 0,
+                    MessageProgression = "Configuration incompatible.",
+                    Log = CreerLog(messageTypes, "Erreur"),
+                    TableauBord = new ExecutionTableauBordModel
+                    {
+                        NombreBasesSelectionnees = 0,
+                        NombreLignesCopiees = 0,
+                        DureeDerniereExecution = "-"
+                    }
+                });
+
+                MessageBox.Show(
+                    messageTypes,
+                    "Configuration incompatible",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+
+                return false;
+            }
+
             progression.Report(new ExecutionProgressionModel
             {
                 Pourcentage = 0,
@@ -617,8 +648,7 @@ namespace SaimDataCopy.Services.Execution
 
             // On récupère le fichier log de l'exécution actuelle.
             // Ce fichier pourra être joint à l'e-mail si l'option est cochée dans Paramètres Email.
-            string cheminFichierLog =
-                _journalisationService.RecupererCheminFichierExecutionActuel();
+            string cheminFichierLog = _journalisationService.RecupererCheminFichierExecutionActuel();
 
             bool emailEnvoye = _emailService.EnvoyerEmailConfirmationCopie(
                 listeBases,
@@ -678,8 +708,7 @@ namespace SaimDataCopy.Services.Execution
         {
             try
             {
-                ConfigurationModel? configuration =
-                    _configurationDataProvider.ChargerConfiguration();
+                ConfigurationModel? configuration = _configurationDataProvider.ChargerConfiguration();
 
                 HistoriqueExecutionModel historique = new HistoriqueExecutionModel
                 {
@@ -804,6 +833,35 @@ namespace SaimDataCopy.Services.Execution
                 _ => "Manuel"
             };
         }
+
+        private bool TypesServeursCompatiblesPourExecution( ConfigurationModel configuration, out string message)
+        {
+            string typeSource = configuration.ServeurSource.TypeServeur;
+            string typeCible = configuration.ServeurCible.TypeServeur;
+
+            if (typeSource == typeCible)
+            {
+                message = string.Empty;
+                return true;
+            }
+
+            message =
+                "Configuration incompatible : la copie entre deux types de serveurs différents n'est pas encore prise en charge." +
+                Environment.NewLine +
+                $"Source : {typeSource}" +
+                Environment.NewLine +
+                $"Cible : {typeCible}" +
+                Environment.NewLine +
+                Environment.NewLine +
+                "Types supportés actuellement :" +
+                Environment.NewLine +
+                "- SQL Server vers SQL Server" +
+                Environment.NewLine +
+                "- MySQL vers MySQL";
+
+            return false;
+        }
+
         private string NormaliserModeCopie(string modeCopie)
         {
             return modeCopie switch

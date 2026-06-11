@@ -113,7 +113,7 @@ namespace SaimDataCopy.Controllers.Configuration
 
                 _view.AfficherMessageSucces(
                     message + Environment.NewLine +
-                    "Le mode de copie global a été appliqué aux bases à copier."
+                    "Les pages dépendantes de la configuration seront rechargées avec les nouveaux paramètres."
                 );
 
                 return true;

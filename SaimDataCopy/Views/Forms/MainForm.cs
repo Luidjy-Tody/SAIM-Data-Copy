@@ -339,12 +339,32 @@ namespace SaimDataCopy.Views.Forms
         // on met à jour la page Bases à copier si elle a déjà été créée.
         private void ConfigurationController_ModeCopieGlobalModifie(string modeCopieGlobal)
         {
-            if (basesCopierController == null)
+            // Quand la configuration change, les pages qui dépendent du serveur
+            // doivent être recréées.
+            // Exemple : si on passe de MySQL à SQL Server sans redémarrer,
+            // l'ancien controller gardait encore l'ancien DataProvider en mémoire.
+            ReinitialiserPagesDependantesConfiguration();
+        }
+
+        private void ReinitialiserPagesDependantesConfiguration()
+        {
+            // La page Bases à copier dépend du type de serveur source.
+            // On la supprime du cache pour forcer sa recréation au prochain affichage.
+            if (basesCopierView != null && pageActuelle != basesCopierView)
             {
-                return;
+                basesCopierView.Dispose();
+                basesCopierView = null;
+                basesCopierController = null;
             }
 
-            basesCopierController.AppliquerModeCopieGlobal(modeCopieGlobal);
+            // La page Exécution dépend aussi du type de serveur et des bases sélectionnées.
+            // Elle doit aussi être recréée après un changement SQL Server / MySQL.
+            if (executionView != null && pageActuelle != executionView)
+            {
+                executionView.Dispose();
+                executionView = null;
+                executionController = null;
+            }
         }
 
         // Crée la View Bases à copier et son Controller une seule fois.
