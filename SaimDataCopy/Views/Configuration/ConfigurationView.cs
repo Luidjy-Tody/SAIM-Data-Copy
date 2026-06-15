@@ -123,11 +123,6 @@ namespace SaimDataCopy.Views.Configuration
 
             cmbCibleTypeServeur = CreerComboBox("MySQL", "SQL Server");
 
-            AjouterChampPleineLargeur(
-                ref ligne,
-                CreerChampComboBox("Type de serveur cible", cmbCibleTypeServeur)
-            );
-
             AjouterDeuxChamps(
                 ref ligne,
                 CreerChampTexte("Nom ou adresse IP du serveur", "Ex : STAGING-SRV-01 ou 192.168.1.60", true, out txtCibleNomServeur),
@@ -145,11 +140,18 @@ namespace SaimDataCopy.Views.Configuration
                 CreerChampMotDePasse("Mot de passe", "12345678", false, out txtCibleMotDePasse)
             );
 
-            cmbModeCopie = CreerComboBox("Écraser", "Mise à jour");
-
             AjouterDeuxChamps(
                 ref ligne,
                 CreerChampTexte("Port", "Ex : 3306 ou 1433", false, out txtCiblePort),
+                CreerChampComboBox("Type de serveur cible", cmbCibleTypeServeur)
+            );
+
+            AjouterTitreSection(ref ligne, "Bases à copier");
+
+            cmbModeCopie = CreerComboBox("Écraser", "Mise à jour");
+
+            AjouterChampPleineLargeur(
+                ref ligne,
                 CreerChampComboBox("Mode de copie", cmbModeCopie)
             );
 

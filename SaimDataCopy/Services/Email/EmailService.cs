@@ -1,15 +1,13 @@
-﻿using MailKit.Security;
-using MailKitSmtpClient = MailKit.Net.Smtp.SmtpClient;
-using MimeKit;
-using SaimDataCopy.DataProviders.Email;
+﻿using SaimDataCopy.DataProviders.Email;
 using SaimDataCopy.Models.Email;
+using System.Net;
 using System.Net.Mail;
 
 namespace SaimDataCopy.Services.Email
 {
     /// <summary>
     /// Service pour gérer la logique métier des paramètres email.
-    /// Ici on valide les données, on sauvegarde et on peut envoyer des emails.
+    /// Il valide les données, sauvegarde les paramètres et envoie les emails.
     /// </summary>
     public class EmailService : IEmailService
     {
@@ -47,61 +45,42 @@ namespace SaimDataCopy.Services.Email
 
             try
             {
-                MimeMessage email = new MimeMessage();
-
-                email.From.Add(MailboxAddress.Parse(configuration.ExpediteurFrom));
-
-                AjouterDestinataires(email.To, configuration.DestinataireTo);
-                AjouterDestinataires(email.Cc, configuration.CopieCc);
-                AjouterDestinataires(email.Bcc, configuration.CopieCacheeBcc);
-
                 string dateActuelle = DateTime.Now.ToString("dd/MM/yyyy");
                 string heureActuelle = DateTime.Now.ToString("HH:mm:ss");
 
-                string objetTest = configuration.Objet
-                    .Replace("{date}", dateActuelle)
-                    .Replace("{heure}", heureActuelle)
-                    .Replace("{liste_bases}", "DB_TestRH, DB_TestVentes")
-                    .Replace("{duree}", "Test email");
-
-                string corpsTest = configuration.CorpsMessage
-                    .Replace("{date}", dateActuelle)
-                    .Replace("{heure}", heureActuelle)
-                    .Replace("{liste_bases}", "DB_TestRH, DB_TestVentes")
-                    .Replace("{duree}", "Test email");
-
-                email.Subject = "[TEST] " + objetTest;
-
-                email.Body = new TextPart("plain")
-                {
-                    Text = corpsTest
-                };
-
-                using MailKitSmtpClient smtpClient = new MailKitSmtpClient();
-
-                SecureSocketOptions optionSecurite = ObtenirOptionSecurite(configuration.Securite);
-
-                smtpClient.Connect(
-                    configuration.ServeurSmtp,
-                    configuration.Port,
-                    optionSecurite
+                string objetTest = RemplacerVariables(
+                    configuration.Objet,
+                    "DB_TestRH, DB_TestVentes",
+                    "Test email",
+                    dateActuelle,
+                    heureActuelle
                 );
 
-                smtpClient.Authenticate(
-                    configuration.IdentifiantSmtp,
-                    configuration.MotDePasseSmtp
+                string corpsTest = RemplacerVariables(
+                    configuration.CorpsMessage,
+                    "DB_TestRH, DB_TestVentes",
+                    "Test email",
+                    dateActuelle,
+                    heureActuelle
                 );
 
-                smtpClient.Send(email);
+                using MailMessage mail = CreerMailMessage(
+                    configuration,
+                    "[TEST] " + objetTest,
+                    corpsTest,
+                    null
+                );
 
-                smtpClient.Disconnect(true);
+                EnvoyerMail(configuration, mail);
 
                 message = "E-mail de test envoyé avec succès.";
                 return true;
             }
             catch (Exception ex)
             {
-                message = "Erreur pendant l'envoi de l'e-mail de test : " + ex.Message;
+                message = "Erreur pendant l'envoi de l'e-mail de test : "
+                    + ObtenirMessageErreurEmail(ex);
+
                 return false;
             }
         }
@@ -133,69 +112,161 @@ namespace SaimDataCopy.Services.Email
                 string dateActuelle = DateTime.Now.ToString("dd/MM/yyyy");
                 string heureActuelle = DateTime.Now.ToString("HH:mm:ss");
 
-                string objet = configuration.Objet
-                    .Replace("{date}", dateActuelle)
-                    .Replace("{heure}", heureActuelle)
-                    .Replace("{liste_bases}", listeBases)
-                    .Replace("{duree}", duree);
-
-                string corpsMessage = configuration.CorpsMessage
-                    .Replace("{date}", dateActuelle)
-                    .Replace("{heure}", heureActuelle)
-                    .Replace("{liste_bases}", listeBases)
-                    .Replace("{duree}", duree);
-
-                MimeMessage email = new MimeMessage();
-
-                email.From.Add(MailboxAddress.Parse(configuration.ExpediteurFrom));
-
-                AjouterDestinataires(email.To, configuration.DestinataireTo);
-                AjouterDestinataires(email.Cc, configuration.CopieCc);
-                AjouterDestinataires(email.Bcc, configuration.CopieCacheeBcc);
-
-                email.Subject = objet;
-
-                BodyBuilder bodyBuilder = new BodyBuilder();
-                bodyBuilder.TextBody = corpsMessage;
-
-                // Si l'utilisateur veut joindre le fichier log,
-                // on vérifie d'abord que le chemin existe.
-                if (configuration.JoindreFichierLog &&
-                    !string.IsNullOrWhiteSpace(cheminFichierLog) &&
-                    File.Exists(cheminFichierLog))
-                {
-                    bodyBuilder.Attachments.Add(cheminFichierLog);
-                }
-
-                email.Body = bodyBuilder.ToMessageBody();
-
-                using MailKitSmtpClient smtpClient = new MailKitSmtpClient();
-
-                SecureSocketOptions optionSecurite = ObtenirOptionSecurite(configuration.Securite);
-
-                smtpClient.Connect(
-                    configuration.ServeurSmtp,
-                    configuration.Port,
-                    optionSecurite
+                string objet = RemplacerVariables(
+                    configuration.Objet,
+                    listeBases,
+                    duree,
+                    dateActuelle,
+                    heureActuelle
                 );
 
-                smtpClient.Authenticate(
-                    configuration.IdentifiantSmtp,
-                    configuration.MotDePasseSmtp
+                string corpsMessage = RemplacerVariables(
+                    configuration.CorpsMessage,
+                    listeBases,
+                    duree,
+                    dateActuelle,
+                    heureActuelle
                 );
 
-                smtpClient.Send(email);
+                using MailMessage mail = CreerMailMessage(
+                    configuration,
+                    objet,
+                    corpsMessage,
+                    cheminFichierLog
+                );
 
-                smtpClient.Disconnect(true);
+                EnvoyerMail(configuration, mail);
 
                 message = "E-mail de confirmation envoyé avec succès.";
                 return true;
             }
             catch (Exception ex)
             {
-                message = "Erreur pendant l'envoi de l'e-mail de confirmation : " + ex.Message;
+                message = "Erreur pendant l'envoi de l'e-mail de confirmation : "
+                    + ObtenirMessageErreurEmail(ex);
+
                 return false;
             }
+        }
+
+        private MailMessage CreerMailMessage(
+            EmailConfigModel configuration,
+            string objet,
+            string corpsMessage,
+            string? cheminFichierLog)
+        {
+            MailMessage mail = new MailMessage();
+
+            mail.From = new MailAddress(configuration.ExpediteurFrom);
+
+            AjouterDestinataires(mail.To, configuration.DestinataireTo);
+            AjouterDestinataires(mail.CC, configuration.CopieCc);
+            AjouterDestinataires(mail.Bcc, configuration.CopieCacheeBcc);
+
+            mail.Subject = objet;
+
+            // On garde le corps saisi par l'utilisateur,
+            // mais on le transforme en HTML simple pour respecter la logique du superviseur.
+            mail.Body = ConvertirTexteEnHtml(corpsMessage);
+            mail.IsBodyHtml = true;
+
+            // Si l'utilisateur veut joindre le fichier log,
+            // on vérifie d'abord que le fichier existe.
+            if (configuration.JoindreFichierLog &&
+                !string.IsNullOrWhiteSpace(cheminFichierLog) &&
+                File.Exists(cheminFichierLog))
+            {
+                mail.Attachments.Add(new Attachment(cheminFichierLog));
+            }
+
+            return mail;
+        }
+
+        private void EnvoyerMail(EmailConfigModel configuration, MailMessage mail)
+        {
+            string identifiantConnexion = ObtenirIdentifiantConnexion(configuration);
+
+            // On normalise la sécurité pour éviter les problèmes d'espace,
+            // de casse ou de valeur vide.
+            string securite = NormaliserSecurite(configuration.Securite);
+
+            bool utiliserSsl = SecuriteUtiliseSsl(securite);
+
+            // Sécurité supplémentaire :
+            // Le port 587 correspond généralement à TLS / STARTTLS.
+            // Donc si l'utilisateur utilise 587, on force SSL/TLS à true.
+            if (configuration.Port == 587)
+            {
+                utiliserSsl = true;
+            }
+
+            using SmtpClient smtpClient = new SmtpClient();
+
+            smtpClient.Host = configuration.ServeurSmtp.Trim();
+            smtpClient.Port = configuration.Port;
+            smtpClient.EnableSsl = utiliserSsl;
+            smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
+            smtpClient.UseDefaultCredentials = false;
+            smtpClient.Credentials = new NetworkCredential(
+                identifiantConnexion,
+                configuration.MotDePasseSmtp
+            );
+            smtpClient.Timeout = 30000;
+
+            smtpClient.Send(mail);
+        }
+
+        private string NormaliserSecurite(string securite)
+        {
+            if (string.IsNullOrWhiteSpace(securite))
+            {
+                return "TLS";
+            }
+
+            return securite.Trim() switch
+            {
+                "TLS" => "TLS",
+                "SSL" => "SSL",
+                "Aucune" => "Aucune",
+                _ => "TLS"
+            };
+        }
+
+        private string ObtenirIdentifiantConnexion(EmailConfigModel configuration)
+        {
+            // Si l'utilisateur remplit "Identifiant SMTP",
+            // on utilise cette adresse pour se connecter au serveur SMTP.
+            // Exemple : adresse Outlook ou adresse entreprise.
+            if (!string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp))
+            {
+                return configuration.IdentifiantSmtp.Trim();
+            }
+
+            // Sinon, on utilise l'adresse expéditeur comme dans le code du superviseur.
+            return configuration.ExpediteurFrom.Trim();
+        }
+
+        private string RemplacerVariables(
+            string texte,
+            string listeBases,
+            string duree,
+            string dateActuelle,
+            string heureActuelle)
+        {
+            return texte
+                .Replace("{date}", dateActuelle)
+                .Replace("{heure}", heureActuelle)
+                .Replace("{liste_bases}", listeBases)
+                .Replace("{duree}", duree);
+        }
+
+        private string ConvertirTexteEnHtml(string texte)
+        {
+            string texteEncode = WebUtility.HtmlEncode(texte);
+
+            return texteEncode
+                .Replace("\r\n", "<br>")
+                .Replace("\n", "<br>");
         }
 
         private bool ValiderConfiguration(EmailConfigModel configuration, out string message)
@@ -275,12 +346,6 @@ namespace SaimDataCopy.Services.Email
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp))
-            {
-                message = "L'identifiant SMTP est obligatoire.";
-                return false;
-            }
-
             if (string.IsNullOrWhiteSpace(configuration.MotDePasseSmtp))
             {
                 message = "Le mot de passe SMTP est obligatoire.";
@@ -291,20 +356,11 @@ namespace SaimDataCopy.Services.Email
             return true;
         }
 
-        private SecureSocketOptions ObtenirOptionSecurite(string securite)
-        {
-            return securite switch
-            {
-                "TLS" => SecureSocketOptions.StartTls,
-                "SSL" => SecureSocketOptions.SslOnConnect,
-                "Aucune" => SecureSocketOptions.None,
-                _ => SecureSocketOptions.Auto
-            };
-        }
-
         private bool SecuriteEstValide(string securite)
         {
-            return securite switch
+            string securiteNormalisee = NormaliserSecurite(securite);
+
+            return securiteNormalisee switch
             {
                 "TLS" => true,
                 "SSL" => true,
@@ -313,7 +369,20 @@ namespace SaimDataCopy.Services.Email
             };
         }
 
-        private void AjouterDestinataires(InternetAddressList liste, string adresses)
+        private bool SecuriteUtiliseSsl(string securite)
+        {
+            string securiteNormalisee = NormaliserSecurite(securite);
+
+            return securiteNormalisee switch
+            {
+                "TLS" => true,
+                "SSL" => true,
+                "Aucune" => false,
+                _ => true
+            };
+        }
+
+        private void AjouterDestinataires(MailAddressCollection liste, string adresses)
         {
             if (string.IsNullOrWhiteSpace(adresses))
             {
@@ -322,7 +391,7 @@ namespace SaimDataCopy.Services.Email
 
             foreach (string adresse in SeparerEmails(adresses))
             {
-                liste.Add(MailboxAddress.Parse(adresse));
+                liste.Add(new MailAddress(adresse));
             }
         }
 
@@ -355,6 +424,37 @@ namespace SaimDataCopy.Services.Email
                 .Select(adresse => adresse.Trim())
                 .Where(adresse => !string.IsNullOrWhiteSpace(adresse))
                 .ToList();
+        }
+
+        private string ObtenirMessageErreurEmail(Exception exception)
+        {
+            if (exception is SmtpException erreurSmtp)
+            {
+                return erreurSmtp.StatusCode switch
+                {
+                    SmtpStatusCode.MailboxUnavailable =>
+                        "Adresse e-mail introuvable ou boîte mail indisponible.",
+
+                    SmtpStatusCode.ClientNotPermitted =>
+                        "Le serveur SMTP a refusé l'envoi. Vérifiez les droits du compte e-mail.",
+
+                    SmtpStatusCode.MustIssueStartTlsFirst =>
+                        "Le serveur SMTP demande TLS. Vérifiez le champ Sécurité.",
+
+                    SmtpStatusCode.GeneralFailure =>
+                        "Connexion au serveur SMTP impossible. Vérifiez le serveur, le port et le réseau.",
+
+                    _ =>
+                        $"{erreurSmtp.Message} ({erreurSmtp.StatusCode})"
+                };
+            }
+
+            if (exception is FormatException)
+            {
+                return "Une adresse e-mail est mal écrite.";
+            }
+
+            return exception.Message;
         }
     }
 }

@@ -101,24 +101,16 @@ namespace SaimDataCopy.DataProviders.Configuration
                 }
 
                 // On déchiffre la chaîne de connexion source.
-                configuration.ServeurSource.ChaineConnexion =
-                    SecuriteMotDePasseHelper.Dechiffrer(
-                        configuration.ServeurSource.ChaineConnexion);
+                configuration.ServeurSource.ChaineConnexion = SecuriteMotDePasseHelper.Dechiffrer(configuration.ServeurSource.ChaineConnexion);
 
                 // On déchiffre le mot de passe source.
-                configuration.ServeurSource.MotDePasse =
-                    SecuriteMotDePasseHelper.Dechiffrer(
-                        configuration.ServeurSource.MotDePasse);
+                configuration.ServeurSource.MotDePasse = SecuriteMotDePasseHelper.Dechiffrer(configuration.ServeurSource.MotDePasse);
 
                 // On déchiffre la chaîne de connexion cible.
-                configuration.ServeurCible.ChaineConnexion =
-                    SecuriteMotDePasseHelper.Dechiffrer(
-                        configuration.ServeurCible.ChaineConnexion);
+                configuration.ServeurCible.ChaineConnexion = SecuriteMotDePasseHelper.Dechiffrer(configuration.ServeurCible.ChaineConnexion);
 
                 // On déchiffre le mot de passe cible.
-                configuration.ServeurCible.MotDePasse =
-                    SecuriteMotDePasseHelper.Dechiffrer(
-                        configuration.ServeurCible.MotDePasse);
+                configuration.ServeurCible.MotDePasse = SecuriteMotDePasseHelper.Dechiffrer(configuration.ServeurCible.MotDePasse);
 
                 return configuration;
             }
