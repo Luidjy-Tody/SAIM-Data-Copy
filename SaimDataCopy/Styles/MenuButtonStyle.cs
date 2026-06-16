@@ -71,6 +71,10 @@ namespace SaimDataCopy.Styles
 
             lblStatus.ForeColor = TexteNormal;
             lblStatus.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+
+            lblStatus.AutoSize =false;
+            lblStatus.Width = 400;
+            lblStatus.TextAlign = ContentAlignment.MiddleLeft;
         }
 
     }

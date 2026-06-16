@@ -36,6 +36,9 @@ namespace SaimDataCopy.Views.Forms
         // Bouton du bas pour enregistrer les pages qui ont des paramètres.
         private Button? btnEnregistrerParametres;
 
+        // Texte de statut affiché en bas de l'application.
+        private Label? lblStatus;
+
         // Page Configuration gardée en mémoire.
         private ConfigurationView? configurationView;
 
@@ -543,6 +546,7 @@ namespace SaimDataCopy.Views.Forms
             // On garde en mémoire la page affichée.
             pageActuelle = page;
             MettreAJourBoutonEnregistrer();
+            MettreAJourStatutPage();
         }
 
         // Affiche le bouton Enregistrer seulement sur les pages qui ont des paramètres.
@@ -560,9 +564,28 @@ namespace SaimDataCopy.Views.Forms
                 pageActuelle is LogsView;
         }
 
+        // Met à jour le texte de statut selon la page affichée.
+        private void MettreAJourStatutPage()
+        {
+            if (lblStatus == null)
+            {
+                return;
+            }
+
+            lblStatus.Text = pageActuelle switch
+            {
+                ConfigurationView => "Page actuelle : Configuration",
+                BasesCopierView => "Page actuelle : Bases à copier",
+                EmailView => "Page actuelle : Paramètres Email",
+                LogsView => "Page actuelle : Paramètres Logs",
+                ExecutionView => "Page actuelle : Exécution",
+                HistoriqueView => "Page actuelle : Historique",
+                _ => "Prêt"
+            };
+        }
         private void CreerBarreBas()
         {
-            Label lblStatus = new Label();
+            lblStatus = new Label();
             lblStatus.Text = "Prêt";
 
             // Style du label dans Styles.
