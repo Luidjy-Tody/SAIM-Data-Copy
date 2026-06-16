@@ -33,6 +33,9 @@ namespace SaimDataCopy.Views.Forms
         // Page actuellement affichée dans panelMain.
         private UserControl? pageActuelle;
 
+        // Bouton du bas pour enregistrer les pages qui ont des paramètres.
+        private Button? btnEnregistrerParametres;
+
         // Page Configuration gardée en mémoire.
         private ConfigurationView? configurationView;
 
@@ -539,6 +542,22 @@ namespace SaimDataCopy.Views.Forms
 
             // On garde en mémoire la page affichée.
             pageActuelle = page;
+            MettreAJourBoutonEnregistrer();
+        }
+
+        // Affiche le bouton Enregistrer seulement sur les pages qui ont des paramètres.
+        private void MettreAJourBoutonEnregistrer()
+        {
+            if (btnEnregistrerParametres == null)
+            {
+                return;
+            }
+
+            btnEnregistrerParametres.Visible =
+                pageActuelle is ConfigurationView ||
+                pageActuelle is BasesCopierView ||
+                pageActuelle is EmailView ||
+                pageActuelle is LogsView;
         }
 
         private void CreerBarreBas()
@@ -549,7 +568,7 @@ namespace SaimDataCopy.Views.Forms
             // Style du label dans Styles.
             MenuLabelStyle.Appliquer(lblStatus);
 
-            Button btnEnregistrerParametres = new Button();
+            btnEnregistrerParametres = new Button();
             btnEnregistrerParametres.Text = "Enregistrer les paramètres";
 
             // Style du bouton dans Styles.

@@ -12,8 +12,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
 
             ConfigurationModel? configuration = configurationDataProvider.ChargerConfiguration();
 
-            string typeServeurSource =
-                configuration?.ServeurSource.TypeServeur ?? "SQL Server";
+            string typeServeurSource = configuration?.ServeurSource.TypeServeur ?? "SQL Server";
 
             return typeServeurSource switch
             {
