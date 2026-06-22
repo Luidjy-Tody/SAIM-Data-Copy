@@ -48,8 +48,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
 
             string chaineConnexionSource = ChaineConnexionHelper.ConstruireChaineConnexionSource(configuration);
 
-            DbContextOptions<SaimDbContext> optionsSource =
-                new DbContextOptionsBuilder<SaimDbContext>()
+            DbContextOptions<SaimDbContext> optionsSource = new DbContextOptionsBuilder<SaimDbContext>()
                     .UseSqlServer(chaineConnexionSource)
                     .Options;
 

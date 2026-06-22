@@ -54,11 +54,18 @@ namespace SaimDataCopy.Styles
         }
 
         // Style des ComboBOX.
+        // Style des ComboBox.
+        // Style des ComboBox.
+        // Style des ComboBox.
+        // Style des ComboBox.
         public static void AppliquerComboBox(ComboBox comboBox)
         {
             comboBox.Font = new Font("Segoe UI", 12F, FontStyle.Regular);
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox.BackColor = FondChamp;
+            comboBox.FlatStyle = FlatStyle.Flat;
+            comboBox.MaxDropDownItems = 3;
+
         }
 
         // Cree un petit badge rouge clair avec le text "requis".

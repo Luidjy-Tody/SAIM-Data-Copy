@@ -498,13 +498,34 @@ namespace SaimDataCopy.Views.Configuration
 
             AjouterLabelChamp(panel, texteLabel, false);
 
-            comboBox.Location = new Point(0, 28);
-            comboBox.Width = panel.Width;
-            comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            Panel panelBordure = new Panel();
+            panelBordure.Location = new Point(0, 28);
+            panelBordure.Width = panel.Width;
+            panelBordure.Height = HauteurChamp;
+            panelBordure.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelBordure.BackColor = Color.White;
+            panelBordure.BorderStyle = BorderStyle.FixedSingle;
+
+            panel.Controls.Add(panelBordure);
 
             PageFormStyle.AppliquerComboBox(comboBox);
 
-            panel.Controls.Add(comboBox);
+            comboBox.Location = new Point(1, CalculerPositionVerticale(panelBordure, comboBox));
+            comboBox.Width = panelBordure.Width - 2;
+            comboBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+
+            panelBordure.Controls.Add(comboBox);
+
+            panelBordure.Resize += (sender, e) =>
+            {
+                comboBox.Width = panelBordure.Width - 2;
+                comboBox.Top = CalculerPositionVerticale(panelBordure, comboBox);
+            };
+
+            comboBox.SelectionChangeCommitted += (sender, e) =>
+            {
+                panel.Focus();
+            };
 
             return panel;
         }

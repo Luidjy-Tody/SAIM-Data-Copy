@@ -49,8 +49,7 @@ namespace SaimDataCopy
 
         private static bool EstModeExecutionAutomatique(string[] args)
         {
-            return args.Any(argument =>
-                argument.Equals("--run-copy", StringComparison.OrdinalIgnoreCase));
+            return args.Any(argument => argument.Equals("--run-copy", StringComparison.OrdinalIgnoreCase));
         }
 
         private static async Task LancerExecutionAutomatiqueAsync()
@@ -59,11 +58,9 @@ namespace SaimDataCopy
             // grâce à ExecutionDataProviderFactory.
             ExecutionService executionService = new ExecutionService();
 
-            Progress<ExecutionProgressionModel> progression =
-                new Progress<ExecutionProgressionModel>();
+            Progress<ExecutionProgressionModel> progression = new Progress<ExecutionProgressionModel>();
 
-            using CancellationTokenSource cancellationTokenSource =
-                new CancellationTokenSource();
+            using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
             await executionService.LancerCopieAsync(
                 progression,

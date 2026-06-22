@@ -160,8 +160,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
 
             try
             {
-                List<BaseCopieModel>? bases =
-                    JsonConvert.DeserializeObject<List<BaseCopieModel>>(contenuJson);
+                List<BaseCopieModel>? bases = JsonConvert.DeserializeObject<List<BaseCopieModel>>(contenuJson);
 
                 if (bases == null)
                 {
@@ -175,8 +174,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             }
             catch (JsonException)
             {
-                throw new InvalidOperationException(
-                    "Le fichier bases_copier.json est invalide. Vérifiez son contenu JSON.");
+                throw new InvalidOperationException("Le fichier bases_copier.json est invalide. Vérifiez son contenu JSON.");
             }
         }
 
@@ -204,12 +202,8 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             foreach (BaseCopieModel baseServeur in basesServeur)
             {
                 BaseCopieModel? baseSauvegardee = basesSauvegardees
-                    .FirstOrDefault(b =>
-                        b.NomBase.Equals(
-                            baseServeur.NomBase,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    );
+                    .FirstOrDefault(b => b.NomBase.Equals(baseServeur.NomBase, StringComparison.OrdinalIgnoreCase));
+
                 if (baseSauvegardee == null)
                 {
                     // Nouvelle base trouvée sur le serveur source.
