@@ -227,11 +227,20 @@ namespace SaimDataCopy.Styles
         }
 
         // Style du bouton Voir détail dans le tableau Historique.
-        public static void AppliquerBoutonDetail(Button bouton)
+        public static void AppliquerBoutonDetail(IconButton bouton)
         {
-            bouton.Width = 84;
+            bouton.Width = 80;
             bouton.Height = 36;
-            bouton.Text = "Voir";
+
+            bouton.Text = " Voir";
+
+            bouton.IconChar = IconChar.Eye;
+            bouton.IconSize = 18;
+            bouton.IconColor = Color.Blue;
+
+            bouton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            bouton.ImageAlign = ContentAlignment.MiddleLeft;
+            bouton.TextAlign = ContentAlignment.MiddleCenter;
 
             bouton.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
             bouton.ForeColor = CouleurTexte;
@@ -241,8 +250,7 @@ namespace SaimDataCopy.Styles
             bouton.FlatAppearance.BorderColor = CouleurBordure;
             bouton.FlatAppearance.BorderSize = 1;
 
-            bouton.TextAlign = ContentAlignment.MiddleCenter;
-            bouton.Padding = new Padding(0);
+            bouton.Padding = new Padding(2, 0, 0, 0);
             bouton.Margin = new Padding(0);
 
             bouton.Cursor = Cursors.Hand;

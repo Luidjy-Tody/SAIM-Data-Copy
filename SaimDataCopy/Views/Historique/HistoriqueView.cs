@@ -495,7 +495,7 @@ namespace SaimDataCopy.Views.Historique
             panel.Dock = DockStyle.Fill;
             panel.BackColor = Color.White;
 
-            Button bouton = new Button();
+            IconButton bouton = new IconButton();
             HistoriqueStyle.AppliquerBoutonDetail(bouton);
 
             bouton.Click += (sender, e) =>
