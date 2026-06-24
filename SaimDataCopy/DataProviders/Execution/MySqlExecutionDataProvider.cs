@@ -319,6 +319,52 @@ namespace SaimDataCopy.DataProviders.Execution
             OuvrirConnexionMySql(connexion);
         }
 
+        public void RecreerContraintesForeignKey(string nomBase)
+        {
+            if (string.IsNullOrWhiteSpace(nomBase))
+            {
+                return;
+            }
+
+            string nomBaseCible = ObtenirNomBaseCible(nomBase);
+
+            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
+            string chaineConnexionCible = CreerChaineConnexionBaseCible(nomBaseCible);
+
+            using MySqlConnection connexionSource = new MySqlConnection(chaineConnexionSource);
+            using MySqlConnection connexionCible = new MySqlConnection(chaineConnexionCible);
+
+            OuvrirConnexionMySql(connexionSource);
+            OuvrirConnexionMySql(connexionCible);
+
+            List<string> tables = ChargerTablesBaseSource(nomBase);
+
+            foreach (string table in tables)
+            {
+                List<string> requetesContraintes = ConstruireRequetesAjoutForeignKey(connexionSource, nomBase, table);
+
+                foreach (string requete in requetesContraintes)
+                {
+                    try
+                    {
+                        using MySqlCommand commande = connexionCible.CreateCommand();
+
+                        // Cette requête recrée une clé étrangère MySQL après la copie des données.
+                        commande.CommandText = requete;
+                        commande.ExecuteNonQuery();
+                    }
+                    catch (MySqlException ex)
+                    {
+                        // Si la contrainte existe déjà, on ignore l'erreur.
+                        // Cela évite de bloquer une deuxième exécution de la copie.
+                        if (ex.Number != 1826)
+                        {
+                            throw;
+                        }
+                    }
+                }
+            }
+        }
         public ExecutionTableauBordModel ChargerDernierTableauBord()
         {
             return new ExecutionTableauBordModel
@@ -660,6 +706,89 @@ namespace SaimDataCopy.DataProviders.Execution
         private string ObtenirNomBaseCible(string nomBaseSource)
         {
             return nomBaseSource;
+        }
+
+        private List<string> ConstruireRequetesAjoutForeignKey(MySqlConnection connexionSource, string nomBase, string nomTable)
+        {
+            List<string> requetes = new List<string>();
+
+            string nomTableSql = ProtegerNomMySql(nomTable);
+
+            using MySqlCommand commandeStructure = connexionSource.CreateCommand();
+
+            // Cette requête récupère le script CREATE TABLE de la table source.
+            // On va seulement extraire les lignes qui contiennent les FOREIGN KEY.
+            commandeStructure.CommandText = $"SHOW CREATE TABLE {nomTableSql};";
+
+            using MySqlDataReader lecteur = commandeStructure.ExecuteReader();
+
+            if (!lecteur.Read())
+            {
+                return requetes;
+            }
+
+            string scriptCreationTable = lecteur.GetString(1);
+
+            List<string> lignes = scriptCreationTable
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Split('\n')
+                .ToList();
+
+            foreach (string ligne in lignes)
+            {
+                string ligneNettoyee = ligne.Trim().TrimEnd(',');
+
+                bool estContrainteForeignKey =
+                    ligneNettoyee.StartsWith("CONSTRAINT", StringComparison.OrdinalIgnoreCase) &&
+                    ligneNettoyee.Contains("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
+
+                bool estForeignKeyDirect = ligneNettoyee.StartsWith("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
+
+                if (!estContrainteForeignKey && !estForeignKeyDirect)
+                {
+                    continue;
+                }
+
+                string requeteAlterTable;
+
+                if (estContrainteForeignKey)
+                {
+                    // Exemple :
+                    // ALTER TABLE `city`
+                    // ADD CONSTRAINT `fk_city_country`
+                    // FOREIGN KEY (`country_id`) REFERENCES `country` (`country_id`);
+                    requeteAlterTable =
+                        $"ALTER TABLE {nomTableSql} ADD {ligneNettoyee};";
+                }
+                else
+                {
+                    string nomContrainte = CreerNomContrainteForeignKey(nomTable, requetes.Count + 1);
+
+                    // Cas rare où la FOREIGN KEY n'a pas de nom de contrainte.
+                    requeteAlterTable =
+                        $"ALTER TABLE {nomTableSql} " +
+                        $"ADD CONSTRAINT {ProtegerNomMySql(nomContrainte)} {ligneNettoyee};";
+                }
+
+                requetes.Add(requeteAlterTable);
+            }
+
+            return requetes;
+        }
+
+        private string CreerNomContrainteForeignKey(string nomTable, int numero)
+        {
+            string nomNettoye = new string(nomTable
+                    .Where(c => char.IsLetterOrDigit(c) || c == '_')
+                    .ToArray());
+
+            if (string.IsNullOrWhiteSpace(nomNettoye))
+            {
+                nomNettoye = "table";
+            }
+
+            return $"fk_{nomNettoye}_{numero}";
         }
 
         private void OuvrirConnexionMySql(MySqlConnection connexion)

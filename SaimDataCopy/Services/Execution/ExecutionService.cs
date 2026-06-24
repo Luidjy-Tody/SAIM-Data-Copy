@@ -499,8 +499,7 @@ namespace SaimDataCopy.Services.Execution
                 $"Détail technique : {message}";
         }
 
-        private ExecutionResultatBaseModel CreerResultatLectureReelle(BaseCopieModel baseCopie,
-            CancellationToken cancellationToken)
+        private ExecutionResultatBaseModel CreerResultatLectureReelle(BaseCopieModel baseCopie, CancellationToken cancellationToken)
         {
             _journalisationService.EcrireInformation(
                 $"Vérification de la base cible : {baseCopie.NomBase}");
@@ -608,6 +607,12 @@ namespace SaimDataCopy.Services.Execution
                     $"{baseCopie.NomBase}.{table} : {lignesCopiees} ligne(s) copiée(s). " +
                     $"Lignes avant : {lignesAvantTable}, lignes après : {lignesApresTable}.");
             }
+
+            _journalisationService.EcrireInformation( $"{baseCopie.NomBase} : recréation des contraintes de clés étrangères.");
+
+            _executionDataProvider.RecreerContraintesForeignKey(baseCopie.NomBase);
+
+            _journalisationService.EcrireSucces( $"{baseCopie.NomBase} : contraintes de clés étrangères recréées.");
 
             _journalisationService.EcrireSucces(
                 $"{baseCopie.NomBase} : copie terminée avec succès. " +

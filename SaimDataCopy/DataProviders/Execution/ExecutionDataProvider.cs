@@ -961,6 +961,63 @@ namespace SaimDataCopy.DataProviders.Execution
 
             connexion.Open();
         }
+
+        public void RecreerContraintesForeignKey(string nomBase)
+        {
+            if (string.IsNullOrWhiteSpace(nomBase))
+            {
+                return;
+            }
+
+            string nomBaseCible = ObtenirNomBaseCible(nomBase);
+
+            string chaineConnexionSource = CreerChaineConnexionBaseSource(nomBase);
+            string chaineConnexionCible = CreerChaineConnexionBaseCible(nomBaseCible);
+
+            using SqlConnection connexionSource = new SqlConnection(chaineConnexionSource);
+            using SqlConnection connexionCible = new SqlConnection(chaineConnexionCible);
+
+            connexionSource.Open();
+            connexionCible.Open();
+
+            List<string> tables = ChargerTablesBaseSource(nomBase);
+
+            // Étape 1 : recréer les clés primaires et contraintes uniques.
+            foreach (string nomTable in tables)
+            {
+                string[] morceaux = nomTable.Split('.');
+
+                if (morceaux.Length != 2)
+                {
+                    continue;
+                }
+
+                List<string> requetesContraintes = ConstruireRequetesContraintesUniquesSqlServer(connexionSource, morceaux[0], morceaux[1]);
+
+                foreach (string requete in requetesContraintes)
+                {
+                    ExecuterRequeteContrainteSqlServer(connexionCible, requete);
+                }
+            }
+
+            // Étape 2 : recréer les clés étrangères après les clés primaires.
+            foreach (string nomTable in tables)
+            {
+                string[] morceaux = nomTable.Split('.');
+
+                if (morceaux.Length != 2)
+                {
+                    continue;
+                }
+
+                List<string> requetesForeignKey = ConstruireRequetesForeignKeySqlServer(connexionSource, morceaux[0], morceaux[1]);
+
+                foreach (string requete in requetesForeignKey)
+                {
+                    ExecuterRequeteContrainteSqlServer(connexionCible, requete);
+                }
+            }
+        }
         public ExecutionTableauBordModel ChargerDernierTableauBord()
         {
             ExecutionSauvegardeModel sauvegarde = ChargerSauvegarde();
@@ -1147,6 +1204,250 @@ namespace SaimDataCopy.DataProviders.Execution
             return $"{ConstruireNomSql(schema)}.{ConstruireNomSql(table)}";
         }
 
+
+        private List<string> ConstruireRequetesContraintesUniquesSqlServer(
+    SqlConnection connexionSource,
+    string schema,
+    string table)
+        {
+            List<string> requetes = new List<string>();
+
+            // Cette requête récupère les clés primaires et contraintes uniques
+            // de la table source SQL Server.
+            string requete = @"
+        SELECT
+            kc.name AS NomContrainte,
+            kc.type AS TypeContrainte,
+            i.type_desc AS TypeIndex,
+            c.name AS NomColonne,
+            ic.is_descending_key,
+            ic.key_ordinal
+        FROM sys.key_constraints kc
+        INNER JOIN sys.tables t
+            ON kc.parent_object_id = t.object_id
+        INNER JOIN sys.schemas s
+            ON t.schema_id = s.schema_id
+        INNER JOIN sys.indexes i
+            ON kc.parent_object_id = i.object_id
+            AND kc.unique_index_id = i.index_id
+        INNER JOIN sys.index_columns ic
+            ON i.object_id = ic.object_id
+            AND i.index_id = ic.index_id
+        INNER JOIN sys.columns c
+            ON ic.object_id = c.object_id
+            AND ic.column_id = c.column_id
+        WHERE s.name = @Schema
+        AND t.name = @Table
+        AND ic.is_included_column = 0
+        ORDER BY kc.name, ic.key_ordinal;
+    ";
+
+            using SqlCommand commande = new SqlCommand(requete, connexionSource);
+            commande.Parameters.AddWithValue("@Schema", schema);
+            commande.Parameters.AddWithValue("@Table", table);
+
+            using SqlDataReader lecteur = commande.ExecuteReader();
+
+            Dictionary<string, List<string>> colonnesParContrainte = new Dictionary<string, List<string>>();
+            Dictionary<string, string> typeParContrainte = new Dictionary<string, string>();
+            Dictionary<string, string> indexParContrainte = new Dictionary<string, string>();
+
+            while (lecteur.Read())
+            {
+                string nomContrainte = lecteur.GetString(0);
+                string typeContrainte = lecteur.GetString(1);
+                string typeIndex = lecteur.GetString(2);
+                string nomColonne = lecteur.GetString(3);
+                bool descendant = lecteur.GetBoolean(4);
+
+                if (!colonnesParContrainte.ContainsKey(nomContrainte))
+                {
+                    colonnesParContrainte[nomContrainte] = new List<string>();
+                    typeParContrainte[nomContrainte] = typeContrainte;
+                    indexParContrainte[nomContrainte] = typeIndex;
+                }
+
+                string ordre = descendant ? "DESC" : "ASC";
+                colonnesParContrainte[nomContrainte].Add($"{ConstruireNomSql(nomColonne)} {ordre}");
+            }
+
+            foreach (string nomContrainte in colonnesParContrainte.Keys)
+            {
+                string typeSql = typeParContrainte[nomContrainte] switch
+                {
+                    "PK" => "PRIMARY KEY",
+                    "UQ" => "UNIQUE",
+                    _ => string.Empty
+                };
+
+                if (string.IsNullOrWhiteSpace(typeSql))
+                {
+                    continue;
+                }
+
+                string typeIndex = indexParContrainte[nomContrainte].Contains("CLUSTERED")
+                    ? "CLUSTERED"
+                    : "NONCLUSTERED";
+
+                string nomTableSql = $"{ConstruireNomSql(schema)}.{ConstruireNomSql(table)}";
+                string nomContrainteSql = ConstruireNomSql(nomContrainte);
+                string colonnesSql = string.Join(", ", colonnesParContrainte[nomContrainte]);
+
+                // Cette requête recrée une clé primaire ou une contrainte unique.
+                string requeteCreation = $@"
+            ALTER TABLE {nomTableSql}
+            ADD CONSTRAINT {nomContrainteSql}
+            {typeSql} {typeIndex} ({colonnesSql});
+        ";
+
+                requetes.Add(requeteCreation);
+            }
+
+            return requetes;
+        }
+
+        private List<string> ConstruireRequetesForeignKeySqlServer(SqlConnection connexionSource, string schema, string table)
+        {
+            List<string> requetes = new List<string>();
+
+            // Cette requête récupère les clés étrangères de la table source.
+            string requete = @"
+        SELECT
+            fk.name AS NomContrainte,
+            sp.name AS SchemaParent,
+            tp.name AS TableParent,
+            cp.name AS ColonneParent,
+            sr.name AS SchemaReference,
+            tr.name AS TableReference,
+            cr.name AS ColonneReference,
+            fkc.constraint_column_id,
+            fk.delete_referential_action_desc,
+            fk.update_referential_action_desc
+        FROM sys.foreign_keys fk
+        INNER JOIN sys.foreign_key_columns fkc
+            ON fk.object_id = fkc.constraint_object_id
+        INNER JOIN sys.tables tp
+            ON fk.parent_object_id = tp.object_id
+        INNER JOIN sys.schemas sp
+            ON tp.schema_id = sp.schema_id
+        INNER JOIN sys.columns cp
+            ON fkc.parent_object_id = cp.object_id
+            AND fkc.parent_column_id = cp.column_id
+        INNER JOIN sys.tables tr
+            ON fk.referenced_object_id = tr.object_id
+        INNER JOIN sys.schemas sr
+            ON tr.schema_id = sr.schema_id
+        INNER JOIN sys.columns cr
+            ON fkc.referenced_object_id = cr.object_id
+            AND fkc.referenced_column_id = cr.column_id
+        WHERE sp.name = @Schema
+        AND tp.name = @Table
+        ORDER BY fk.name, fkc.constraint_column_id;
+    ";
+
+            using SqlCommand commande = new SqlCommand(requete, connexionSource);
+            commande.Parameters.AddWithValue("@Schema", schema);
+            commande.Parameters.AddWithValue("@Table", table);
+
+            using SqlDataReader lecteur = commande.ExecuteReader();
+
+            Dictionary<string, List<string>> colonnesParent = new Dictionary<string, List<string>>();
+            Dictionary<string, List<string>> colonnesReference = new Dictionary<string, List<string>>();
+            Dictionary<string, string> tableParentParContrainte = new Dictionary<string, string>();
+            Dictionary<string, string> tableReferenceParContrainte = new Dictionary<string, string>();
+            Dictionary<string, string> actionDeleteParContrainte = new Dictionary<string, string>();
+            Dictionary<string, string> actionUpdateParContrainte = new Dictionary<string, string>();
+
+            while (lecteur.Read())
+            {
+                string nomContrainte = lecteur.GetString(0);
+                string schemaParent = lecteur.GetString(1);
+                string tableParent = lecteur.GetString(2);
+                string colonneParent = lecteur.GetString(3);
+                string schemaReference = lecteur.GetString(4);
+                string tableReference = lecteur.GetString(5);
+                string colonneReference = lecteur.GetString(6);
+                string actionDelete = lecteur.GetString(8);
+                string actionUpdate = lecteur.GetString(9);
+
+                if (!colonnesParent.ContainsKey(nomContrainte))
+                {
+                    colonnesParent[nomContrainte] = new List<string>();
+                    colonnesReference[nomContrainte] = new List<string>();
+
+                    tableParentParContrainte[nomContrainte] =
+                        $"{ConstruireNomSql(schemaParent)}.{ConstruireNomSql(tableParent)}";
+
+                    tableReferenceParContrainte[nomContrainte] =
+                        $"{ConstruireNomSql(schemaReference)}.{ConstruireNomSql(tableReference)}";
+
+                    actionDeleteParContrainte[nomContrainte] = actionDelete;
+                    actionUpdateParContrainte[nomContrainte] = actionUpdate;
+                }
+
+                colonnesParent[nomContrainte].Add(ConstruireNomSql(colonneParent));
+                colonnesReference[nomContrainte].Add(ConstruireNomSql(colonneReference));
+            }
+
+            foreach (string nomContrainte in colonnesParent.Keys)
+            {
+                string nomContrainteSql = ConstruireNomSql(nomContrainte);
+                string tableParentSql = tableParentParContrainte[nomContrainte];
+                string tableReferenceSql = tableReferenceParContrainte[nomContrainte];
+
+                string colonnesParentSql = string.Join(", ", colonnesParent[nomContrainte]);
+                string colonnesReferenceSql = string.Join(", ", colonnesReference[nomContrainte]);
+
+                string actionDeleteSql = ConstruireActionReferentielleSqlServer("DELETE", actionDeleteParContrainte[nomContrainte]);
+
+                string actionUpdateSql = ConstruireActionReferentielleSqlServer("UPDATE", actionUpdateParContrainte[nomContrainte]);
+
+                // Cette requête recrée une clé étrangère SQL Server.
+                string requeteCreation = $@"
+            ALTER TABLE {tableParentSql}
+            ADD CONSTRAINT {nomContrainteSql}
+            FOREIGN KEY ({colonnesParentSql})
+            REFERENCES {tableReferenceSql} ({colonnesReferenceSql})
+            {actionDeleteSql}
+            {actionUpdateSql};
+        ";
+
+                requetes.Add(requeteCreation);
+            }
+
+            return requetes;
+        }
+
+        private string ConstruireActionReferentielleSqlServer(string typeAction, string action)
+        {
+            return action switch
+            {
+                "CASCADE" => $"ON {typeAction} CASCADE",
+                "SET_NULL" => $"ON {typeAction} SET NULL",
+                "SET_DEFAULT" => $"ON {typeAction} SET DEFAULT",
+                _ => string.Empty
+            };
+        }
+
+        private void ExecuterRequeteContrainteSqlServer(
+            SqlConnection connexionCible,
+            string requete)
+        {
+            try
+            {
+                using SqlCommand commande = new SqlCommand(requete, connexionCible);
+                commande.ExecuteNonQuery();
+            }
+            catch (SqlException ex)
+            {
+                // 2714 : contrainte déjà existante.
+                // On ignore ce cas pour éviter de bloquer une deuxième exécution.
+                if (ex.Number != 2714)
+                {
+                    throw;
+                }
+            }
+        }
         private ExecutionSauvegardeModel ChargerSauvegarde()
         {
             if (!File.Exists(_cheminFichier))
