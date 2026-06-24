@@ -29,6 +29,20 @@ namespace SaimDataCopy.Controllers.Execution
             ChargerDonneesInitiales();
         }
 
+        public bool EstTraitementEnCours()
+        {
+            return _traitementEnCours;
+        }
+
+        public void AnnulerTraitementEnCoursDepuisMainForm()
+        {
+            if (!_traitementEnCours || _cancellationTokenSource == null)
+            {
+                return;
+            }
+
+            _cancellationTokenSource.Cancel();
+        }
         private void ChargerDonneesInitiales()
         {
             ExecutionTableauBordModel tableauBord =

@@ -203,7 +203,6 @@ namespace SaimDataCopy.DataProviders.BasesCopier
             {
                 BaseCopieModel? baseSauvegardee = basesSauvegardees
                     .FirstOrDefault(b => b.NomBase.Equals(baseServeur.NomBase, StringComparison.OrdinalIgnoreCase));
-
                 if (baseSauvegardee == null)
                 {
                     // Nouvelle base trouvée sur le serveur source.

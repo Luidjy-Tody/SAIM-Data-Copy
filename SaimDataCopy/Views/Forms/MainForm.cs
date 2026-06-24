@@ -93,6 +93,7 @@ namespace SaimDataCopy.Views.Forms
             CreerBarreHaut();
             CreerMenu();
             CreerBarreBas();
+            FormClosing += MainForm_FormClosing;
 
             // Au démarrage, on affiche directement la vraie page Configuration.
             AfficherPage(CreerConfigurationView());
@@ -209,6 +210,11 @@ namespace SaimDataCopy.Views.Forms
             btnFermer.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnFermer.Click += (sender, e) =>
             {
+                if (!VerifierFermetureApplication())
+                {
+                    return;
+                }
+
                 Close();
             };
 
@@ -662,6 +668,38 @@ namespace SaimDataCopy.Views.Forms
                     );
                     break;
             }
+        }
+
+        private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            if (!VerifierFermetureApplication())
+            {
+                e.Cancel = true;
+            }
+        }
+
+        private bool VerifierFermetureApplication()
+        {
+            if (executionController == null || !executionController.EstTraitementEnCours())
+            {
+                return true;
+            }
+
+            DialogResult choix = MessageBox.Show(
+                "Une copie ou un test de connexion est actuellement en cours.\n\n" +
+                "Voulez-vous annuler l'exécution en cours ?\n\n" +
+                "L'application restera ouverte jusqu'à l'arrêt complet de l'exécution.",
+                "Exécution en cours",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (choix == DialogResult.Yes)
+            {
+                executionController.AnnulerTraitementEnCoursDepuisMainForm();
+            }
+
+            return false;
         }
     }
 }
