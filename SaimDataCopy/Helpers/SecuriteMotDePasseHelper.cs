@@ -61,5 +61,48 @@ namespace SaimDataCopy.Helpers
 
             return Encoding.UTF8.GetString(donneesClaires);
         }
+
+
+        public static string HasherMotDePasse(string motDePasse)
+        {
+            if (string.IsNullOrWhiteSpace(motDePasse))
+            {
+                return string.Empty;
+            }
+
+            byte[] sel = RandomNumberGenerator.GetBytes(16);
+
+            byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+                motDePasse,
+                sel,
+                100000,
+                HashAlgorithmName.SHA256,
+                32
+            );
+
+            return Convert.ToBase64String(sel) + ":" + Convert.ToBase64String(hash);
+        }
+
+        public static bool VerifierMotDePasse(string motDePasse, string motDePasseHash)
+        {
+            if (string.IsNullOrWhiteSpace(motDePasse) || string.IsNullOrWhiteSpace(motDePasseHash))
+            {
+                return false;
+            }
+
+            string[] parties = motDePasseHash.Split(':');
+
+            if (parties.Length != 2)
+            {
+                return false;
+            }
+
+            byte[] sel = Convert.FromBase64String(parties[0]);
+            byte[] hashEnregistre = Convert.FromBase64String(parties[1]);
+
+            byte[] hashSaisi = Rfc2898DeriveBytes.Pbkdf2(motDePasse, sel, 100000, HashAlgorithmName.SHA256, 32);
+
+            return CryptographicOperations.FixedTimeEquals(hashSaisi, hashEnregistre);
+        }
     }
 }

@@ -24,7 +24,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using SaimDataCopy.Views.Commun;
-
+using SaimDataCopy.Services.Authentification;
 
 namespace SaimDataCopy.Views.Forms
 {
@@ -74,6 +74,13 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Historique.
         private HistoriqueController? historiqueController;
+
+        // Gère l'utilisateur connecté et le verrouillage par inactivité.
+        private readonly SessionUtilisateurService sessionUtilisateurService = new SessionUtilisateurService();
+
+        // Timer qui vérifie régulièrement si l'application doit se verrouiller.
+        private readonly System.Windows.Forms.Timer timerInactivite = new System.Windows.Forms.Timer();
+
         // Permet de déplacer la fenêtre quand on clique sur la barre personnalisée.
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -94,7 +101,7 @@ namespace SaimDataCopy.Views.Forms
             CreerMenu();
             CreerBarreBas();
             FormClosing += MainForm_FormClosing;
-
+            ConfigurerVerrouillageInactivite();
             // Au démarrage, on affiche directement la vraie page Configuration.
             AfficherPage(CreerConfigurationView());
         }
@@ -700,6 +707,46 @@ namespace SaimDataCopy.Views.Forms
             }
 
             return false;
+        }
+
+        private void ConfigurerVerrouillageInactivite()
+        {
+            KeyPreview = true;
+
+            MouseMove += MainForm_ActiviteUtilisateur;
+            MouseClick += MainForm_ActiviteUtilisateur;
+            KeyDown += MainForm_ActiviteUtilisateur;
+
+            timerInactivite.Interval = 10000; // Vérifie toutes les 10 secondes.
+            timerInactivite.Tick += TimerInactivite_Tick;
+            timerInactivite.Start();
+        }
+
+        private void MainForm_ActiviteUtilisateur(object? sender, EventArgs e)
+        {
+            if (sessionUtilisateurService.EstVerrouille)
+            {
+                return;
+            }
+
+            sessionUtilisateurService.ActualiserActivite();
+        }
+
+        private void TimerInactivite_Tick(object? sender, EventArgs e)
+        {
+            if (!sessionUtilisateurService.DoitVerrouiller())
+            {
+                return;
+            }
+
+            sessionUtilisateurService.Verrouiller();
+
+            MessageBox.Show(
+                "Application verrouillée après 5 minutes d'inactivité.",
+                "Verrouillage",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
     }
 }

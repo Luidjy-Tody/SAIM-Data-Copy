@@ -1,7 +1,8 @@
 using SaimDataCopy.Models.Execution;
 using SaimDataCopy.Services.Execution;
 using SaimDataCopy.Views.Forms;
-
+using SaimDataCopy.DataAccess;
+using Microsoft.EntityFrameworkCore;
 namespace SaimDataCopy
 {
     internal static class Program
@@ -24,6 +25,7 @@ namespace SaimDataCopy
 
                 // Sinon, on lance l'application normalement avec l'interface WinForms.
                 ApplicationConfiguration.Initialize();
+                await InitialiserBaseAuthentificationAsync();
                 Application.Run(new MainForm());
             }
             catch (Exception ex)
@@ -45,6 +47,23 @@ namespace SaimDataCopy
                     MessageBoxIcon.Error
                 );
             }
+        }
+
+        private static async Task InitialiserBaseAuthentificationAsync()
+        {
+            string chaineConnexion ="server=localhost;port=3306;database=saimdatacopy_auth;user=root;password=;";
+
+            DbContextOptions<AuthentificationDbContext> options = new DbContextOptionsBuilder<AuthentificationDbContext>()
+                    .UseMySql(
+                        chaineConnexion,
+                        ServerVersion.AutoDetect(chaineConnexion)
+                    )
+                    .Options;
+
+            using AuthentificationDbContext context = new AuthentificationDbContext(options);
+
+            // Crée la base et les tables si elles n'existent pas.
+            await context.Database.EnsureCreatedAsync();
         }
 
         private static bool EstModeExecutionAutomatique(string[] args)

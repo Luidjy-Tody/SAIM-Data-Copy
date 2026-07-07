@@ -6,7 +6,6 @@ namespace SaimDataCopy.DataProviders.Configuration
 {
     // DataProvider de configuration.
     // Il sauvegarde et charge les paramètres depuis un fichier JSON.
-    // Les mots de passe et les chaînes de connexion sont chiffrés avec DPAPI.
     public class ConfigurationDataProvider : IConfigurationDataProvider
     {
         private readonly string _cheminFichierConfiguration;
@@ -33,14 +32,12 @@ namespace SaimDataCopy.DataProviders.Configuration
                     NomServeur = configuration.ServeurSource.NomServeur,
 
                     // On chiffre toute la chaîne de connexion si elle est remplie.
-                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(
-                        configuration.ServeurSource.ChaineConnexion),
+                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(configuration.ServeurSource.ChaineConnexion),
 
                     Identifiant = configuration.ServeurSource.Identifiant,
 
                     // On chiffre aussi le mot de passe séparé.
-                    MotDePasse = SecuriteMotDePasseHelper.Chiffrer(
-                        configuration.ServeurSource.MotDePasse),
+                    MotDePasse = SecuriteMotDePasseHelper.Chiffrer(configuration.ServeurSource.MotDePasse),
 
                     Port = configuration.ServeurSource.Port
                 },
@@ -51,14 +48,12 @@ namespace SaimDataCopy.DataProviders.Configuration
                     NomServeur = configuration.ServeurCible.NomServeur,
 
                     // On chiffre toute la chaîne de connexion si elle est remplie.
-                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(
-                        configuration.ServeurCible.ChaineConnexion),
+                    ChaineConnexion = SecuriteMotDePasseHelper.Chiffrer(configuration.ServeurCible.ChaineConnexion),
 
                     Identifiant = configuration.ServeurCible.Identifiant,
 
                     // On chiffre aussi le mot de passe séparé.
-                    MotDePasse = SecuriteMotDePasseHelper.Chiffrer(
-                        configuration.ServeurCible.MotDePasse),
+                    MotDePasse = SecuriteMotDePasseHelper.Chiffrer(configuration.ServeurCible.MotDePasse),
 
                     Port = configuration.ServeurCible.Port
                 },
