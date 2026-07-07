@@ -1,1 +1,9 @@
 Data/email_parametres.json 
+# Données locales de l'application
+SaimDataCopy/Data/*.json
+
+# Scripts SQL de test locaux
+SQLQuery*.sql
+
+# Config locale d'authentification si créée plus tard
+SaimDataCopy/Data/authentification*.json
