@@ -1,4 +1,4 @@
-﻿using SaimDataCopy.Styles.Authentification;
+﻿using SaimDataCopy.Styles.Authentification.Identification;
 
 namespace SaimDataCopy.Views.Authentification.Components
 {
@@ -9,16 +9,18 @@ namespace SaimDataCopy.Views.Authentification.Components
         public AuthMessageControl()
         {
             Height = 25;
-            Width = 360;
-            BackColor = Color.Transparent;
+            Width = 400;
+            BackColor = Color.White;
+            Visible = false;
 
             lblMessage = new Label
             {
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = AuthentificationFormStyle.LabelChamp(),
-                ForeColor = AuthentificationFormStyle.RougeErreur,
-                Visible = false
+                Font = IdentificationStyle.LabelChamp(),
+                ForeColor = IdentificationStyle.RougeErreur,
+                BackColor = Color.White,
+                Visible = true
             };
 
             Controls.Add(lblMessage);
@@ -27,21 +29,21 @@ namespace SaimDataCopy.Views.Authentification.Components
         public void AfficherErreur(string message)
         {
             lblMessage.Text = message;
-            lblMessage.ForeColor = AuthentificationFormStyle.RougeErreur;
-            lblMessage.Visible = true;
+            lblMessage.ForeColor = IdentificationStyle.RougeErreur;
+            Visible = true;
         }
 
         public void AfficherSucces(string message)
         {
             lblMessage.Text = message;
-            lblMessage.ForeColor = AuthentificationFormStyle.VertSucces;
-            lblMessage.Visible = true;
+            lblMessage.ForeColor = IdentificationStyle.VertSucces;
+            Visible = true;
         }
 
         public void Effacer()
         {
             lblMessage.Text = string.Empty;
-            lblMessage.Visible = false;
+            Visible = false;
         }
     }
 }

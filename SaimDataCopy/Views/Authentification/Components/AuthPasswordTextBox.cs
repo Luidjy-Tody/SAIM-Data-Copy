@@ -1,5 +1,5 @@
 ﻿using FontAwesome.Sharp;
-using SaimDataCopy.Styles.Authentification;
+using SaimDataCopy.Styles.Authentification.Identification;
 
 namespace SaimDataCopy.Views.Authentification.Components
 {
@@ -10,36 +10,34 @@ namespace SaimDataCopy.Views.Authentification.Components
 
         public AuthPasswordTextBox()
         {
-            Height = 38;
-            Width = 360;
-            BackColor = Color.Transparent;
+            Size = new Size(430, 42);
+            BackColor = Color.White;
 
             txtMotDePasse = new TextBox
             {
                 Location = new Point(0, 0),
-                Width = 320,
-                Height = 38,
-                UseSystemPasswordChar = true
+                Size = new Size(400, 24),
+                UseSystemPasswordChar = true,
+                PlaceholderText = "Entrez votre mot de passe"
             };
 
-            AuthTextBoxStyle.Appliquer(txtMotDePasse);
+            IdentificationStyle.AppliquerTextBox(txtMotDePasse);
 
             btnAfficherMasquer = new IconButton
             {
-                Width = 38,
-                Height = 38,
-                Location = new Point(322, 0),
-
+                Location = new Point(402, -6),
+                Size = new Size(28, 34),
                 IconChar = IconChar.Eye,
-                IconColor = Color.Gray,
-                IconSize = 18,
-
+                IconColor = Color.FromArgb(100, 116, 139),
+                IconSize = 14,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
                 Cursor = Cursors.Hand
             };
 
             btnAfficherMasquer.FlatAppearance.BorderSize = 0;
+            btnAfficherMasquer.FlatAppearance.MouseOverBackColor = Color.White;
+            btnAfficherMasquer.FlatAppearance.MouseDownBackColor = Color.White;
 
             btnAfficherMasquer.Click += BtnAfficherMasquer_Click;
 
@@ -60,8 +58,8 @@ namespace SaimDataCopy.Views.Authentification.Components
             txtMotDePasse.UseSystemPasswordChar = !txtMotDePasse.UseSystemPasswordChar;
 
             btnAfficherMasquer.IconChar = txtMotDePasse.UseSystemPasswordChar
-                    ? IconChar.Eye
-                    : IconChar.EyeSlash;
+                ? IconChar.Eye
+                : IconChar.EyeSlash;
         }
     }
 }

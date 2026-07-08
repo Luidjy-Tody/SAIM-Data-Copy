@@ -1,4 +1,4 @@
-﻿using SaimDataCopy.Styles.Authentification;
+﻿using SaimDataCopy.Styles.Authentification.Identification;
 
 namespace SaimDataCopy.Views.Authentification.Components
 {
@@ -8,7 +8,7 @@ namespace SaimDataCopy.Views.Authentification.Components
         {
             Height = 1;
             Width = 360;
-            BackColor = AuthentificationFormStyle.Separateur;
+            BackColor = IdentificationStyle.Separateur;
         }
     }
 }

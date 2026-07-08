@@ -26,6 +26,7 @@ using System.Runtime.InteropServices;
 using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Services.Authentification;
 
+
 namespace SaimDataCopy.Views.Forms
 {
     public partial class MainForm : Form
@@ -76,10 +77,13 @@ namespace SaimDataCopy.Views.Forms
         private HistoriqueController? historiqueController;
 
         // Gère l'utilisateur connecté et le verrouillage par inactivité.
-        private readonly SessionUtilisateurService sessionUtilisateurService = new SessionUtilisateurService();
+        // On utilise une instance unique pour toute l'application.
+        private readonly SessionUtilisateurService sessionUtilisateurService = SessionUtilisateurService.Instance;
 
         // Timer qui vérifie régulièrement si l'application doit se verrouiller.
         private readonly System.Windows.Forms.Timer timerInactivite = new System.Windows.Forms.Timer();
+
+     
 
         // Permet de déplacer la fenêtre quand on clique sur la barre personnalisée.
         [DllImport("user32.dll")]
@@ -102,9 +106,12 @@ namespace SaimDataCopy.Views.Forms
             CreerBarreBas();
             FormClosing += MainForm_FormClosing;
             ConfigurerVerrouillageInactivite();
-            // Au démarrage, on affiche directement la vraie page Configuration.
+            // Au démarrage, l'utilisateur doit d'abord s'identifier.
             AfficherPage(CreerConfigurationView());
         }
+
+
+        
 
         // Configure la fenêtre principale pour un affichage adapté aux grands écrans.
         private void ConfigurerFenetrePrincipale()
@@ -708,6 +715,8 @@ namespace SaimDataCopy.Views.Forms
 
             return false;
         }
+
+        
 
         private void ConfigurerVerrouillageInactivite()
         {

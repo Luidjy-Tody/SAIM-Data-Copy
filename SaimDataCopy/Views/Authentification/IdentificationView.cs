@@ -1,4 +1,6 @@
-﻿using SaimDataCopy.Styles.Authentification;
+﻿using FontAwesome.Sharp;
+using SaimDataCopy.Styles.Authentification.Commun;
+using SaimDataCopy.Styles.Authentification.Identification;
 using SaimDataCopy.Views.Authentification.Components;
 
 namespace SaimDataCopy.Views.Authentification
@@ -8,6 +10,11 @@ namespace SaimDataCopy.Views.Authentification
         private readonly TextBox txtIdentifiant;
         private readonly AuthPasswordTextBox txtMotDePasse;
         private readonly AuthMessageControl messageControl;
+
+        private readonly Panel fond;
+        private readonly AuthHeaderControl header;
+        private readonly AuthShadowPanel carte;
+        private readonly AuthFooterControl footer;
 
         public event EventHandler? ConnexionDemandee;
         public event EventHandler? MotDePasseOublieDemande;
@@ -19,91 +26,88 @@ namespace SaimDataCopy.Views.Authentification
         public IdentificationView()
         {
             Text = "SaimDataCopy - Identification";
-            Size = new Size(560, 720);
-            StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
+            Size = new Size(1280, 720);
+            MinimumSize = new Size(1100, 650);
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.None;
+            MaximizeBox = true;
+            MinimizeBox = true;
 
-            AuthGradientPanel fond = new AuthGradientPanel
+            fond = new Panel
             {
                 Dock = DockStyle.Fill
             };
+            fond.Paint += Fond_Paint;
 
-            AuthHeaderControl header = new AuthHeaderControl
-            {
-                Location = new Point(20, 45)
-            };
+            header = new AuthHeaderControl();
 
-            AuthShadowPanel carte = new AuthShadowPanel
+            carte = new AuthShadowPanel
             {
-                Size = new Size(440, 410),
-                Location = new Point(60, 155)
+                Size = new Size(500, 455)
             };
 
             Label lblTitre = new Label
             {
                 Text = "Identification",
-                Font = AuthentificationFormStyle.TitreCarte(),
-                ForeColor = AuthentificationFormStyle.TextePrincipal,
+                Font = IdentificationStyle.TitreCarte(),
+                ForeColor = IdentificationStyle.TextePrincipal,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(40, 30),
-                Size = new Size(360, 45)
+                Location = new Point(50, 35),
+                Size = new Size(400, 45)
             };
 
-            Label lblIdentifiant = CreerLabel("Identifiant", 40, 95);
+            Label lblIdentifiant = CreerLabel("Identifiant", 50, 100);
 
             txtIdentifiant = new TextBox
             {
-                Location = new Point(40, 123),
-                Size = new Size(360, 36)
+                Location = new Point(50, 130),
+                Size = new Size(400, 42),
+                PlaceholderText = "Entrez votre nom utilisateur ou email"
             };
-            AuthTextBoxStyle.Appliquer(txtIdentifiant);
+            IdentificationStyle.AppliquerTextBox(txtIdentifiant);
 
-            Label lblMotDePasse = CreerLabel("Mot de passe", 40, 180);
+            Label lblMotDePasse = CreerLabel("Mot de passe", 50, 195);
 
             txtMotDePasse = new AuthPasswordTextBox
             {
-                Location = new Point(40, 208),
-                Size = new Size(360, 38)
+                Location = new Point(50, 225),
+                Size = new Size(430, 42)
             };
 
             LinkLabel lienMotDePasse = new LinkLabel
             {
                 Text = "Mot de passe oublié ?",
-                Location = new Point(220, 252),
-                Size = new Size(180, 25)
+                Location = new Point(260, 275),
+                Size = new Size(190, 25)
             };
-            AuthLabelStyle.AppliquerLien(lienMotDePasse);
+            IdentificationStyle.AppliquerLien(lienMotDePasse);
             lienMotDePasse.LinkClicked += (s, e) => MotDePasseOublieDemande?.Invoke(this, EventArgs.Empty);
 
             messageControl = new AuthMessageControl
             {
-                Location = new Point(40, 282)
+                Location = new Point(50, 310),
+                Size = new Size(400, 25)
             };
 
             Button btnConnexion = new Button
             {
                 Text = "S'identifier",
-                Location = new Point(40, 315),
-                Size = new Size(360, 48)
+                Location = new Point(50, 345),
+                Size = new Size(400, 50)
             };
-            AuthButtonStyle.Appliquer(btnConnexion);
+            IdentificationStyle.AppliquerBouton(btnConnexion);
             btnConnexion.Click += (s, e) => ConnexionDemandee?.Invoke(this, EventArgs.Empty);
 
             LinkLabel lienInscription = new LinkLabel
             {
                 Text = "Pas encore de compte ? S'inscrire",
-                Location = new Point(40, 370),
-                Size = new Size(360, 25)
+                Location = new Point(50, 405),
+                Size = new Size(400, 25)
             };
-            AuthLabelStyle.AppliquerLien(lienInscription);
+            IdentificationStyle.AppliquerLien(lienInscription);
             lienInscription.LinkClicked += (s, e) => InscriptionDemandee?.Invoke(this, EventArgs.Empty);
 
-            AuthFooterControl footer = new AuthFooterControl
-            {
-                Location = new Point(20, 610)
-            };
+            footer = new AuthFooterControl();
 
             carte.Controls.Add(lblTitre);
             carte.Controls.Add(lblIdentifiant);
@@ -120,6 +124,85 @@ namespace SaimDataCopy.Views.Authentification
             fond.Controls.Add(footer);
 
             Controls.Add(fond);
+
+            AjouterBoutonsFenetre();
+
+            Resize += (s, e) => CentrerElements();
+            Shown += (s, e) => CentrerElements();
+        }
+
+        private void Fond_Paint(object? sender, PaintEventArgs e)
+        {
+            AuthBackgroundStyle.DessinerFond(e.Graphics, fond.ClientRectangle);
+        }
+
+        private void CentrerElements()
+        {
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            header.Location = new Point((ClientSize.Width - header.Width) / 2, 70);
+
+            carte.Location = new Point(
+                (ClientSize.Width - carte.Width) / 2,
+                (ClientSize.Height - carte.Height) / 2 + 35
+            );
+
+            footer.Location = new Point(
+                (ClientSize.Width - footer.Width) / 2,
+                ClientSize.Height - 55
+            );
+        }
+
+        private void AjouterBoutonsFenetre()
+        {
+            IconButton btnReduire = CreerBoutonFenetre(IconChar.Minus);
+            IconButton btnAgrandir = CreerBoutonFenetre(IconChar.WindowMaximize);
+            IconButton btnFermer = CreerBoutonFenetre(IconChar.Xmark);
+
+            btnReduire.Location = new Point(ClientSize.Width - 170, 14);
+            btnAgrandir.Location = new Point(ClientSize.Width - 115, 14);
+            btnFermer.Location = new Point(ClientSize.Width - 60, 14);
+
+            btnReduire.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAgrandir.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnFermer.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            btnReduire.Click += (s, e) => WindowState = FormWindowState.Minimized;
+
+            btnAgrandir.Click += (s, e) =>
+            {
+                WindowState = WindowState == FormWindowState.Maximized
+                    ? FormWindowState.Normal
+                    : FormWindowState.Maximized;
+            };
+
+            btnFermer.Click += (s, e) =>
+            {
+                DialogResult = DialogResult.Cancel;
+            };
+
+            AuthWindowButtonStyle.Appliquer(btnReduire);
+            AuthWindowButtonStyle.Appliquer(btnAgrandir);
+            AuthWindowButtonStyle.AppliquerBoutonFermer(btnFermer);
+
+            Controls.Add(btnReduire);
+            Controls.Add(btnAgrandir);
+            Controls.Add(btnFermer);
+
+            btnReduire.BringToFront();
+            btnAgrandir.BringToFront();
+            btnFermer.BringToFront();
+        }
+
+        private static IconButton CreerBoutonFenetre(IconChar icone)
+        {
+            return new IconButton
+            {
+                IconChar = icone
+            };
         }
 
         private static Label CreerLabel(string texte, int x, int y)
@@ -128,10 +211,10 @@ namespace SaimDataCopy.Views.Authentification
             {
                 Text = texte,
                 Location = new Point(x, y),
-                Size = new Size(360, 24)
+                Size = new Size(400, 24)
             };
 
-            AuthLabelStyle.AppliquerLabelChamp(label);
+            IdentificationStyle.AppliquerLabelChamp(label);
 
             return label;
         }

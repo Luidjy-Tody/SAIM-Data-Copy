@@ -8,9 +8,10 @@ namespace SaimDataCopy.Services.Authentification
 
         Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse);
 
+        Task<string> InscrireEtRetournerMessageAsync(string nomComplet, string identifiant, string email, string motDePasse);
+
         Task AjouterLogAsync(int? utilisateurId, string nomUtilisateur, string action, string details);
 
         UtilisateurModel? UtilisateurConnecte { get; }
-
     }
 }

@@ -27,14 +27,18 @@ namespace SaimDataCopy.Services.Authentification
                 return false;
             }
 
-            UtilisateurModel? utilisateur = await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+            identifiantOuEmail = identifiantOuEmail.Trim();
+
+            UtilisateurModel? utilisateur =
+                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
 
             if (utilisateur == null || !utilisateur.EstActif)
             {
                 return false;
             }
 
-            bool motDePasseCorrect = SecuriteMotDePasseHelper.VerifierMotDePasse(motDePasse, utilisateur.MotDePasseHash);
+            bool motDePasseCorrect =
+                SecuriteMotDePasseHelper.VerifierMotDePasse(motDePasse, utilisateur.MotDePasseHash);
 
             if (!motDePasseCorrect)
             {
@@ -46,7 +50,11 @@ namespace SaimDataCopy.Services.Authentification
 
             UtilisateurConnecte = utilisateur;
 
-            await AjouterLogAsync(utilisateur.Id, utilisateur.Identifiant, "Connexion", "Connexion réussie."
+            await AjouterLogAsync(
+                utilisateur.Id,
+                utilisateur.Identifiant,
+                "Connexion",
+                "Connexion réussie."
             );
 
             return true;
@@ -54,24 +62,48 @@ namespace SaimDataCopy.Services.Authentification
 
         public async Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse)
         {
-            if (string.IsNullOrWhiteSpace(nomComplet) || string.IsNullOrWhiteSpace(identifiant) ||
-                string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(motDePasse))
+            string message = await InscrireEtRetournerMessageAsync(
+                nomComplet,
+                identifiant,
+                email,
+                motDePasse
+            );
+
+            return message == "Compte créé avec succès. Vous pouvez vous connecter.";
+        }
+
+        public async Task<string> InscrireEtRetournerMessageAsync(
+            string nomComplet,
+            string identifiant,
+            string email,
+            string motDePasse)
+        {
+            if (string.IsNullOrWhiteSpace(nomComplet) ||
+                string.IsNullOrWhiteSpace(identifiant) ||
+                string.IsNullOrWhiteSpace(email) ||
+                string.IsNullOrWhiteSpace(motDePasse))
             {
-                return false;
+                return "Veuillez remplir tous les champs obligatoires.";
             }
 
-            UtilisateurModel? utilisateurExistant = await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiant);
+            nomComplet = nomComplet.Trim();
+            identifiant = identifiant.Trim();
+            email = email.Trim();
 
-            if (utilisateurExistant != null)
+            UtilisateurModel? identifiantExistant =
+                await _dataProvider.RecupererUtilisateurParIdentifiantAsync(identifiant);
+
+            if (identifiantExistant != null)
             {
-                return false;
+                return "Cet identifiant existe déjà.";
             }
 
-            UtilisateurModel? emailExistant = await _dataProvider.RecupererUtilisateurParEmailAsync(email);
+            UtilisateurModel? emailExistant =
+                await _dataProvider.RecupererUtilisateurParEmailAsync(email);
 
             if (emailExistant != null)
             {
-                return false;
+                return "Cet email existe déjà.";
             }
 
             UtilisateurModel utilisateur = new UtilisateurModel
@@ -86,10 +118,14 @@ namespace SaimDataCopy.Services.Authentification
 
             await _dataProvider.AjouterUtilisateurAsync(utilisateur);
 
-            await AjouterLogAsync(utilisateur.Id, utilisateur.Identifiant, "Inscription", "Nouveau compte utilisateur créé."
+            await AjouterLogAsync(
+                utilisateur.Id,
+                utilisateur.Identifiant,
+                "Inscription",
+                "Nouveau compte utilisateur créé."
             );
 
-            return true;
+            return "Compte créé avec succès. Vous pouvez vous connecter.";
         }
 
         public async Task AjouterLogAsync(

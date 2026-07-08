@@ -1,4 +1,4 @@
-﻿using SaimDataCopy.Styles.Authentification;
+﻿using SaimDataCopy.Styles.Authentification.Identification;
 
 namespace SaimDataCopy.Views.Authentification.Components
 {
@@ -12,8 +12,8 @@ namespace SaimDataCopy.Views.Authentification.Components
             Label lblFooter = new Label
             {
                 Text = "SAIM LTD — v1.0.0",
-                Font = AuthentificationFormStyle.TextePetit(),
-                ForeColor = AuthentificationFormStyle.VertClair,
+                Font = IdentificationStyle.TextePetit(),
+                ForeColor = IdentificationStyle.VertClair,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill
             };

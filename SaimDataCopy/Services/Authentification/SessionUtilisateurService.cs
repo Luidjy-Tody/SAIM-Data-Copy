@@ -4,7 +4,14 @@ namespace SaimDataCopy.Services.Authentification
 {
     public class SessionUtilisateurService
     {
+        public static SessionUtilisateurService Instance { get; } = new SessionUtilisateurService();
+
         private readonly TimeSpan _dureeInactivite = TimeSpan.FromMinutes(5);
+
+        private SessionUtilisateurService()
+        {
+
+        }
 
         public UtilisateurModel? UtilisateurConnecte { get; private set; }
 

@@ -4,6 +4,8 @@ namespace SaimDataCopy.DataProviders.Authentification
 {
     public interface IAuthentificationDataProvider
     {
+        Task<UtilisateurModel?> RecupererUtilisateurParIdentifiantAsync(string identifiant);
+
         Task<UtilisateurModel?> RecupererUtilisateurParIdentifiantOuEmailAsync(string identifiantOuEmail);
 
         Task<UtilisateurModel?> RecupererUtilisateurParEmailAsync(string email);

@@ -11,11 +11,21 @@ namespace SaimDataCopy.DataProviders.Authentification
             string chaineConnexion = "server=localhost;port=3306;database=saimdatacopy_auth;user=root;password=;";
 
             DbContextOptions<AuthentificationDbContext> options = new DbContextOptionsBuilder<AuthentificationDbContext>()
-                    .UseMySql(chaineConnexion, ServerVersion.AutoDetect(chaineConnexion)
-                    )
-                    .Options;
+                .UseMySql(
+                    chaineConnexion,
+                    ServerVersion.AutoDetect(chaineConnexion)
+                )
+                .Options;
 
             return new AuthentificationDbContext(options);
+        }
+
+        public async Task<UtilisateurModel?> RecupererUtilisateurParIdentifiantAsync(string identifiant)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            return await context.Utilisateurs
+                .FirstOrDefaultAsync(u => u.Identifiant == identifiant);
         }
 
         public async Task<UtilisateurModel?> RecupererUtilisateurParIdentifiantOuEmailAsync(string identifiantOuEmail)
@@ -23,9 +33,9 @@ namespace SaimDataCopy.DataProviders.Authentification
             using AuthentificationDbContext context = CreerContext();
 
             return await context.Utilisateurs
-                
-                .FirstOrDefaultAsync(u => u.Identifiant ==  identifiantOuEmail || u.Email == identifiantOuEmail);
-
+                .FirstOrDefaultAsync(u =>
+                    u.Identifiant == identifiantOuEmail ||
+                    u.Email == identifiantOuEmail);
         }
 
         public async Task<UtilisateurModel?> RecupererUtilisateurParEmailAsync(string email)
@@ -33,9 +43,7 @@ namespace SaimDataCopy.DataProviders.Authentification
             using AuthentificationDbContext context = CreerContext();
 
             return await context.Utilisateurs
-
                 .FirstOrDefaultAsync(u => u.Email == email);
-
         }
 
         public async Task AjouterUtilisateurAsync(UtilisateurModel utilisateur)
@@ -44,7 +52,6 @@ namespace SaimDataCopy.DataProviders.Authentification
 
             context.Utilisateurs.Add(utilisateur);
             await context.SaveChangesAsync();
-
         }
 
         public async Task ModifierUtilisateurAsync(UtilisateurModel utilisateur)
@@ -62,6 +69,5 @@ namespace SaimDataCopy.DataProviders.Authentification
             context.LogsUtilisateurs.Add(log);
             await context.SaveChangesAsync();
         }
-
     }
 }

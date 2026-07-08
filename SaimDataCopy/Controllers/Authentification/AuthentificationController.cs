@@ -8,7 +8,14 @@ namespace SaimDataCopy.Controllers.Authentification
         private readonly IAuthentificationService _authentificationService;
         private readonly SessionUtilisateurService _sessionUtilisateurService;
 
-        public AuthentificationController(IAuthentificationService authentificationService, SessionUtilisateurService sessionUtilisateurService)
+        public AuthentificationController()
+            : this(new AuthentificationService(), SessionUtilisateurService.Instance)
+        {
+        }
+
+        public AuthentificationController(
+            IAuthentificationService authentificationService,
+            SessionUtilisateurService sessionUtilisateurService)
         {
             _authentificationService = authentificationService;
             _sessionUtilisateurService = sessionUtilisateurService;
@@ -16,7 +23,10 @@ namespace SaimDataCopy.Controllers.Authentification
 
         public async Task<bool> ConnecterAsync(string identifiantOuEmail, string motDePasse)
         {
-            bool connexionOk = await _authentificationService.ConnecterAsync(identifiantOuEmail, motDePasse);
+            bool connexionOk = await _authentificationService.ConnecterAsync(
+                identifiantOuEmail,
+                motDePasse
+            );
 
             if (!connexionOk)
             {
@@ -37,14 +47,38 @@ namespace SaimDataCopy.Controllers.Authentification
 
         public async Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse)
         {
-            return await _authentificationService.InscrireAsync(nomComplet, identifiant, email, motDePasse);
+            return await _authentificationService.InscrireAsync(
+                nomComplet,
+                identifiant,
+                email,
+                motDePasse
+            );
+        }
+
+        public async Task<string> InscrireEtRetournerMessageAsync(
+            string nomComplet,
+            string identifiant,
+            string email,
+            string motDePasse)
+        {
+            return await _authentificationService.InscrireEtRetournerMessageAsync(
+                nomComplet,
+                identifiant,
+                email,
+                motDePasse
+            );
         }
 
         public async Task AjouterLogAsync(string action, string details)
         {
             UtilisateurModel? utilisateur = _sessionUtilisateurService.UtilisateurConnecte;
 
-            await _authentificationService.AjouterLogAsync(utilisateur?.Id, utilisateur?.Identifiant ?? "Utilisateur inconnu", action, details);
+            await _authentificationService.AjouterLogAsync(
+                utilisateur?.Id,
+                utilisateur?.Identifiant ?? "Utilisateur inconnu",
+                action,
+                details
+            );
         }
 
         public void Deconnecter()
@@ -56,6 +90,5 @@ namespace SaimDataCopy.Controllers.Authentification
         {
             _sessionUtilisateurService.Deverrouiller();
         }
-
     }
 }

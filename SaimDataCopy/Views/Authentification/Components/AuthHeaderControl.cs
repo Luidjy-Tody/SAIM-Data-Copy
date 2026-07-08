@@ -1,4 +1,4 @@
-﻿using SaimDataCopy.Styles.Authentification;
+﻿using SaimDataCopy.Styles.Authentification.Identification;
 
 namespace SaimDataCopy.Views.Authentification.Components
 {
@@ -12,7 +12,7 @@ namespace SaimDataCopy.Views.Authentification.Components
             Label lblTitre = new Label
             {
                 Text = "SaimDataCopy",
-                Font = AuthentificationFormStyle.TitreApplication(),
+                Font = IdentificationStyle.TitreApplication(),
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(0, 0),
@@ -22,8 +22,8 @@ namespace SaimDataCopy.Views.Authentification.Components
             Label lblSousTitre = new Label
             {
                 Text = "Copie automatique des données entre serveurs",
-                Font = AuthentificationFormStyle.SousTitreApplication(),
-                ForeColor = AuthentificationFormStyle.VertClair,
+                Font = IdentificationStyle.SousTitreApplication(),
+                ForeColor = IdentificationStyle.VertClair,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(0, 50),
                 Size = new Size(520, 25)
