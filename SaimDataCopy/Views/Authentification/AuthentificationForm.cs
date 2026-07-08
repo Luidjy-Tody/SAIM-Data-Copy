@@ -24,6 +24,7 @@ namespace SaimDataCopy.Views.Authentification
         private readonly IconButton btnReduire;
         private readonly IconButton btnAgrandir;
         private readonly IconButton btnFermer;
+        private bool creationPremierCompteEnCours;
         private readonly AdminVerificationView adminVerificationView;
         private bool adminAutoriseInscription;
         private UserControl? pageActuelleControle;
@@ -149,9 +150,29 @@ namespace SaimDataCopy.Views.Authentification
                 AfficherPageInscription();
             };
 
-            identificationView.InscriptionDemandee += (sender, e) =>
+            identificationView.InscriptionDemandee += async (sender, e) =>
             {
+                bool utilisateurExiste =
+                    await _authentificationController.ExisteAuMoinsUnUtilisateurAsync();
+
+                if (!utilisateurExiste)
+                {
+                    creationPremierCompteEnCours = true;
+                    adminAutoriseInscription = true;
+
+                    inscriptionView.ViderMessage();
+                    inscriptionView.DefinirStatut("Admin");
+                    inscriptionView.BloquerChoixStatut();
+
+                    AfficherPageInscription();
+                    return;
+                }
+
+                creationPremierCompteEnCours = false;
                 adminAutoriseInscription = false;
+
+                inscriptionView.AutoriserChoixStatut();
+
                 adminVerificationView.ViderMessage();
                 AfficherPageVerificationAdmin();
             };
@@ -246,12 +267,14 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
+            string statutCompte = creationPremierCompteEnCours? "Admin" : inscriptionView.Statut;
+
             string messageInscription = await _authentificationController.InscrireEtRetournerMessageAsync(
                 inscriptionView.NomComplet,
                 inscriptionView.Identifiant,
                 inscriptionView.Email,
                 inscriptionView.MotDePasse,
-                inscriptionView.Statut
+                statutCompte
             );
 
             if (messageInscription != "Compte créé avec succès. Vous pouvez vous connecter.")
@@ -261,6 +284,8 @@ namespace SaimDataCopy.Views.Authentification
             }
 
             inscriptionView.AfficherSucces(messageInscription);
+            creationPremierCompteEnCours = false;
+            inscriptionView.AutoriserChoixStatut();
         }
 
         private void MotDePasseOublieView_EnvoiLienDemande(object? sender, EventArgs e)

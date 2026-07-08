@@ -189,6 +189,11 @@ namespace SaimDataCopy.Services.Authentification
             return "User";
         }
 
+        public async Task<bool> ExisteAuMoinsUnUtilisateurAsync()
+        {
+            return await _dataProvider.ExisteAuMoinsUnUtilisateurAsync();
+        }
+
         public async Task AjouterLogAsync(
             int? utilisateurId,
             string nomUtilisateur,

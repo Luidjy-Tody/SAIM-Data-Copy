@@ -10,6 +10,8 @@ namespace SaimDataCopy.DataProviders.Authentification
 
         Task<UtilisateurModel?> RecupererUtilisateurParEmailAsync(string email);
 
+        Task<bool> ExisteAuMoinsUnUtilisateurAsync();
+
         Task AjouterUtilisateurAsync(UtilisateurModel utilisateur);
 
         Task ModifierUtilisateurAsync(UtilisateurModel utilisateur);

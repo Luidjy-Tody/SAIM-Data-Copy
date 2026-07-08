@@ -12,6 +12,8 @@ namespace SaimDataCopy.Services.Authentification
 
         Task<string> InscrireEtRetournerMessageAsync(string nomComplet, string identifiant, string email, string motDePasse, string statut);
 
+        Task<bool> ExisteAuMoinsUnUtilisateurAsync();
+
         Task AjouterLogAsync(int? utilisateurId, string nomUtilisateur, string action, string details);
 
         UtilisateurModel? UtilisateurConnecte { get; }

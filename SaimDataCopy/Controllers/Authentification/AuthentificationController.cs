@@ -45,6 +45,11 @@ namespace SaimDataCopy.Controllers.Authentification
             return true;
         }
 
+        public async Task<bool> ExisteAuMoinsUnUtilisateurAsync()
+        {
+            return await _authentificationService.ExisteAuMoinsUnUtilisateurAsync();
+        }
+
         public async Task<bool> VerifierAuthentificationAdminAsync(string identifiantOuEmail, string motDePasse)
         {
             return await _authentificationService.VerifierAuthentificationAdminAsync(

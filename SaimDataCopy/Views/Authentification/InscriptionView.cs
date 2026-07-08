@@ -116,6 +116,26 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(lienConnexion);
         }
 
+        public void DefinirStatut(string statut)
+        {
+            if (statut == "Admin")
+            {
+                cboStatut.SelectedItem = "Admin";
+                return;
+            }
+
+            cboStatut.SelectedItem = "User";
+        }
+
+        public void BloquerChoixStatut()
+        {
+            cboStatut.Enabled = false;
+        }
+
+        public void AutoriserChoixStatut()
+        {
+            cboStatut.Enabled = true;
+        }
         private static Label CreerLabel(string texte, int x, int y)
         {
             Label label = new Label

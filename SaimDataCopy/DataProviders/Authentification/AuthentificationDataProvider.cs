@@ -46,6 +46,13 @@ namespace SaimDataCopy.DataProviders.Authentification
                 );
         }
 
+        public async Task<bool> ExisteAuMoinsUnUtilisateurAsync()
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            return await context.Utilisateurs.AnyAsync();
+        }
+
         public async Task<UtilisateurModel?> RecupererUtilisateurParEmailAsync(string email)
         {
             using AuthentificationDbContext context = CreerContext();
