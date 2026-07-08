@@ -64,148 +64,15 @@ namespace SaimDataCopy
 
         private static Task<bool> AfficherAuthentificationAsync(AuthentificationController authentificationController)
         {
-            using IdentificationView identificationView = new IdentificationView();
-            using InscriptionView inscriptionView = new InscriptionView();
-            using MotDePasseOublieView motDePasseOublieView = new MotDePasseOublieView();
+            using AuthentificationForm authentificationForm = new AuthentificationForm(authentificationController);
 
-            string pageActuelle = "Identification";
-            bool authentificationReussie = false;
-            bool quitterApplication = false;
+            DialogResult resultat = authentificationForm.ShowDialog();
 
-            identificationView.ConnexionDemandee += async (sender, e) =>
-            {
-                identificationView.ViderErreur();
+            bool authentificationOk =
+                resultat == DialogResult.OK &&
+                authentificationForm.AuthentificationReussie;
 
-                bool connexionOk = await authentificationController.ConnecterAsync(
-                    identificationView.Identifiant,
-                    identificationView.MotDePasse
-                );
-
-                if (!connexionOk)
-                {
-                    identificationView.AfficherErreur("Identifiant ou mot de passe incorrect.");
-                    return;
-                }
-
-                authentificationReussie = true;
-                identificationView.DialogResult = DialogResult.OK;
-            };
-
-            identificationView.InscriptionDemandee += (sender, e) =>
-            {
-                pageActuelle = "Inscription";
-                identificationView.DialogResult = DialogResult.Retry;
-            };
-
-            identificationView.MotDePasseOublieDemande += (sender, e) =>
-            {
-                pageActuelle = "MotDePasseOublie";
-                identificationView.DialogResult = DialogResult.Ignore;
-            };
-
-            inscriptionView.InscriptionDemandee += async (sender, e) =>
-            {
-                inscriptionView.ViderMessage();
-
-                if (inscriptionView.MotDePasse != inscriptionView.ConfirmationMotDePasse)
-                {
-                    inscriptionView.AfficherErreur("Les mots de passe ne correspondent pas.");
-                    return;
-                }
-
-                string messageInscription = await authentificationController.InscrireEtRetournerMessageAsync(
-                    inscriptionView.NomComplet,
-                    inscriptionView.Identifiant,
-                    inscriptionView.Email,
-                    inscriptionView.MotDePasse
-                );
-
-                if (messageInscription != "Compte créé avec succès. Vous pouvez vous connecter.")
-                {
-                    inscriptionView.AfficherErreur(messageInscription);
-                    return;
-                }
-
-                inscriptionView.AfficherSucces(messageInscription);
-            };
-
-            inscriptionView.RetourConnexionDemande += (sender, e) =>
-            {
-                pageActuelle = "Identification";
-                inscriptionView.DialogResult = DialogResult.OK;
-            };
-
-            motDePasseOublieView.EnvoiLienDemande += (sender, e) =>
-            {
-                motDePasseOublieView.ViderMessage();
-
-                if (string.IsNullOrWhiteSpace(motDePasseOublieView.Email))
-                {
-                    motDePasseOublieView.AfficherErreur("Veuillez saisir votre adresse email.");
-                    return;
-                }
-
-                motDePasseOublieView.AfficherSucces("Fonctionnalité à finaliser : réinitialisation du mot de passe.");
-            };
-
-            motDePasseOublieView.RetourConnexionDemande += (sender, e) =>
-            {
-                pageActuelle = "Identification";
-                motDePasseOublieView.DialogResult = DialogResult.OK;
-            };
-
-            while (!authentificationReussie && !quitterApplication)
-            {
-                switch (pageActuelle)
-                {
-                    case "Identification":
-                        identificationView.DialogResult = DialogResult.None;
-
-                        DialogResult resultatIdentification = identificationView.ShowDialog();
-
-                        if (authentificationReussie)
-                        {
-                            return Task.FromResult(true);
-                        }
-
-                        if (resultatIdentification == DialogResult.Cancel)
-                        {
-                            quitterApplication = true;
-                        }
-
-                        break;
-
-                    case "Inscription":
-                        inscriptionView.DialogResult = DialogResult.None;
-
-                        DialogResult resultatInscription = inscriptionView.ShowDialog();
-
-                        if (resultatInscription == DialogResult.Cancel)
-                        {
-                            quitterApplication = true;
-                        }
-
-                        break;
-
-                    case "MotDePasseOublie":
-                        motDePasseOublieView.DialogResult = DialogResult.None;
-
-                        DialogResult resultatMotDePasseOublie = motDePasseOublieView.ShowDialog();
-
-                        if (resultatMotDePasseOublie == DialogResult.Cancel)
-                        {
-                            quitterApplication = true;
-                        }
-
-                        break;
-
-                    default:
-                        pageActuelle = "Identification";
-                        break;
-                }
-            }
-
-            return Task.FromResult(authentificationReussie);
+            return Task.FromResult(authentificationOk);
         }
 
         private static async Task InitialiserBaseAuthentificationAsync()

@@ -1,11 +1,9 @@
-﻿using FontAwesome.Sharp;
-using SaimDataCopy.Styles.Authentification.Commun;
-using SaimDataCopy.Styles.Authentification.Inscription;
+﻿using SaimDataCopy.Styles.Authentification.Inscription;
 using SaimDataCopy.Views.Authentification.Components;
 
 namespace SaimDataCopy.Views.Authentification
 {
-    public class InscriptionView : Form
+    public class InscriptionView : UserControl
     {
         private readonly TextBox txtNomComplet;
         private readonly TextBox txtIdentifiant;
@@ -13,11 +11,7 @@ namespace SaimDataCopy.Views.Authentification
         private readonly AuthPasswordTextBox txtMotDePasse;
         private readonly AuthPasswordTextBox txtConfirmation;
         private readonly AuthMessageControl messageControl;
-
-        private readonly Panel fond;
-        private readonly AuthHeaderControl header;
         private readonly AuthShadowPanel carte;
-        private readonly AuthFooterControl footer;
 
         public event EventHandler? InscriptionDemandee;
         public event EventHandler? RetourConnexionDemande;
@@ -30,22 +24,13 @@ namespace SaimDataCopy.Views.Authentification
 
         public InscriptionView()
         {
-            Text = "SaimDataCopy - Inscription";
-            Size = new Size(1280, 720);
-            MinimumSize = new Size(1100, 650);
-            StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.None;
-            MaximizeBox = true;
-            MinimizeBox = true;
-
-            fond = new Panel { Dock = DockStyle.Fill };
-            fond.Paint += Fond_Paint;
-
-            header = new AuthHeaderControl();
+            Dock = DockStyle.Fill;
+            BackColor = Color.Transparent;
+            DoubleBuffered = true;
 
             carte = new AuthShadowPanel
             {
-                Size = new Size(500, 615)
+                Size = new Size(540, 640)
             };
 
             Label lblTitre = new Label
@@ -105,8 +90,6 @@ namespace SaimDataCopy.Views.Authentification
             InscriptionStyle.AppliquerLien(lienConnexion);
             lienConnexion.LinkClicked += (s, e) => RetourConnexionDemande?.Invoke(this, EventArgs.Empty);
 
-            footer = new AuthFooterControl();
-
             carte.Controls.Add(lblTitre);
             carte.Controls.Add(lblNom);
             carte.Controls.Add(txtNomComplet);
@@ -122,91 +105,20 @@ namespace SaimDataCopy.Views.Authentification
             carte.Controls.Add(btnInscription);
             carte.Controls.Add(lienConnexion);
 
-            fond.Controls.Add(header);
-            fond.Controls.Add(carte);
-            fond.Controls.Add(footer);
+            Controls.Add(carte);
 
-            Controls.Add(fond);
-
-            AjouterBoutonsFenetre();
-
-            Resize += (s, e) => CentrerElements();
-            Shown += (s, e) => CentrerElements();
+            Resize += (s, e) => CentrerCarte();
+            VisibleChanged += (s, e) => CentrerCarte();
         }
 
-        private void Fond_Paint(object? sender, PaintEventArgs e)
-        {
-            AuthBackgroundStyle.DessinerFond(e.Graphics, fond.ClientRectangle);
-        }
-
-        private void CentrerElements()
+        private void CentrerCarte()
         {
             if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
             {
                 return;
             }
 
-            header.Location = new Point((ClientSize.Width - header.Width) / 2, 25);
-
-            carte.Location = new Point(
-                (ClientSize.Width - carte.Width) / 2,
-                (ClientSize.Height - carte.Height) / 2 + 55
-            );
-
-            footer.Location = new Point(
-                (ClientSize.Width - footer.Width) / 2,
-                ClientSize.Height - 45
-            );
-        }
-
-        private void AjouterBoutonsFenetre()
-        {
-            IconButton btnReduire = CreerBoutonFenetre(IconChar.Minus);
-            IconButton btnAgrandir = CreerBoutonFenetre(IconChar.WindowMaximize);
-            IconButton btnFermer = CreerBoutonFenetre(IconChar.Xmark);
-
-            btnReduire.Location = new Point(ClientSize.Width - 170, 14);
-            btnAgrandir.Location = new Point(ClientSize.Width - 115, 14);
-            btnFermer.Location = new Point(ClientSize.Width - 60, 14);
-
-            btnReduire.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAgrandir.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnFermer.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-
-            btnReduire.Click += (s, e) => WindowState = FormWindowState.Minimized;
-
-            btnAgrandir.Click += (s, e) =>
-            {
-                WindowState = WindowState == FormWindowState.Maximized
-                    ? FormWindowState.Normal
-                    : FormWindowState.Maximized;
-            };
-
-            btnFermer.Click += (s, e) =>
-            {
-                DialogResult = DialogResult.Cancel;
-                Close();
-            };
-
-            AuthWindowButtonStyle.Appliquer(btnReduire);
-            AuthWindowButtonStyle.Appliquer(btnAgrandir);
-            AuthWindowButtonStyle.AppliquerBoutonFermer(btnFermer);
-
-            Controls.Add(btnReduire);
-            Controls.Add(btnAgrandir);
-            Controls.Add(btnFermer);
-
-            btnReduire.BringToFront();
-            btnAgrandir.BringToFront();
-            btnFermer.BringToFront();
-        }
-
-        private static IconButton CreerBoutonFenetre(IconChar icone)
-        {
-            return new IconButton
-            {
-                IconChar = icone
-            };
+            carte.Location = new Point( (ClientSize.Width - carte.Width) / 2, Math.Max(0, (ClientSize.Height - carte.Height) / 2));
         }
 
         private static Label CreerLabel(string texte, int x, int y)
