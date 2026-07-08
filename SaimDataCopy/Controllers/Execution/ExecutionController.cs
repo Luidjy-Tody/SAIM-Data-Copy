@@ -1,4 +1,7 @@
-﻿using SaimDataCopy.Models.Execution;
+﻿using SaimDataCopy.Controllers.Authentification;
+using SaimDataCopy.Models.BasesCopier;
+using SaimDataCopy.Models.Execution;
+using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Services.Execution;
 using SaimDataCopy.Views.Execution;
 
@@ -10,6 +13,8 @@ namespace SaimDataCopy.Controllers.Execution
     {
         private readonly IExecutionView _view;
         private readonly IExecutionService _service;
+        private readonly AuthentificationController _authentificationController;
+        private readonly IBasesCopierService _basesCopierService;
 
         private CancellationTokenSource? _cancellationTokenSource;
 
@@ -20,6 +25,8 @@ namespace SaimDataCopy.Controllers.Execution
         {
             _view = view;
             _service = service;
+            _authentificationController = new AuthentificationController();
+            _basesCopierService = new BasesCopierService();
 
             // Connexion des événements de la View.
             _view.TesterConnexionDemandee += View_TesterConnexionDemandee;
@@ -43,6 +50,7 @@ namespace SaimDataCopy.Controllers.Execution
 
             _cancellationTokenSource.Cancel();
         }
+
         private void ChargerDonneesInitiales()
         {
             ExecutionTableauBordModel tableauBord =
@@ -94,12 +102,6 @@ namespace SaimDataCopy.Controllers.Execution
 
                 if (connexionOk)
                 {
-                    // - la lecture des tables d'une base source
-                    // - le comptage des lignes de chaque table
-                    //TesterLectureTablesBaseSource();
-
-                    
-
                     _view.AfficherMessage(
                         "Connexion réussie. Vous pouvez lancer la copie.",
                         "Test de connexion"
@@ -164,6 +166,9 @@ namespace SaimDataCopy.Controllers.Execution
             try
             {
                 _view.ViderJournal();
+
+                // Le log utilisateur doit être enregistré dès le clic sur "Lancer la copie".
+                await EnregistrerLogLancementCopieAsync();
 
                 // On affiche la progression seulement quand la copie commence.
                 _view.AfficherZoneProgression(true);
@@ -250,6 +255,64 @@ namespace SaimDataCopy.Controllers.Execution
             }
         }
 
+        private async Task EnregistrerLogLancementCopieAsync()
+        {
+            try
+            {
+                List<BaseCopieModel> bases = _basesCopierService.ChargerBases();
+
+                List<BaseCopieModel> basesSelectionnees = bases
+                    .Where(b => b.Inclure)
+                    .OrderBy(b => b.OrdreTraitement)
+                    .ToList();
+
+                string details = ConstruireDetailsLancementCopie(
+                    bases,
+                    basesSelectionnees
+                );
+
+                await _authentificationController.AjouterLogAsync(
+                    "Lancement de la copie",
+                    details
+                );
+            }
+            catch
+            {
+                // L'échec du log utilisateur ne doit pas bloquer le lancement de la copie.
+            }
+        }
+
+        private string ConstruireDetailsLancementCopie(
+            List<BaseCopieModel> toutesLesBases,
+            List<BaseCopieModel> basesSelectionnees)
+        {
+            List<string> lignes = new List<string>
+            {
+                "Origine : Manuel",
+                "Action déclenchée par clic sur le bouton Lancer la copie.",
+                "Nombre total de bases affichées : " + toutesLesBases.Count,
+                "Nombre de bases sélectionnées : " + basesSelectionnees.Count,
+                "",
+                "Bases sélectionnées :"
+            };
+
+            if (basesSelectionnees.Count == 0)
+            {
+                lignes.Add("- Aucune base sélectionnée.");
+            }
+            else
+            {
+                foreach (BaseCopieModel baseCopie in basesSelectionnees)
+                {
+                    lignes.Add(
+                        $"- Ordre {baseCopie.OrdreTraitement} | Base : {baseCopie.NomBase} | Mode : {baseCopie.ModeCopie} | Statut : {baseCopie.Statut}"
+                    );
+                }
+            }
+
+            return string.Join(Environment.NewLine, lignes);
+        }
+
         private void TesterLectureTablesBaseSource()
         {
             string nomBaseTest = "DB_TestRH";
@@ -287,8 +350,6 @@ namespace SaimDataCopy.Controllers.Execution
                     Type = "Succes"
                 });
             }
-        } 
-
-        
+        }
     }
 }

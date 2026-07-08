@@ -1,4 +1,5 @@
-﻿using SaimDataCopy.Models.Logs;
+﻿using SaimDataCopy.Controllers.Authentification;
+using SaimDataCopy.Models.Logs;
 using SaimDataCopy.Services.Logs;
 using SaimDataCopy.Views.Logs;
 using SaimDataCopy.Views.Commun;
@@ -13,21 +14,21 @@ namespace SaimDataCopy.Controllers.Logs
     {
         private readonly ILogsView _view;
         private readonly ILogsService _service;
+        private readonly AuthentificationController _authentificationController;
 
         public LogsController(ILogsView view, ILogsService service)
         {
             _view = view;
             _service = service;
+            _authentificationController = new AuthentificationController();
 
             // Quand l'utilisateur clique sur Parcourir,
             // le Controller réagit à l'événement.
-
         }
 
         /// <summary>
         /// Charge les paramètres logs au démarrage de la page.
         /// </summary>
-        /// 
         public void ChargerPage()
         {
             try
@@ -40,8 +41,7 @@ namespace SaimDataCopy.Controllers.Logs
                 _view.AfficherMessage(
                     "Erreur lors du chargement des paramètres logs : " + ex.Message,
                     false
-            );
-
+                );
             }
         }
 
@@ -49,8 +49,6 @@ namespace SaimDataCopy.Controllers.Logs
         /// Méthode appelée par MainForm quand l'utilisateur clique sur
         /// le bouton Enregistrer les paramètres.
         /// </summary>
-        /// 
-
         public void DemanderEnregistrement()
         {
             EnregistrerDepuisMainForm();
@@ -75,6 +73,11 @@ namespace SaimDataCopy.Controllers.Logs
                     pageEnregistrable.MarquerCommeEnregistre();
                 }
 
+                EnregistrerLogUtilisateur(
+                    "Enregistrement Paramètres Logs",
+                    ConstruireDetailsLogs(configuration)
+                );
+
                 _view.AfficherMessage(
                     "Paramètres logs enregistrés avec succès.",
                     true
@@ -93,5 +96,34 @@ namespace SaimDataCopy.Controllers.Logs
             }
         }
 
+        private string ConstruireDetailsLogs(LogConfigModel configuration)
+        {
+            return
+                "Paramètres fichiers logs :" + Environment.NewLine +
+                "- Répertoire logs : " + AfficherValeur(configuration.RepertoireLogs) + Environment.NewLine +
+                "- Nommage fichiers : " + AfficherValeur(configuration.NommageFichiers) + Environment.NewLine +
+                "- Durée conservation : " + configuration.DureeConservationJours + " jour(s)" + Environment.NewLine +
+                "- Taille maximale fichier : " + configuration.TailleMaxFichierMo + " Mo";
+        }
+
+        private void EnregistrerLogUtilisateur(string action, string details)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _authentificationController.AjouterLogAsync(action, details);
+                }
+                catch
+                {
+                    // L'échec du log utilisateur ne doit pas bloquer l'enregistrement métier.
+                }
+            });
+        }
+
+        private string AfficherValeur(string valeur)
+        {
+            return string.IsNullOrWhiteSpace(valeur) ? "Non renseigné" : valeur;
+        }
     }
 }

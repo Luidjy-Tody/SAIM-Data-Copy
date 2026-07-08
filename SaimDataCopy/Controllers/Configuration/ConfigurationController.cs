@@ -1,4 +1,5 @@
-﻿using SaimDataCopy.Models.Configuration;
+﻿using SaimDataCopy.Controllers.Authentification;
+using SaimDataCopy.Models.Configuration;
 using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Services.Configuration;
 using SaimDataCopy.Views.Configuration;
@@ -13,6 +14,7 @@ namespace SaimDataCopy.Controllers.Configuration
         private readonly ConfigurationView _view;
         private readonly IConfigurationService _configurationService;
         private readonly IBasesCopierService _basesCopierService;
+        private readonly AuthentificationController _authentificationController;
 
         // Événement envoyé à MainForm pour prévenir que le mode global a changé.
         // MainForm pourra ensuite rafraîchir la page Bases à copier si elle existe déjà.
@@ -25,6 +27,7 @@ namespace SaimDataCopy.Controllers.Configuration
             _view = view;
             _configurationService = new ConfigurationService();
             _basesCopierService = new BasesCopierService();
+            _authentificationController = new AuthentificationController();
 
             BrancherEvenements();
             ChargerConfiguration();
@@ -40,6 +43,7 @@ namespace SaimDataCopy.Controllers.Configuration
             _view = view;
             _configurationService = configurationService;
             _basesCopierService = basesCopierService;
+            _authentificationController = new AuthentificationController();
 
             BrancherEvenements();
             ChargerConfiguration();
@@ -118,6 +122,13 @@ namespace SaimDataCopy.Controllers.Configuration
                     pageEnregistrable.MarquerCommeEnregistre();
                 }
 
+                EnregistrerLogUtilisateur(
+                    "Enregistrement Configuration",
+                    ConstruireDetailsConfiguration(configuration) +
+                    Environment.NewLine +
+                    "Statut : configuration enregistrée et mode global appliqué aux bases à copier."
+                );
+
                 _view.AfficherMessageSucces(
                     message + Environment.NewLine +
                     "Le mode de copie global a été appliqué aux bases à copier."
@@ -127,6 +138,15 @@ namespace SaimDataCopy.Controllers.Configuration
             }
             catch (Exception ex)
             {
+                EnregistrerLogUtilisateur(
+                    "Enregistrement Configuration",
+                    ConstruireDetailsConfiguration(configuration) +
+                    Environment.NewLine +
+                    "Statut : configuration enregistrée, mais synchronisation avec les bases échouée." +
+                    Environment.NewLine +
+                    "Erreur : " + ex.Message
+                );
+
                 _view.AfficherMessageErreur(
                     "La configuration a été enregistrée, mais la synchronisation avec les bases a échoué : "
                     + ex.Message
@@ -134,6 +154,54 @@ namespace SaimDataCopy.Controllers.Configuration
 
                 return false;
             }
+        }
+
+        private string ConstruireDetailsConfiguration(ConfigurationModel configuration)
+        {
+            return
+                "Serveur source :" + Environment.NewLine +
+                "- Type : " + configuration.ServeurSource.TypeServeur + Environment.NewLine +
+                "- Nom serveur : " + AfficherValeur(configuration.ServeurSource.NomServeur) + Environment.NewLine +
+                "- Port : " + configuration.ServeurSource.Port + Environment.NewLine +
+                "- Identifiant : " + AfficherValeur(configuration.ServeurSource.Identifiant) + Environment.NewLine +
+                "- Chaîne de connexion renseignée : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSource.ChaineConnexion)) + Environment.NewLine +
+                Environment.NewLine +
+                "Serveur cible :" + Environment.NewLine +
+                "- Type : " + configuration.ServeurCible.TypeServeur + Environment.NewLine +
+                "- Nom serveur : " + AfficherValeur(configuration.ServeurCible.NomServeur) + Environment.NewLine +
+                "- Port : " + configuration.ServeurCible.Port + Environment.NewLine +
+                "- Identifiant : " + AfficherValeur(configuration.ServeurCible.Identifiant) + Environment.NewLine +
+                "- Chaîne de connexion renseignée : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurCible.ChaineConnexion)) + Environment.NewLine +
+                Environment.NewLine +
+                "Paramètres copie :" + Environment.NewLine +
+                "- Mode copie global : " + configuration.ModeCopie + Environment.NewLine +
+                "- Comportement erreur : " + configuration.ComportementErreur + Environment.NewLine +
+                "- Tentatives reprise : " + configuration.TentativesReprise;
+        }
+
+        private void EnregistrerLogUtilisateur(string action, string details)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _authentificationController.AjouterLogAsync(action, details);
+                }
+                catch
+                {
+                    // L'échec du log utilisateur ne doit pas bloquer l'enregistrement métier.
+                }
+            });
+        }
+
+        private string AfficherValeur(string valeur)
+        {
+            return string.IsNullOrWhiteSpace(valeur) ? "Non renseigné" : valeur;
+        }
+
+        private string OuiNon(bool valeur)
+        {
+            return valeur ? "Oui" : "Non";
         }
     }
 }

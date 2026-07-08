@@ -1,4 +1,5 @@
-﻿using SaimDataCopy.Models.BasesCopier;
+﻿using SaimDataCopy.Controllers.Authentification;
+using SaimDataCopy.Models.BasesCopier;
 using SaimDataCopy.Services.BasesCopier;
 using SaimDataCopy.Views.BasesCopier;
 using System.Windows.Forms;
@@ -12,6 +13,7 @@ namespace SaimDataCopy.Controllers.BasesCopier
     {
         private readonly IBasesCopierView _view;
         private readonly IBasesCopierService _service;
+        private readonly AuthentificationController _authentificationController;
 
         private List<BaseCopieModel> _bases = new List<BaseCopieModel>();
 
@@ -21,6 +23,7 @@ namespace SaimDataCopy.Controllers.BasesCopier
         {
             _view = view;
             _service = new BasesCopierService();
+            _authentificationController = new AuthentificationController();
 
             BrancherEvenements();
             ChargerPage();
@@ -32,6 +35,7 @@ namespace SaimDataCopy.Controllers.BasesCopier
         {
             _view = view;
             _service = service;
+            _authentificationController = new AuthentificationController();
 
             BrancherEvenements();
             ChargerPage();
@@ -148,6 +152,11 @@ namespace SaimDataCopy.Controllers.BasesCopier
                     pageEnregistrable.MarquerCommeEnregistre();
                 }
 
+                EnregistrerLogUtilisateur(
+                    "Enregistrement Bases à copier",
+                    ConstruireDetailsBases(_bases)
+                );
+
                 _view.AfficherMessage(
                     "Enregistrement",
                     "Les bases à copier ont été enregistrées avec succès.",
@@ -178,6 +187,77 @@ namespace SaimDataCopy.Controllers.BasesCopier
             // Si la page Bases à copier est déjà ouverte,
             // on recharge directement l'affichage.
             ChargerPage();
+        }
+
+        private string ConstruireDetailsBases(List<BaseCopieModel> bases)
+        {
+            List<BaseCopieModel> basesIncluses = bases
+                .Where(b => b.Inclure)
+                .OrderBy(b => b.OrdreTraitement)
+                .ToList();
+
+            List<BaseCopieModel> basesNonIncluses = bases
+                .Where(b => !b.Inclure)
+                .OrderBy(b => b.OrdreTraitement)
+                .ToList();
+
+            List<string> lignes = new List<string>
+            {
+                "Résumé :",
+                "- Nombre total de bases affichées : " + bases.Count,
+                "- Nombre de bases cochées : " + basesIncluses.Count,
+                "- Nombre de bases non sélectionnées : " + basesNonIncluses.Count,
+                "",
+                "Bases cochées :"
+            };
+
+            if (basesIncluses.Count == 0)
+            {
+                lignes.Add("- Aucune base cochée.");
+            }
+            else
+            {
+                foreach (BaseCopieModel baseCopie in basesIncluses)
+                {
+                    lignes.Add(
+                        $"- Ordre {baseCopie.OrdreTraitement} | Base : {baseCopie.NomBase} | Mode : {baseCopie.ModeCopie} | Statut : {baseCopie.Statut}"
+                    );
+                }
+            }
+
+            lignes.Add("");
+            lignes.Add("Bases non sélectionnées :");
+
+            if (basesNonIncluses.Count == 0)
+            {
+                lignes.Add("- Aucune base non sélectionnée.");
+            }
+            else
+            {
+                foreach (BaseCopieModel baseCopie in basesNonIncluses)
+                {
+                    lignes.Add(
+                        $"- Ordre {baseCopie.OrdreTraitement} | Base : {baseCopie.NomBase} | Mode : {baseCopie.ModeCopie} | Statut : {baseCopie.Statut}"
+                    );
+                }
+            }
+
+            return string.Join(Environment.NewLine, lignes);
+        }
+
+        private void EnregistrerLogUtilisateur(string action, string details)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _authentificationController.AjouterLogAsync(action, details);
+                }
+                catch
+                {
+                    // L'échec du log utilisateur ne doit pas bloquer l'enregistrement métier.
+                }
+            });
         }
     }
 }
