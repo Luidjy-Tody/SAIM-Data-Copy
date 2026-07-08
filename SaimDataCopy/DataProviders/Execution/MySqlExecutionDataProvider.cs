@@ -14,6 +14,7 @@ namespace SaimDataCopy.DataProviders.Execution
         private readonly IBasesCopierDataProvider _basesCopierDataProvider;
         private readonly IConfigurationDataProvider _configurationDataProvider;
 
+
         public MySqlExecutionDataProvider(
             IBasesCopierDataProvider basesCopierDataProvider,
             IConfigurationDataProvider configurationDataProvider)
@@ -51,12 +52,12 @@ namespace SaimDataCopy.DataProviders.Execution
             // dans la base MySQL source.
             commande.CommandText =
                 """
-                SELECT TABLE_NAME
-                FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_SCHEMA = @NomBase
-                AND TABLE_TYPE = 'BASE TABLE'
-                ORDER BY TABLE_NAME;
-                """;
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = @NomBase
+        AND TABLE_TYPE = 'BASE TABLE'
+        ORDER BY TABLE_NAME;
+        """;
 
             commande.Parameters.AddWithValue("@NomBase", nomBase);
 
@@ -67,7 +68,13 @@ namespace SaimDataCopy.DataProviders.Execution
                 tables.Add(lecteur.GetString("TABLE_NAME"));
             }
 
-            return tables;
+            lecteur.Close();
+
+            // Important :
+            // Pour MySQL, on trie les tables selon les dépendances FOREIGN KEY.
+            // Exemple : pays doit être copié avant ville,
+            // car ville dépend de pays.
+            return OrdonnerTablesMySqlParDependances(connexion, nomBase, tables);
         }
 
         public int CompterLignesTableSource(string nomBase, string nomTable)
@@ -463,9 +470,9 @@ namespace SaimDataCopy.DataProviders.Execution
         }
 
         private int CopierModeEcraser(
-            string nomBase,
-            string nomTable,
-            CancellationToken cancellationToken)
+    string nomBase,
+    string nomTable,
+    CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -488,38 +495,65 @@ namespace SaimDataCopy.DataProviders.Execution
             OuvrirConnexionMySql(connexionSource);
             OuvrirConnexionMySql(connexionCible);
 
-            cancellationToken.ThrowIfCancellationRequested();
+            bool foreignKeyChecksDesactives = false;
 
-            using MySqlCommand commandeSuppression = connexionCible.CreateCommand();
-
-            // Cette requête vide la table cible avant la copie.
-            commandeSuppression.CommandText = $"DELETE FROM {nomTableSql};";
-            commandeSuppression.ExecuteNonQuery();
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using MySqlCommand commandeLecture = connexionSource.CreateCommand();
-
-            // Cette requête lit toutes les lignes de la table source.
-            commandeLecture.CommandText = $"SELECT * FROM {nomTableSql};";
-
-            using MySqlDataReader lecteur = commandeLecture.ExecuteReader();
-
-            int lignesCopiees = 0;
-
-            while (lecteur.Read())
+            try
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                InsererLigneDansTableCible(
-                    connexionCible,
-                    nomTable,
-                    lecteur);
+                using MySqlCommand commandeDesactivationFk = connexionCible.CreateCommand();
 
-                lignesCopiees++;
+                // Cette requête désactive temporairement le contrôle des clés étrangères
+                // pour la connexion cible actuelle.
+                // Elle évite l'erreur quand une table parent est vidée avant une table enfant.
+                commandeDesactivationFk.CommandText = "SET FOREIGN_KEY_CHECKS = 0;";
+                commandeDesactivationFk.ExecuteNonQuery();
+
+                foreignKeyChecksDesactives = true;
+
+                using MySqlCommand commandeSuppression = connexionCible.CreateCommand();
+
+                // Cette requête vide la table cible avant la copie.
+                commandeSuppression.CommandText = $"DELETE FROM {nomTableSql};";
+                commandeSuppression.ExecuteNonQuery();
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using MySqlCommand commandeLecture = connexionSource.CreateCommand();
+
+                // Cette requête lit toutes les lignes de la table source.
+                commandeLecture.CommandText = $"SELECT * FROM {nomTableSql};";
+
+                using MySqlDataReader lecteur = commandeLecture.ExecuteReader();
+
+                int lignesCopiees = 0;
+
+                while (lecteur.Read())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    InsererLigneDansTableCible(
+                        connexionCible,
+                        nomTable,
+                        lecteur);
+
+                    lignesCopiees++;
+                }
+
+                return lignesCopiees;
             }
+            finally
+            {
+                if (foreignKeyChecksDesactives && connexionCible.State == System.Data.ConnectionState.Open)
+                {
+                    using MySqlCommand commandeActivationFk = connexionCible.CreateCommand();
 
-            return lignesCopiees;
+                    // Cette requête réactive le contrôle des clés étrangères
+                    // après le vidage et la copie de la table.
+                    commandeActivationFk.CommandText = "SET FOREIGN_KEY_CHECKS = 1;";
+                    commandeActivationFk.ExecuteNonQuery();
+                }
+            }
         }
 
         private int CopierLignesAvecOnDuplicateKeyUpdate(
@@ -664,7 +698,170 @@ namespace SaimDataCopy.DataProviders.Execution
 
             commandeInsertion.ExecuteNonQuery();
         }
+        private List<string> OrdonnerTablesMySqlParDependances(
+    MySqlConnection connexion,
+    string nomBase,
+    List<string> tables)
+        {
+            if (tables.Count <= 1)
+            {
+                return tables;
+            }
 
+            Dictionary<string, List<string>> dependances =
+                ChargerDependancesForeignKeySource(connexion, nomBase, tables);
+
+            HashSet<string> tablesConnues = new HashSet<string>(
+                tables,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            List<string> tablesOrdonnees = new List<string>();
+
+            HashSet<string> tablesVisitees = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            HashSet<string> tablesEnCours = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            foreach (string table in tables.OrderBy(t => t))
+            {
+                AjouterTableAvecDependances(
+                    table,
+                    dependances,
+                    tablesConnues,
+                    tablesOrdonnees,
+                    tablesVisitees,
+                    tablesEnCours
+                );
+            }
+
+            return tablesOrdonnees;
+        }
+
+        private Dictionary<string, List<string>> ChargerDependancesForeignKeySource(
+            MySqlConnection connexion,
+            string nomBase,
+            List<string> tables)
+        {
+            Dictionary<string, List<string>> dependances =
+                new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            HashSet<string> tablesConnues = new HashSet<string>(
+                tables,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            foreach (string table in tables)
+            {
+                dependances[table] = new List<string>();
+            }
+
+            using MySqlCommand commande = connexion.CreateCommand();
+
+            // Cette requête récupère les relations FOREIGN KEY de la base source.
+            // TABLE_NAME = table enfant.
+            // REFERENCED_TABLE_NAME = table parent.
+            commande.CommandText =
+                """
+        SELECT TABLE_NAME, REFERENCED_TABLE_NAME
+        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = @NomBase
+        AND REFERENCED_TABLE_NAME IS NOT NULL;
+        """;
+
+            commande.Parameters.AddWithValue("@NomBase", nomBase);
+
+            using MySqlDataReader lecteur = commande.ExecuteReader();
+
+            while (lecteur.Read())
+            {
+                string tableEnfant = lecteur.GetString("TABLE_NAME");
+                string tableParent = lecteur.GetString("REFERENCED_TABLE_NAME");
+
+                if (!tablesConnues.Contains(tableEnfant) ||
+                    !tablesConnues.Contains(tableParent))
+                {
+                    continue;
+                }
+
+                if (tableEnfant.Equals(tableParent, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!dependances.ContainsKey(tableEnfant))
+                {
+                    dependances[tableEnfant] = new List<string>();
+                }
+
+                bool dependanceDejaAjoutee = dependances[tableEnfant]
+                    .Any(t => t.Equals(tableParent, StringComparison.OrdinalIgnoreCase));
+
+                if (!dependanceDejaAjoutee)
+                {
+                    dependances[tableEnfant].Add(tableParent);
+                }
+            }
+
+            return dependances;
+        }
+
+        private void AjouterTableAvecDependances(
+            string table,
+            Dictionary<string, List<string>> dependances,
+            HashSet<string> tablesConnues,
+            List<string> tablesOrdonnees,
+            HashSet<string> tablesVisitees,
+            HashSet<string> tablesEnCours)
+        {
+            if (tablesVisitees.Contains(table))
+            {
+                return;
+            }
+
+            if (tablesEnCours.Contains(table))
+            {
+                // Cas rare : cycle de clés étrangères.
+                // On évite une boucle infinie.
+                return;
+            }
+
+            tablesEnCours.Add(table);
+
+            if (dependances.TryGetValue(table, out List<string>? parents))
+            {
+                foreach (string parent in parents.OrderBy(t => t))
+                {
+                    if (!tablesConnues.Contains(parent))
+                    {
+                        continue;
+                    }
+
+                    AjouterTableAvecDependances(
+                        parent,
+                        dependances,
+                        tablesConnues,
+                        tablesOrdonnees,
+                        tablesVisitees,
+                        tablesEnCours
+                    );
+                }
+            }
+
+            tablesEnCours.Remove(table);
+            tablesVisitees.Add(table);
+
+            bool tableDejaAjoutee = tablesOrdonnees
+                .Any(t => t.Equals(table, StringComparison.OrdinalIgnoreCase));
+
+            if (!tableDejaAjoutee)
+            {
+                tablesOrdonnees.Add(table);
+            }
+        }
         private string SupprimerContraintesForeignKeyMySql(string scriptCreationTable)
         {
             List<string> lignes = scriptCreationTable
@@ -818,6 +1015,8 @@ namespace SaimDataCopy.DataProviders.Execution
                     2005 => "Nom du serveur MySQL invalide.",
                     1146 => "Table MySQL introuvable.",
                     1064 => "Erreur de syntaxe SQL MySQL.",
+                    1451 => "Impossible de supprimer ou modifier une ligne parent car une table enfant possède encore une clé étrangère liée.",
+                    1452 => "Impossible d'insérer ou modifier une ligne enfant car la ligne parent référencée n'existe pas.",
                     _ => $"Erreur MySQL ({erreurMySql.Number}) : {erreurMySql.Message}"
                 };
             }
