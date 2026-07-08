@@ -7,7 +7,6 @@ namespace SaimDataCopy.Views.Authentification
     {
         private readonly TextBox txtEmail;
         private readonly AuthMessageControl messageControl;
-        private readonly AuthShadowPanel carte;
 
         public event EventHandler? EnvoiLienDemande;
         public event EventHandler? RetourConnexionDemande;
@@ -16,14 +15,8 @@ namespace SaimDataCopy.Views.Authentification
 
         public MotDePasseOublieView()
         {
-            Dock = DockStyle.Fill;
-            BackColor = Color.Transparent;
+            BackColor = Color.White;
             DoubleBuffered = true;
-
-            carte = new AuthShadowPanel
-            {
-                Size = new Size(500, 415)
-            };
 
             Label lblTitre = new Label
             {
@@ -31,7 +24,7 @@ namespace SaimDataCopy.Views.Authentification
                 Font = MotDePasseOublieStyle.TitreCarte(),
                 ForeColor = MotDePasseOublieStyle.TextePrincipal,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(50, 35),
+                Location = new Point(70, 80),
                 Size = new Size(400, 45)
             };
 
@@ -41,15 +34,15 @@ namespace SaimDataCopy.Views.Authentification
                 Font = MotDePasseOublieStyle.TextePetit(),
                 ForeColor = MotDePasseOublieStyle.TexteAide,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(50, 85),
+                Location = new Point(70, 135),
                 Size = new Size(400, 50)
             };
 
-            Label lblEmail = CreerLabel("Email", 50, 150);
+            Label lblEmail = CreerLabel("Email", 70, 205);
 
             txtEmail = new TextBox
             {
-                Location = new Point(50, 180),
+                Location = new Point(70, 230),
                 Size = new Size(400, 42),
                 PlaceholderText = "Entrez votre adresse email"
             };
@@ -57,14 +50,14 @@ namespace SaimDataCopy.Views.Authentification
 
             messageControl = new AuthMessageControl
             {
-                Location = new Point(50, 235),
+                Location = new Point(70, 290),
                 Size = new Size(400, 25)
             };
 
             Button btnEnvoyer = new Button
             {
                 Text = "Envoyer le lien de réinitialisation",
-                Location = new Point(50, 270),
+                Location = new Point(70, 325),
                 Size = new Size(400, 50)
             };
             MotDePasseOublieStyle.AppliquerBouton(btnEnvoyer);
@@ -73,34 +66,19 @@ namespace SaimDataCopy.Views.Authentification
             LinkLabel lienRetour = new LinkLabel
             {
                 Text = "← Retour à la connexion",
-                Location = new Point(50, 340),
+                Location = new Point(70, 395),
                 Size = new Size(400, 25)
             };
             MotDePasseOublieStyle.AppliquerLien(lienRetour);
             lienRetour.LinkClicked += (s, e) => RetourConnexionDemande?.Invoke(this, EventArgs.Empty);
 
-            carte.Controls.Add(lblTitre);
-            carte.Controls.Add(lblDescription);
-            carte.Controls.Add(lblEmail);
-            carte.Controls.Add(txtEmail);
-            carte.Controls.Add(messageControl);
-            carte.Controls.Add(btnEnvoyer);
-            carte.Controls.Add(lienRetour);
-
-            Controls.Add(carte);
-
-            Resize += (s, e) => CentrerCarte();
-            VisibleChanged += (s, e) => CentrerCarte();
-        }
-
-        private void CentrerCarte()
-        {
-            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
-            {
-                return;
-            }
-
-            carte.Location = new Point((ClientSize.Width - carte.Width) / 2, Math.Max(0, (ClientSize.Height - carte.Height) / 2));
+            Controls.Add(lblTitre);
+            Controls.Add(lblDescription);
+            Controls.Add(lblEmail);
+            Controls.Add(txtEmail);
+            Controls.Add(messageControl);
+            Controls.Add(btnEnvoyer);
+            Controls.Add(lienRetour);
         }
 
         private static Label CreerLabel(string texte, int x, int y)

@@ -10,10 +10,12 @@ namespace SaimDataCopy.Views.Authentification
         private readonly AuthentificationController _authentificationController;
 
         private readonly Panel fond;
-        private readonly Panel panelContenu;
 
         private readonly AuthHeaderControl header;
         private readonly AuthFooterControl footer;
+
+        private readonly AuthShadowPanel cartePrincipale;
+        private readonly Panel panelCarteContenu;
 
         private readonly IdentificationView identificationView;
         private readonly InscriptionView inscriptionView;
@@ -23,6 +25,8 @@ namespace SaimDataCopy.Views.Authentification
         private readonly IconButton btnAgrandir;
         private readonly IconButton btnFermer;
 
+        private UserControl? pageActuelleControle;
+
         public bool AuthentificationReussie { get; private set; }
 
         public AuthentificationForm(AuthentificationController authentificationController)
@@ -30,14 +34,14 @@ namespace SaimDataCopy.Views.Authentification
             _authentificationController = authentificationController;
 
             Text = "SaimDataCopy - Authentification";
-            Size = new Size(1350, 840);
-            MinimumSize = new Size(1150, 820);
+            Size = new Size(1280, 720);
+            MinimumSize = new Size(1100, 720);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.None;
             MaximizeBox = true;
             MinimizeBox = true;
 
-            fond = new Panel
+            fond = new PanelDoubleBuffer
             {
                 Dock = DockStyle.Fill
             };
@@ -46,10 +50,16 @@ namespace SaimDataCopy.Views.Authentification
             header = new AuthHeaderControl();
             footer = new AuthFooterControl();
 
-            panelContenu = new Panel
+            cartePrincipale = new AuthShadowPanel
             {
-                BackColor = Color.Transparent,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                Size = new Size(540, 530),
+                Padding = new Padding(1)
+            };
+
+            panelCarteContenu = new PanelDoubleBuffer
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
             };
 
             identificationView = new IdentificationView
@@ -66,6 +76,12 @@ namespace SaimDataCopy.Views.Authentification
             {
                 Dock = DockStyle.Fill
             };
+
+            panelCarteContenu.Controls.Add(identificationView);
+            panelCarteContenu.Controls.Add(inscriptionView);
+            panelCarteContenu.Controls.Add(motDePasseOublieView);
+
+            cartePrincipale.Controls.Add(panelCarteContenu);
 
             btnReduire = CreerBoutonFenetre(IconChar.Minus);
             btnAgrandir = CreerBoutonFenetre(IconChar.WindowMaximize);
@@ -90,12 +106,8 @@ namespace SaimDataCopy.Views.Authentification
                 Close();
             };
 
-            panelContenu.Controls.Add(identificationView);
-            panelContenu.Controls.Add(inscriptionView);
-            panelContenu.Controls.Add(motDePasseOublieView);
-
-            fond.Controls.Add(panelContenu);
             fond.Controls.Add(header);
+            fond.Controls.Add(cartePrincipale);
             fond.Controls.Add(footer);
             fond.Controls.Add(btnReduire);
             fond.Controls.Add(btnAgrandir);
@@ -226,7 +238,14 @@ namespace SaimDataCopy.Views.Authentification
 
         private void AfficherPage(UserControl page)
         {
-            foreach (Control controle in panelContenu.Controls)
+            if (pageActuelleControle == page)
+            {
+                return;
+            }
+
+            panelCarteContenu.SuspendLayout();
+
+            foreach (Control controle in panelCarteContenu.Controls)
             {
                 controle.Visible = false;
             }
@@ -235,7 +254,13 @@ namespace SaimDataCopy.Views.Authentification
             page.BringToFront();
             page.Focus();
 
-            PositionnerElementsFixes();
+            pageActuelleControle = page;
+
+            panelCarteContenu.ResumeLayout();
+
+            panelCarteContenu.Invalidate();
+            cartePrincipale.Invalidate();
+            fond.Invalidate();
         }
 
         private void PositionnerElementsFixes()
@@ -245,39 +270,31 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
-            // Header fixe pour toutes les pages.
             header.Location = new Point(
                 (ClientSize.Width - header.Width) / 2,
-                35
+                22
             );
 
-            // Footer fixe pour toutes les pages.
             footer.Location = new Point(
                 (ClientSize.Width - footer.Width) / 2,
-                ClientSize.Height - footer.Height - 25
+                ClientSize.Height - footer.Height - 12
             );
 
-            // Zone centrale fixe entre le header et le footer.
-            int margeEntreHeaderEtContenu = 15;
-            int margeEntreContenuEtFooter = 15;
+            int topDisponible = header.Bottom + 20;
+            int bottomDisponible = footer.Top - 20;
+            int hauteurDisponible = bottomDisponible - topDisponible;
 
-            int topContenu = header.Bottom + margeEntreHeaderEtContenu;
-            int bottomContenu = footer.Top - margeEntreContenuEtFooter;
+            int xCarte = (ClientSize.Width - cartePrincipale.Width) / 2;
+            int yCarte = topDisponible + Math.Max(0, (hauteurDisponible - cartePrincipale.Height) / 2);
 
-            panelContenu.Location = new Point(0, topContenu);
-            panelContenu.Size = new Size(
-                ClientSize.Width,
-                Math.Max(100, bottomContenu - topContenu)
-            );
+            cartePrincipale.Location = new Point(xCarte, yCarte);
 
-            // Boutons fenêtre fixes.
             btnReduire.Location = new Point(ClientSize.Width - 170, 14);
             btnAgrandir.Location = new Point(ClientSize.Width - 115, 14);
             btnFermer.Location = new Point(ClientSize.Width - 60, 14);
 
-            panelContenu.SendToBack();
-
             header.BringToFront();
+            cartePrincipale.BringToFront();
             footer.BringToFront();
 
             btnReduire.BringToFront();
@@ -292,6 +309,15 @@ namespace SaimDataCopy.Views.Authentification
                 IconChar = icone,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
+        }
+
+        private class PanelDoubleBuffer : Panel
+        {
+            public PanelDoubleBuffer()
+            {
+                DoubleBuffered = true;
+                ResizeRedraw = true;
+            }
         }
     }
 }

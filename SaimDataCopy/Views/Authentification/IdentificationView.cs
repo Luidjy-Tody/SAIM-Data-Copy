@@ -8,7 +8,6 @@ namespace SaimDataCopy.Views.Authentification
         private readonly TextBox txtIdentifiant;
         private readonly AuthPasswordTextBox txtMotDePasse;
         private readonly AuthMessageControl messageControl;
-        private readonly AuthShadowPanel carte;
 
         public event EventHandler? ConnexionDemandee;
         public event EventHandler? MotDePasseOublieDemande;
@@ -19,14 +18,8 @@ namespace SaimDataCopy.Views.Authentification
 
         public IdentificationView()
         {
-            Dock = DockStyle.Fill;
-            BackColor = Color.Transparent;
+            BackColor = Color.White;
             DoubleBuffered = true;
-
-            carte = new AuthShadowPanel
-            {
-                Size = new Size(500, 455)
-            };
 
             Label lblTitre = new Label
             {
@@ -34,32 +27,32 @@ namespace SaimDataCopy.Views.Authentification
                 Font = IdentificationStyle.TitreCarte(),
                 ForeColor = IdentificationStyle.TextePrincipal,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(50, 35),
+                Location = new Point(70, 45),
                 Size = new Size(400, 45)
             };
 
-            Label lblIdentifiant = CreerLabel("Identifiant", 50, 100);
+            Label lblIdentifiant = CreerLabel("Identifiant", 70, 115);
 
             txtIdentifiant = new TextBox
             {
-                Location = new Point(50, 130),
+                Location = new Point(70, 145),
                 Size = new Size(400, 42),
                 PlaceholderText = "Entrez votre nom utilisateur ou email"
             };
             IdentificationStyle.AppliquerTextBox(txtIdentifiant);
 
-            Label lblMotDePasse = CreerLabel("Mot de passe", 50, 195);
+            Label lblMotDePasse = CreerLabel("Mot de passe", 70, 210);
 
             txtMotDePasse = new AuthPasswordTextBox
             {
-                Location = new Point(50, 225),
+                Location = new Point(70, 240),
                 Size = new Size(430, 42)
             };
 
             LinkLabel lienMotDePasse = new LinkLabel
             {
                 Text = "Mot de passe oublié ?",
-                Location = new Point(260, 275),
+                Location = new Point(280, 292),
                 Size = new Size(190, 25)
             };
             IdentificationStyle.AppliquerLien(lienMotDePasse);
@@ -67,14 +60,14 @@ namespace SaimDataCopy.Views.Authentification
 
             messageControl = new AuthMessageControl
             {
-                Location = new Point(50, 310),
+                Location = new Point(70, 325),
                 Size = new Size(400, 25)
             };
 
             Button btnConnexion = new Button
             {
                 Text = "S'identifier",
-                Location = new Point(50, 345),
+                Location = new Point(70, 360),
                 Size = new Size(400, 50)
             };
             IdentificationStyle.AppliquerBouton(btnConnexion);
@@ -83,39 +76,21 @@ namespace SaimDataCopy.Views.Authentification
             LinkLabel lienInscription = new LinkLabel
             {
                 Text = "Pas encore de compte ? S'inscrire",
-                Location = new Point(50, 405),
+                Location = new Point(70, 425),
                 Size = new Size(400, 25)
             };
             IdentificationStyle.AppliquerLien(lienInscription);
             lienInscription.LinkClicked += (s, e) => InscriptionDemandee?.Invoke(this, EventArgs.Empty);
 
-            carte.Controls.Add(lblTitre);
-            carte.Controls.Add(lblIdentifiant);
-            carte.Controls.Add(txtIdentifiant);
-            carte.Controls.Add(lblMotDePasse);
-            carte.Controls.Add(txtMotDePasse);
-            carte.Controls.Add(lienMotDePasse);
-            carte.Controls.Add(messageControl);
-            carte.Controls.Add(btnConnexion);
-            carte.Controls.Add(lienInscription);
-
-            Controls.Add(carte);
-
-            Resize += (s, e) => CentrerCarte();
-            VisibleChanged += (s, e) => CentrerCarte();
-        }
-
-        private void CentrerCarte()
-        {
-            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
-            {
-                return;
-            }
-
-            carte.Location = new Point(
-                (ClientSize.Width - carte.Width) / 2,
-                Math.Max(0, (ClientSize.Height - carte.Height) / 2)
-            );
+            Controls.Add(lblTitre);
+            Controls.Add(lblIdentifiant);
+            Controls.Add(txtIdentifiant);
+            Controls.Add(lblMotDePasse);
+            Controls.Add(txtMotDePasse);
+            Controls.Add(lienMotDePasse);
+            Controls.Add(messageControl);
+            Controls.Add(btnConnexion);
+            Controls.Add(lienInscription);
         }
 
         private static Label CreerLabel(string texte, int x, int y)
