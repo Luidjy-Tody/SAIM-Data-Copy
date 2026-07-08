@@ -5,6 +5,7 @@ using SaimDataCopy.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using SaimDataCopy.Controllers.Authentification;
 using SaimDataCopy.Views.Authentification;
+using SaimDataCopy.Helpers;
 
 namespace SaimDataCopy
 {
@@ -80,7 +81,7 @@ namespace SaimDataCopy
 
         private static async Task InitialiserBaseAuthentificationAsync()
         {
-            string chaineConnexion ="server=localhost;port=3306;database=saimdatacopy_auth;user=root;password=;";
+            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexion();
 
             DbContextOptions<AuthentificationDbContext> options =
                 new DbContextOptionsBuilder<AuthentificationDbContext>()

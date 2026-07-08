@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SaimDataCopy.DataAccess;
 using SaimDataCopy.Models.Authentification;
+using SaimDataCopy.Helpers;
 
 namespace SaimDataCopy.DataProviders.Authentification
 {
@@ -8,7 +9,7 @@ namespace SaimDataCopy.DataProviders.Authentification
     {
         private static AuthentificationDbContext CreerContext()
         {
-            string chaineConnexion = "server=localhost;port=3306;database=saimdatacopy_auth;user=root;password=;";
+            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexion();
 
             DbContextOptions<AuthentificationDbContext> options = new DbContextOptionsBuilder<AuthentificationDbContext>()
                 .UseMySql(
