@@ -1,7 +1,11 @@
 ﻿using SaimDataCopy.DataProviders.Authentification;
 using SaimDataCopy.Models.Authentification;
 using SaimDataCopy.Helpers;
-
+using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.Models.Email;
+using System.Net;
+using System.Net.Mail;
+using System.Security.Cryptography;
 namespace SaimDataCopy.Services.Authentification
 {
     public class AuthentificationService : IAuthentificationService
@@ -170,6 +174,176 @@ namespace SaimDataCopy.Services.Authentification
             );
 
             return "Compte créé avec succès. Vous pouvez vous connecter.";
+        }
+
+        public async Task<string> DemanderCodeReinitialisationMotDePasseAsync(string identifiantOuEmail)
+        {
+            if (string.IsNullOrWhiteSpace(identifiantOuEmail))
+            {
+                return "Veuillez saisir votre email ou votre identifiant.";
+            }
+
+            identifiantOuEmail = identifiantOuEmail.Trim();
+
+            UtilisateurModel? utilisateur =
+                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+
+            // On retourne un message neutre pour ne pas afficher clairement
+            // si un compte existe ou non.
+            if (utilisateur == null || !utilisateur.EstActif)
+            {
+                return "Si un compte actif correspond à cette information, un code de réinitialisation a été envoyé par email.";
+            }
+
+            string code = GenererCodeReinitialisation();
+
+            await _dataProvider.MarquerCodesUtilisateurCommeUtilisesAsync(utilisateur.Id);
+
+            CodeReinitialisationMotDePasseModel codeReinitialisation =
+                new CodeReinitialisationMotDePasseModel
+                {
+                    UtilisateurId = utilisateur.Id,
+                    CodeHash = SecuriteMotDePasseHelper.HasherMotDePasse(code),
+                    DateCreation = DateTime.Now,
+                    DateExpiration = DateTime.Now.AddMinutes(10),
+                    EstUtilise = false
+                };
+
+            await _dataProvider.AjouterCodeReinitialisationAsync(codeReinitialisation);
+
+            bool emailEnvoye = EnvoyerCodeReinitialisationParEmail(
+                utilisateur,
+                code,
+                out string messageErreurEmail
+            );
+
+            if (!emailEnvoye)
+            {
+                await _dataProvider.MarquerCodesUtilisateurCommeUtilisesAsync(utilisateur.Id);
+
+                return "Erreur pendant l'envoi du code : " + messageErreurEmail;
+            }
+
+            await AjouterLogAsync(
+                utilisateur.Id,
+                utilisateur.Identifiant,
+                "Demande réinitialisation mot de passe",
+                "Un code de réinitialisation a été généré et envoyé par email."
+            );
+
+            return "Si un compte actif correspond à cette information, un code de réinitialisation a été envoyé par email.";
+        }
+
+        private static string GenererCodeReinitialisation()
+        {
+            int nombre = RandomNumberGenerator.GetInt32(100000, 1000000);
+
+            return nombre.ToString();
+        }
+
+        private bool EnvoyerCodeReinitialisationParEmail(
+            UtilisateurModel utilisateur,
+            string code,
+            out string messageErreur)
+        {
+            messageErreur = string.Empty;
+
+            try
+            {
+                EmailDataProvider emailDataProvider = new EmailDataProvider();
+                EmailConfigModel configuration = emailDataProvider.Charger();
+
+                if (!ConfigurationEmailValidePourReinitialisation(configuration, out messageErreur))
+                {
+                    return false;
+                }
+
+                using MailMessage mail = new MailMessage();
+
+                mail.From = new MailAddress(configuration.ExpediteurFrom);
+                mail.To.Add(utilisateur.Email);
+                mail.Subject = "Code de réinitialisation - SaimDataCopy";
+
+                mail.Body =
+                    "Bonjour " + utilisateur.NomComplet + "," + Environment.NewLine +
+                    Environment.NewLine +
+                    "Votre code de réinitialisation SaimDataCopy est :" + Environment.NewLine +
+                    Environment.NewLine +
+                    code + Environment.NewLine +
+                    Environment.NewLine +
+                    "Ce code est valable pendant 10 minutes." + Environment.NewLine +
+                    "Si vous n'avez pas demandé cette action, ignorez simplement cet email." + Environment.NewLine +
+                    Environment.NewLine +
+                    "SaimDataCopy";
+
+                using SmtpClient client = new SmtpClient(
+                    configuration.ServeurSmtp,
+                    configuration.Port
+                );
+
+                client.EnableSsl = SecuriteEmailAvecSsl(configuration.Securite);
+
+                if (!string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp))
+                {
+                    client.Credentials = new NetworkCredential(
+                        configuration.IdentifiantSmtp,
+                        configuration.MotDePasseSmtp
+                    );
+                }
+
+                client.Send(mail);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                messageErreur = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool ConfigurationEmailValidePourReinitialisation(
+            EmailConfigModel configuration,
+            out string message)
+        {
+            if (!configuration.ActiverEnvoiEmail)
+            {
+                message = "l'envoi email est désactivé dans les paramètres.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(configuration.ServeurSmtp))
+            {
+                message = "le serveur SMTP n'est pas renseigné.";
+                return false;
+            }
+
+            if (configuration.Port <= 0)
+            {
+                message = "le port SMTP est invalide.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(configuration.ExpediteurFrom))
+            {
+                message = "l'adresse expéditeur n'est pas renseignée.";
+                return false;
+            }
+
+            message = string.Empty;
+            return true;
+        }
+
+        private static bool SecuriteEmailAvecSsl(string securite)
+        {
+            if (string.IsNullOrWhiteSpace(securite))
+            {
+                return false;
+            }
+
+            return securite.Contains("SSL", StringComparison.OrdinalIgnoreCase) ||
+                   securite.Contains("TLS", StringComparison.OrdinalIgnoreCase) ||
+                   securite.Contains("STARTTLS", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string NormaliserStatutUtilisateur(string statut)

@@ -288,17 +288,27 @@ namespace SaimDataCopy.Views.Authentification
             inscriptionView.AutoriserChoixStatut();
         }
 
-        private void MotDePasseOublieView_EnvoiLienDemande(object? sender, EventArgs e)
+        private async void MotDePasseOublieView_EnvoiLienDemande(object? sender, EventArgs e)
         {
             motDePasseOublieView.ViderMessage();
 
             if (string.IsNullOrWhiteSpace(motDePasseOublieView.Email))
             {
-                motDePasseOublieView.AfficherErreur("Veuillez saisir votre adresse email.");
+                motDePasseOublieView.AfficherErreur("Veuillez saisir votre email ou votre identifiant.");
                 return;
             }
 
-            motDePasseOublieView.AfficherSucces("Fonctionnalité à finaliser : réinitialisation du mot de passe.");
+            string message = await _authentificationController.DemanderCodeReinitialisationMotDePasseAsync(
+                motDePasseOublieView.Email
+            );
+
+            if (message.StartsWith("Erreur", StringComparison.OrdinalIgnoreCase))
+            {
+                motDePasseOublieView.AfficherErreur(message);
+                return;
+            }
+
+            motDePasseOublieView.AfficherSucces(message);
         }
 
         private void AfficherPageIdentification()

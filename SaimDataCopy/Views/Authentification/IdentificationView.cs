@@ -53,7 +53,9 @@ namespace SaimDataCopy.Views.Authentification
             {
                 Text = "Mot de passe oublié ?",
                 Location = new Point(280, 292),
-                Size = new Size(190, 25)
+                Size = new Size(190, 25),
+                Visible = false
+
             };
             IdentificationStyle.AppliquerLien(lienMotDePasse);
             lienMotDePasse.LinkClicked += (s, e) => MotDePasseOublieDemande?.Invoke(this, EventArgs.Empty);

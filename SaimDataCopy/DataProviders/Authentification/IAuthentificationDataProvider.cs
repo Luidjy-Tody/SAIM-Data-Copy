@@ -17,5 +17,14 @@ namespace SaimDataCopy.DataProviders.Authentification
         Task ModifierUtilisateurAsync(UtilisateurModel utilisateur);
 
         Task AjouterLogAsync(LogUtilisateurModel log);
+
+        Task AjouterCodeReinitialisationAsync(CodeReinitialisationMotDePasseModel code);
+
+        Task<CodeReinitialisationMotDePasseModel?> RecupererDernierCodeValideAsync(int utilisateurId);
+
+        Task MarquerCodesUtilisateurCommeUtilisesAsync(int utilisateurId);
+
+
+
     }
 }

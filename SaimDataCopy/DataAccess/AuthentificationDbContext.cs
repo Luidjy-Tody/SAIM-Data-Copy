@@ -15,6 +15,8 @@ namespace SaimDataCopy.DataAccess
 
         public DbSet<LogUtilisateurModel> LogsUtilisateurs { get; set; }
 
+        public DbSet<CodeReinitialisationMotDePasseModel> CodesReinitialisationMotDePasse { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UtilisateurModel>().ToTable("User");
@@ -38,6 +40,15 @@ namespace SaimDataCopy.DataAccess
                 .WithMany()
                 .HasForeignKey(l => l.UtilisateurId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
+                .ToTable("PasswordResetCode");
+
+            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
+                .HasOne(code => code.Utilisateur)
+                .WithMany()
+                .HasForeignKey(code => code.UtilisateurId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

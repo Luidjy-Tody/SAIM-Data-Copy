@@ -1,6 +1,7 @@
 ﻿using SaimDataCopy.Models.Authentification;
 using SaimDataCopy.Services.Authentification;
 
+
 namespace SaimDataCopy.Controllers.Authentification
 {
     public class AuthentificationController
@@ -95,6 +96,13 @@ namespace SaimDataCopy.Controllers.Authentification
                 utilisateur?.Identifiant ?? "Utilisateur inconnu",
                 action,
                 details
+            );
+        }
+
+        public async Task<string> DemanderCodeReinitialisationMotDePasseAsync(string identifiantOuEmail)
+        {
+            return await _authentificationService.DemanderCodeReinitialisationMotDePasseAsync(
+                identifiantOuEmail
             );
         }
 

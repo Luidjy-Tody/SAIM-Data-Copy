@@ -38,13 +38,13 @@ namespace SaimDataCopy.Views.Authentification
                 Size = new Size(400, 50)
             };
 
-            Label lblEmail = CreerLabel("Email", 70, 205);
+            Label lblEmail = CreerLabel("Email ou identifiant", 70, 195);
 
             txtEmail = new TextBox
             {
                 Location = new Point(70, 230),
                 Size = new Size(400, 42),
-                PlaceholderText = "Entrez votre adresse email"
+                PlaceholderText = "Entrez votre email ou identifiant"
             };
             MotDePasseOublieStyle.AppliquerTextBox(txtEmail);
 

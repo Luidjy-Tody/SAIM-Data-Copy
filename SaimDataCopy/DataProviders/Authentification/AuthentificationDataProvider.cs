@@ -84,5 +84,46 @@ namespace SaimDataCopy.DataProviders.Authentification
             context.LogsUtilisateurs.Add(log);
             await context.SaveChangesAsync();
         }
+
+        public async Task AjouterCodeReinitialisationAsync(CodeReinitialisationMotDePasseModel code)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            await context.CodesReinitialisationMotDePasse.AddAsync(code);
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task<CodeReinitialisationMotDePasseModel?> RecupererDernierCodeValideAsync(int utilisateurId)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            return await context.CodesReinitialisationMotDePasse
+                .Where(code =>
+                    code.UtilisateurId == utilisateurId &&
+                    !code.EstUtilise &&
+                    code.DateExpiration > DateTime.Now)
+                .OrderByDescending(code => code.DateCreation)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task MarquerCodesUtilisateurCommeUtilisesAsync(int utilisateurId)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            List<CodeReinitialisationMotDePasseModel> codes =
+                await context.CodesReinitialisationMotDePasse
+                    .Where(code =>
+                        code.UtilisateurId == utilisateurId &&
+                        !code.EstUtilise)
+                    .ToListAsync();
+
+            foreach (CodeReinitialisationMotDePasseModel code in codes)
+            {
+                code.EstUtilise = true;
+            }
+
+            await context.SaveChangesAsync();
+        }
     }
 }

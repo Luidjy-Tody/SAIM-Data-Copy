@@ -18,5 +18,7 @@ namespace SaimDataCopy.Services.Authentification
 
         UtilisateurModel? UtilisateurConnecte { get; }
 
+        Task<string> DemanderCodeReinitialisationMotDePasseAsync(string identifiantOuEmail);
+
     }
 }
