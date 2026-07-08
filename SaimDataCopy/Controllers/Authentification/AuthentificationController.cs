@@ -45,13 +45,23 @@ namespace SaimDataCopy.Controllers.Authentification
             return true;
         }
 
-        public async Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse)
+        public async Task<bool> VerifierAuthentificationAdminAsync(string identifiantOuEmail, string motDePasse)
+        {
+            return await _authentificationService.VerifierAuthentificationAdminAsync(
+                identifiantOuEmail,
+                motDePasse
+            );
+        }
+
+        public async Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse, string statut)
         {
             return await _authentificationService.InscrireAsync(
                 nomComplet,
                 identifiant,
                 email,
-                motDePasse
+                motDePasse,
+                statut
+
             );
         }
 
@@ -59,13 +69,15 @@ namespace SaimDataCopy.Controllers.Authentification
             string nomComplet,
             string identifiant,
             string email,
-            string motDePasse)
+            string motDePasse,
+            string statut)
         {
             return await _authentificationService.InscrireEtRetournerMessageAsync(
                 nomComplet,
                 identifiant,
                 email,
-                motDePasse
+                motDePasse,
+                statut
             );
         }
 

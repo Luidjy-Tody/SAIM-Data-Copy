@@ -1,5 +1,4 @@
-﻿
-namespace SaimDataCopy.Models.Authentification
+﻿namespace SaimDataCopy.Models.Authentification
 {
     public class UtilisateurModel
     {
@@ -7,7 +6,7 @@ namespace SaimDataCopy.Models.Authentification
 
         public string NomComplet { get; set; } = string.Empty;
 
-        public string Identifiant { get; set; } = string.Empty ;
+        public string Identifiant { get; set; } = string.Empty;
 
         public string Email { get; set; } = string.Empty;
 
@@ -17,6 +16,8 @@ namespace SaimDataCopy.Models.Authentification
 
         public DateTime? DerniereConnexion { get; set; }
 
-        public bool EstActif {  get; set; } = true;
+        public bool EstActif { get; set; } = true;
+
+        public string Statut { get; set; } = "User";
     }
 }

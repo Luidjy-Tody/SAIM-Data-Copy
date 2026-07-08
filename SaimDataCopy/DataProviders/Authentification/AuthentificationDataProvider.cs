@@ -30,12 +30,20 @@ namespace SaimDataCopy.DataProviders.Authentification
 
         public async Task<UtilisateurModel?> RecupererUtilisateurParIdentifiantOuEmailAsync(string identifiantOuEmail)
         {
+            if (string.IsNullOrWhiteSpace(identifiantOuEmail))
+            {
+                return null;
+            }
+
+            string valeurRecherchee = identifiantOuEmail.Trim().ToLower();
+
             using AuthentificationDbContext context = CreerContext();
 
             return await context.Utilisateurs
-                .FirstOrDefaultAsync(u =>
-                    u.Identifiant == identifiantOuEmail ||
-                    u.Email == identifiantOuEmail);
+                .FirstOrDefaultAsync(utilisateur =>
+                    utilisateur.Identifiant.ToLower() == valeurRecherchee ||
+                    utilisateur.Email.ToLower() == valeurRecherchee
+                );
         }
 
         public async Task<UtilisateurModel?> RecupererUtilisateurParEmailAsync(string email)

@@ -60,23 +60,65 @@ namespace SaimDataCopy.Services.Authentification
             return true;
         }
 
-        public async Task<bool> InscrireAsync(string nomComplet, string identifiant, string email, string motDePasse)
+        public async Task<bool> VerifierAuthentificationAdminAsync(string identifiantOuEmail, string motDePasse)
+        {
+            if (string.IsNullOrWhiteSpace(identifiantOuEmail) ||
+                string.IsNullOrWhiteSpace(motDePasse))
+            {
+                return false;
+            }
+
+            identifiantOuEmail = identifiantOuEmail.Trim();
+
+            UtilisateurModel? utilisateur =
+                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+
+            if (utilisateur == null || !utilisateur.EstActif)
+            {
+                return false;
+            }
+
+            bool estAdmin =
+                utilisateur.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+            if (!estAdmin)
+            {
+                return false;
+            }
+
+            bool motDePasseCorrect =
+                SecuriteMotDePasseHelper.VerifierMotDePasse(
+                    motDePasse,
+                    utilisateur.MotDePasseHash
+                );
+
+            return motDePasseCorrect;
+        }
+
+        public async Task<bool> InscrireAsync(
+            string nomComplet,
+            string identifiant,
+            string email,
+            string motDePasse,
+            string statut)
         {
             string message = await InscrireEtRetournerMessageAsync(
                 nomComplet,
                 identifiant,
                 email,
-                motDePasse
+                motDePasse,
+                statut
             );
 
             return message == "Compte créé avec succès. Vous pouvez vous connecter.";
         }
 
         public async Task<string> InscrireEtRetournerMessageAsync(
-            string nomComplet,
-            string identifiant,
-            string email,
-            string motDePasse)
+    string nomComplet,
+    string identifiant,
+    string email,
+    string motDePasse,
+    string statut)
         {
             if (string.IsNullOrWhiteSpace(nomComplet) ||
                 string.IsNullOrWhiteSpace(identifiant) ||
@@ -89,6 +131,7 @@ namespace SaimDataCopy.Services.Authentification
             nomComplet = nomComplet.Trim();
             identifiant = identifiant.Trim();
             email = email.Trim();
+            statut = NormaliserStatutUtilisateur(statut);
 
             UtilisateurModel? identifiantExistant =
                 await _dataProvider.RecupererUtilisateurParIdentifiantAsync(identifiant);
@@ -113,7 +156,8 @@ namespace SaimDataCopy.Services.Authentification
                 Email = email,
                 MotDePasseHash = SecuriteMotDePasseHelper.HasherMotDePasse(motDePasse),
                 DateCreation = DateTime.Now,
-                EstActif = true
+                EstActif = true,
+                Statut = statut
             };
 
             await _dataProvider.AjouterUtilisateurAsync(utilisateur);
@@ -122,10 +166,27 @@ namespace SaimDataCopy.Services.Authentification
                 utilisateur.Id,
                 utilisateur.Identifiant,
                 "Inscription",
-                "Nouveau compte utilisateur créé."
+                "Nouveau compte utilisateur créé avec le statut : " + statut + "."
             );
 
             return "Compte créé avec succès. Vous pouvez vous connecter.";
+        }
+
+        private static string NormaliserStatutUtilisateur(string statut)
+        {
+            if (string.IsNullOrWhiteSpace(statut))
+            {
+                return "User";
+            }
+
+            statut = statut.Trim();
+
+            if (statut.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Admin";
+            }
+
+            return "User";
         }
 
         public async Task AjouterLogAsync(

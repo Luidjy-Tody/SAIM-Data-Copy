@@ -12,7 +12,7 @@ namespace SaimDataCopy.Views.Authentification
         private readonly Panel fond;
 
         private readonly AuthHeaderControl header;
-        private readonly AuthFooterControl footer;
+        //private readonly AuthFooterControl footer;
 
         private readonly AuthShadowPanel cartePrincipale;
         private readonly Panel panelCarteContenu;
@@ -24,7 +24,8 @@ namespace SaimDataCopy.Views.Authentification
         private readonly IconButton btnReduire;
         private readonly IconButton btnAgrandir;
         private readonly IconButton btnFermer;
-
+        private readonly AdminVerificationView adminVerificationView;
+        private bool adminAutoriseInscription;
         private UserControl? pageActuelleControle;
 
         public bool AuthentificationReussie { get; private set; }
@@ -34,8 +35,8 @@ namespace SaimDataCopy.Views.Authentification
             _authentificationController = authentificationController;
 
             Text = "SaimDataCopy - Authentification";
-            Size = new Size(1280, 720);
-            MinimumSize = new Size(1100, 720);
+            Size = new Size(1280, 780);
+            MinimumSize = new Size(1100, 760);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.None;
             MaximizeBox = true;
@@ -48,11 +49,11 @@ namespace SaimDataCopy.Views.Authentification
             fond.Paint += Fond_Paint;
 
             header = new AuthHeaderControl();
-            footer = new AuthFooterControl();
+            //footer = new AuthFooterControl();
 
             cartePrincipale = new AuthShadowPanel
             {
-                Size = new Size(540, 530),
+                Size = new Size(540, 620),
                 Padding = new Padding(1)
             };
 
@@ -77,7 +78,13 @@ namespace SaimDataCopy.Views.Authentification
                 Dock = DockStyle.Fill
             };
 
+            adminVerificationView = new AdminVerificationView
+            {
+                Dock = DockStyle.Fill
+            };
+
             panelCarteContenu.Controls.Add(identificationView);
+            panelCarteContenu.Controls.Add(adminVerificationView);
             panelCarteContenu.Controls.Add(inscriptionView);
             panelCarteContenu.Controls.Add(motDePasseOublieView);
 
@@ -108,7 +115,7 @@ namespace SaimDataCopy.Views.Authentification
 
             fond.Controls.Add(header);
             fond.Controls.Add(cartePrincipale);
-            fond.Controls.Add(footer);
+            //fond.Controls.Add(footer);
             fond.Controls.Add(btnReduire);
             fond.Controls.Add(btnAgrandir);
             fond.Controls.Add(btnFermer);
@@ -142,9 +149,19 @@ namespace SaimDataCopy.Views.Authentification
                 AfficherPageInscription();
             };
 
-            identificationView.MotDePasseOublieDemande += (sender, e) =>
+            identificationView.InscriptionDemandee += (sender, e) =>
             {
-                AfficherPageMotDePasseOublie();
+                adminAutoriseInscription = false;
+                adminVerificationView.ViderMessage();
+                AfficherPageVerificationAdmin();
+            };
+
+            adminVerificationView.VerificationAdminDemandee += AdminVerificationView_VerificationAdminDemandee;
+
+            adminVerificationView.RetourConnexionDemande += (sender, e) =>
+            {
+                adminAutoriseInscription = false;
+                AfficherPageIdentification();
             };
 
             inscriptionView.InscriptionDemandee += InscriptionView_InscriptionDemandee;
@@ -160,6 +177,36 @@ namespace SaimDataCopy.Views.Authentification
             {
                 AfficherPageIdentification();
             };
+        }
+
+
+        private void AfficherPageVerificationAdmin()
+        {
+            AfficherPage(adminVerificationView);
+        }
+
+        private async void AdminVerificationView_VerificationAdminDemandee(
+    object? sender,
+    EventArgs e)
+        {
+            adminVerificationView.ViderMessage();
+
+            bool adminOk = await _authentificationController.VerifierAuthentificationAdminAsync(
+                adminVerificationView.IdentifiantAdmin,
+                adminVerificationView.MotDePasseAdmin
+            );
+
+            if (!adminOk)
+            {
+                adminAutoriseInscription = false;
+                adminVerificationView.AfficherErreur("Accès refusé. Un compte Admin valide est requis.");
+                return;
+            }
+
+            adminAutoriseInscription = true;
+
+            inscriptionView.ViderMessage();
+            AfficherPageInscription();
         }
 
         private async void IdentificationView_ConnexionDemandee(object? sender, EventArgs e)
@@ -186,6 +233,13 @@ namespace SaimDataCopy.Views.Authentification
         {
             inscriptionView.ViderMessage();
 
+            if (!adminAutoriseInscription)
+            {
+                inscriptionView.AfficherErreur("Accès refusé. Veuillez d'abord valider un compte Admin.");
+                AfficherPageVerificationAdmin();
+                return;
+            }
+
             if (inscriptionView.MotDePasse != inscriptionView.ConfirmationMotDePasse)
             {
                 inscriptionView.AfficherErreur("Les mots de passe ne correspondent pas.");
@@ -196,7 +250,8 @@ namespace SaimDataCopy.Views.Authentification
                 inscriptionView.NomComplet,
                 inscriptionView.Identifiant,
                 inscriptionView.Email,
-                inscriptionView.MotDePasse
+                inscriptionView.MotDePasse,
+                inscriptionView.Statut
             );
 
             if (messageInscription != "Compte créé avec succès. Vous pouvez vous connecter.")
@@ -270,18 +325,15 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
+            // Header fixe.
             header.Location = new Point(
                 (ClientSize.Width - header.Width) / 2,
                 22
             );
 
-            footer.Location = new Point(
-                (ClientSize.Width - footer.Width) / 2,
-                ClientSize.Height - footer.Height - 12
-            );
-
-            int topDisponible = header.Bottom + 20;
-            int bottomDisponible = footer.Top - 20;
+            // Zone disponible entre le header et le bas de la fenêtre.
+            int topDisponible = header.Bottom + 25;
+            int bottomDisponible = ClientSize.Height - 35;
             int hauteurDisponible = bottomDisponible - topDisponible;
 
             int xCarte = (ClientSize.Width - cartePrincipale.Width) / 2;
@@ -289,13 +341,13 @@ namespace SaimDataCopy.Views.Authentification
 
             cartePrincipale.Location = new Point(xCarte, yCarte);
 
+            // Boutons fenêtre fixes.
             btnReduire.Location = new Point(ClientSize.Width - 170, 14);
             btnAgrandir.Location = new Point(ClientSize.Width - 115, 14);
             btnFermer.Location = new Point(ClientSize.Width - 60, 14);
 
             header.BringToFront();
             cartePrincipale.BringToFront();
-            footer.BringToFront();
 
             btnReduire.BringToFront();
             btnAgrandir.BringToFront();

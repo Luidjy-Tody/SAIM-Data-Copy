@@ -11,6 +11,7 @@ namespace SaimDataCopy.Views.Authentification
         private readonly AuthPasswordTextBox txtMotDePasse;
         private readonly AuthPasswordTextBox txtConfirmation;
         private readonly AuthMessageControl messageControl;
+        private readonly ComboBox cboStatut;
 
         public event EventHandler? InscriptionDemandee;
         public event EventHandler? RetourConnexionDemande;
@@ -20,6 +21,7 @@ namespace SaimDataCopy.Views.Authentification
         public string Email => txtEmail.Text.Trim();
         public string MotDePasse => txtMotDePasse.Texte;
         public string ConfirmationMotDePasse => txtConfirmation.Texte;
+        public string Statut => cboStatut.SelectedItem?.ToString() ?? "User";
 
         public InscriptionView()
         {
@@ -59,16 +61,29 @@ namespace SaimDataCopy.Views.Authentification
                 Size = new Size(430, 42)
             };
 
+            Label lblStatut = CreerLabel("Statut", 70, 386);
+
+            cboStatut = new ComboBox
+            {
+                Location = new Point(70, 410),
+                Size = new Size(400, 42),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+
+            cboStatut.Items.Add("User");
+            cboStatut.Items.Add("Admin");
+            cboStatut.SelectedItem = "User";
+
             messageControl = new AuthMessageControl
             {
-                Location = new Point(70, 386),
+                Location = new Point(70, 462),
                 Size = new Size(400, 25)
             };
 
             Button btnInscription = new Button
             {
                 Text = "S'inscrire",
-                Location = new Point(70, 421),
+                Location = new Point(70, 500),
                 Size = new Size(400, 48)
             };
             InscriptionStyle.AppliquerBouton(btnInscription);
@@ -77,7 +92,7 @@ namespace SaimDataCopy.Views.Authentification
             LinkLabel lienConnexion = new LinkLabel
             {
                 Text = "Déjà un compte ? Se connecter",
-                Location = new Point(70, 485),
+                Location = new Point(70, 565),
                 Size = new Size(400, 25)
             };
             InscriptionStyle.AppliquerLien(lienConnexion);
@@ -94,6 +109,8 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(txtMotDePasse);
             Controls.Add(lblConfirmation);
             Controls.Add(txtConfirmation);
+            Controls.Add(lblStatut);
+            Controls.Add(cboStatut);
             Controls.Add(messageControl);
             Controls.Add(btnInscription);
             Controls.Add(lienConnexion);
