@@ -161,22 +161,24 @@ namespace SaimDataCopy.Controllers.Configuration
             return
                 "Serveur source :" + Environment.NewLine +
                 "- Type : " + configuration.ServeurSource.TypeServeur + Environment.NewLine +
-                "- Nom serveur : " + AfficherValeur(configuration.ServeurSource.NomServeur) + Environment.NewLine +
-                "- Port : " + configuration.ServeurSource.Port + Environment.NewLine +
-                "- Identifiant : " + AfficherValeur(configuration.ServeurSource.Identifiant) + Environment.NewLine +
+                "- Nom serveur renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSource.NomServeur)) + Environment.NewLine +
+                "- Port renseigné : " + OuiNon(configuration.ServeurSource.Port > 0) + Environment.NewLine +
+                "- Identifiant renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSource.Identifiant)) + Environment.NewLine +
+                "- Mot de passe renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSource.MotDePasse)) + Environment.NewLine +
                 "- Chaîne de connexion renseignée : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSource.ChaineConnexion)) + Environment.NewLine +
                 Environment.NewLine +
                 "Serveur cible :" + Environment.NewLine +
                 "- Type : " + configuration.ServeurCible.TypeServeur + Environment.NewLine +
-                "- Nom serveur : " + AfficherValeur(configuration.ServeurCible.NomServeur) + Environment.NewLine +
-                "- Port : " + configuration.ServeurCible.Port + Environment.NewLine +
-                "- Identifiant : " + AfficherValeur(configuration.ServeurCible.Identifiant) + Environment.NewLine +
+                "- Nom serveur renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurCible.NomServeur)) + Environment.NewLine +
+                "- Port renseigné : " + OuiNon(configuration.ServeurCible.Port > 0) + Environment.NewLine +
+                "- Identifiant renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurCible.Identifiant)) + Environment.NewLine +
+                "- Mot de passe renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurCible.MotDePasse)) + Environment.NewLine +
                 "- Chaîne de connexion renseignée : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurCible.ChaineConnexion)) + Environment.NewLine +
                 Environment.NewLine +
                 "Paramètres copie :" + Environment.NewLine +
                 "- Mode copie global : " + configuration.ModeCopie + Environment.NewLine +
                 "- Comportement erreur : " + configuration.ComportementErreur + Environment.NewLine +
-                "- Tentatives reprise : " + configuration.TentativesReprise;
+                "- Tentatives reprise renseignées : " + OuiNon(configuration.TentativesReprise > 0);
         }
 
         private void EnregistrerLogUtilisateur(string action, string details)

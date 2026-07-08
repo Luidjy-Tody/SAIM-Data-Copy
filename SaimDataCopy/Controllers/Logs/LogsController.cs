@@ -100,8 +100,8 @@ namespace SaimDataCopy.Controllers.Logs
         {
             return
                 "Paramètres fichiers logs :" + Environment.NewLine +
-                "- Répertoire logs : " + AfficherValeur(configuration.RepertoireLogs) + Environment.NewLine +
-                "- Nommage fichiers : " + AfficherValeur(configuration.NommageFichiers) + Environment.NewLine +
+                "- Répertoire logs renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.RepertoireLogs)) + Environment.NewLine +
+                "- Nommage fichiers renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.NommageFichiers)) + Environment.NewLine +
                 "- Durée conservation : " + configuration.DureeConservationJours + " jour(s)" + Environment.NewLine +
                 "- Taille maximale fichier : " + configuration.TailleMaxFichierMo + " Mo";
         }
@@ -121,6 +121,10 @@ namespace SaimDataCopy.Controllers.Logs
             });
         }
 
+        private string OuiNon(bool valeur)
+        {
+            return valeur ? "Oui" : "Non";
+        }
         private string AfficherValeur(string valeur)
         {
             return string.IsNullOrWhiteSpace(valeur) ? "Non renseigné" : valeur;

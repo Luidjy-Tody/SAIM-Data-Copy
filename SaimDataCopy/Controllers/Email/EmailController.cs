@@ -118,20 +118,20 @@ namespace SaimDataCopy.Controllers.Email
         {
             return
                 "Serveur SMTP :" + Environment.NewLine +
-                "- Serveur : " + AfficherValeur(configuration.ServeurSmtp) + Environment.NewLine +
-                "- Port : " + configuration.Port + Environment.NewLine +
+                "- Serveur SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSmtp)) + Environment.NewLine +
+                "- Port SMTP renseigné : " + OuiNon(configuration.Port > 0) + Environment.NewLine +
                 "- Sécurité : " + AfficherValeur(configuration.Securite) + Environment.NewLine +
-                "- Identifiant SMTP : " + AfficherValeur(configuration.IdentifiantSmtp) + Environment.NewLine +
+                "- Identifiant SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp)) + Environment.NewLine +
                 "- Mot de passe SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.MotDePasseSmtp)) + Environment.NewLine +
                 Environment.NewLine +
                 "Destinataires :" + Environment.NewLine +
-                "- Expéditeur From : " + AfficherValeur(configuration.ExpediteurFrom) + Environment.NewLine +
-                "- Destinataire To : " + AfficherValeur(configuration.DestinataireTo) + Environment.NewLine +
-                "- Copie CC : " + AfficherValeur(configuration.CopieCc) + Environment.NewLine +
-                "- Copie cachée BCC : " + AfficherValeur(configuration.CopieCacheeBcc) + Environment.NewLine +
+                "- Expéditeur renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ExpediteurFrom)) + Environment.NewLine +
+                "- Nombre de destinataires To : " + CompterEmails(configuration.DestinataireTo) + Environment.NewLine +
+                "- Nombre de destinataires CC : " + CompterEmails(configuration.CopieCc) + Environment.NewLine +
+                "- Nombre de destinataires BCC : " + CompterEmails(configuration.CopieCacheeBcc) + Environment.NewLine +
                 Environment.NewLine +
                 "Message :" + Environment.NewLine +
-                "- Objet : " + AfficherValeur(configuration.Objet) + Environment.NewLine +
+                "- Objet renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.Objet)) + Environment.NewLine +
                 "- Corps renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.CorpsMessage)) + Environment.NewLine +
                 Environment.NewLine +
                 "Options :" + Environment.NewLine +
@@ -152,6 +152,19 @@ namespace SaimDataCopy.Controllers.Email
                     // L'échec du log utilisateur ne doit pas bloquer l'enregistrement métier.
                 }
             });
+        }
+
+        private int CompterEmails(string adresses)
+        {
+            if (string.IsNullOrWhiteSpace(adresses))
+            {
+                return 0;
+            }
+
+            return adresses
+                .Split(',', ';')
+                .Select(adresse => adresse.Trim())
+                .Count(adresse => !string.IsNullOrWhiteSpace(adresse));
         }
 
         private string AfficherValeur(string valeur)
