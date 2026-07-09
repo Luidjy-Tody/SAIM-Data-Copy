@@ -20,7 +20,6 @@ namespace SaimDataCopy.DataAccess
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Charset compatible avec MySQL 5.1.
-            // On évite utf8mb4 car le serveur de test du superviseur ne le supporte pas.
             modelBuilder.HasCharSet("latin1");
 
             modelBuilder.Entity<UtilisateurModel>()
