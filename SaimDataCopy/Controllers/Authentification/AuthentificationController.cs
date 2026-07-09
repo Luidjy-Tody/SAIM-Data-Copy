@@ -106,6 +106,17 @@ namespace SaimDataCopy.Controllers.Authentification
             );
         }
 
+        public async Task DeconnecterEtJournaliserAsync(string details)
+        {
+            try
+            {
+                await AjouterLogAsync("Déconnexion",details);
+            }
+            finally
+            {
+                Deconnecter();
+            }
+        }
         public void Deconnecter()
         {
             _sessionUtilisateurService.DeconnecterUtilisateur();
@@ -115,5 +126,7 @@ namespace SaimDataCopy.Controllers.Authentification
         {
             _sessionUtilisateurService.Deverrouiller();
         }
+
+
     }
 }

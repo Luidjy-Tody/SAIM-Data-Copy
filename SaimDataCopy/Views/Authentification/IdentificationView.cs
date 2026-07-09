@@ -55,10 +55,12 @@ namespace SaimDataCopy.Views.Authentification
                 Location = new Point(280, 292),
                 Size = new Size(190, 25),
                 Visible = false
-
             };
             IdentificationStyle.AppliquerLien(lienMotDePasse);
-            lienMotDePasse.LinkClicked += (s, e) => MotDePasseOublieDemande?.Invoke(this, EventArgs.Empty);
+            lienMotDePasse.LinkClicked += (s, e) =>
+            {
+                MotDePasseOublieDemande?.Invoke(this, EventArgs.Empty);
+            };
 
             messageControl = new AuthMessageControl
             {
@@ -73,7 +75,10 @@ namespace SaimDataCopy.Views.Authentification
                 Size = new Size(400, 50)
             };
             IdentificationStyle.AppliquerBouton(btnConnexion);
-            btnConnexion.Click += (s, e) => ConnexionDemandee?.Invoke(this, EventArgs.Empty);
+            btnConnexion.Click += (s, e) =>
+            {
+                ConnexionDemandee?.Invoke(this, EventArgs.Empty);
+            };
 
             LinkLabel lienInscription = new LinkLabel
             {
@@ -82,7 +87,10 @@ namespace SaimDataCopy.Views.Authentification
                 Size = new Size(400, 25)
             };
             IdentificationStyle.AppliquerLien(lienInscription);
-            lienInscription.LinkClicked += (s, e) => InscriptionDemandee?.Invoke(this, EventArgs.Empty);
+            lienInscription.LinkClicked += (s, e) =>
+            {
+                InscriptionDemandee?.Invoke(this, EventArgs.Empty);
+            };
 
             Controls.Add(lblTitre);
             Controls.Add(lblIdentifiant);
@@ -93,6 +101,8 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(messageControl);
             Controls.Add(btnConnexion);
             Controls.Add(lienInscription);
+
+            ConfigurerNavigationClavier();
         }
 
         private static Label CreerLabel(string texte, int x, int y)
@@ -109,9 +119,81 @@ namespace SaimDataCopy.Views.Authentification
             return label;
         }
 
+        private void ConfigurerNavigationClavier()
+        {
+            txtIdentifiant.KeyDown += TxtIdentifiant_KeyDown;
+            txtMotDePasse.TextBox.KeyDown += TxtMotDePasse_KeyDown;
+        }
+
+        private void TxtIdentifiant_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtIdentifiant.Text))
+            {
+                AfficherErreur("Veuillez remplir l'identifiant.");
+                txtIdentifiant.Focus();
+                return;
+            }
+
+            ViderErreur();
+            txtMotDePasse.TextBox.Focus();
+        }
+
+        private void TxtMotDePasse_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            DemanderConnexionDepuisClavier();
+        }
+
+        private void DemanderConnexionDepuisClavier()
+        {
+            if (string.IsNullOrWhiteSpace(txtIdentifiant.Text))
+            {
+                AfficherErreur("Veuillez remplir l'identifiant.");
+                txtIdentifiant.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtMotDePasse.Texte))
+            {
+                AfficherErreur("Veuillez remplir le mot de passe.");
+                txtMotDePasse.TextBox.Focus();
+                return;
+            }
+
+            ViderErreur();
+            ConnexionDemandee?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void ReinitialiserFormulaire()
+        {
+            txtIdentifiant.Clear();
+            txtMotDePasse.Texte = string.Empty;
+            messageControl.Effacer();
+
+            txtIdentifiant.Focus();
+        }
+
         public void AfficherErreur(string message)
         {
             messageControl.AfficherErreur(message);
+        }
+
+        public void AfficherSucces(string message)
+        {
+            messageControl.AfficherSucces(message);
         }
 
         public void ViderErreur()

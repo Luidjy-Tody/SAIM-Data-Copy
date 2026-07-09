@@ -23,9 +23,9 @@ namespace SaimDataCopy.Migrations
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     NomComplet = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "latin1"),
-                    Identifiant = table.Column<string>(type: "varchar(255)", nullable: false)
+                    Identifiant = table.Column<string>(type: "varchar(95)", nullable: false)
                         .Annotation("MySql:CharSet", "latin1"),
-                    Email = table.Column<string>(type: "varchar(255)", nullable: false)
+                    Email = table.Column<string>(type: "varchar(95)", nullable: false)
                         .Annotation("MySql:CharSet", "latin1"),
                     MotDePasseHash = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "latin1"),

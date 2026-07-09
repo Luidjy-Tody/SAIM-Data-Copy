@@ -25,6 +25,7 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Services.Authentification;
+using SaimDataCopy.Controllers.Authentification;
 
 
 namespace SaimDataCopy.Views.Forms
@@ -83,7 +84,11 @@ namespace SaimDataCopy.Views.Forms
         // Timer qui vérifie régulièrement si l'application doit se verrouiller.
         private readonly System.Windows.Forms.Timer timerInactivite = new System.Windows.Forms.Timer();
 
-     
+        private readonly AuthentificationController authentificationController = new AuthentificationController();
+
+        private bool fermetureAutoriseeApresDeconnexion;
+
+
 
         // Permet de déplacer la fenêtre quand on clique sur la barre personnalisée.
         [DllImport("user32.dll")]
@@ -684,12 +689,34 @@ namespace SaimDataCopy.Views.Forms
             }
         }
 
-        private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+        private async void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
             if (!VerifierFermetureApplication())
             {
                 e.Cancel = true;
+                return;
             }
+
+            if (fermetureAutoriseeApresDeconnexion)
+            {
+                return;
+            }
+
+            e.Cancel = true;
+            fermetureAutoriseeApresDeconnexion = true;
+
+            try
+            {
+                timerInactivite.Stop();
+
+                await authentificationController.DeconnecterEtJournaliserAsync("Déconnexion automatique après fermeture de la fenêtre principale.");
+            }
+            catch
+            {
+                authentificationController.Deconnecter();
+            }
+
+            Close();
         }
 
         private bool VerifierFermetureApplication()

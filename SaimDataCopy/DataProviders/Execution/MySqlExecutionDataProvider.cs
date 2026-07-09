@@ -249,8 +249,16 @@ namespace SaimDataCopy.DataProviders.Execution
 
             // Certains anciens serveurs MySQL ne connaissent pas utf8mb4_0900_ai_ci.
             // On remplace par une collation plus compatible.
-            scriptCreationTable = scriptCreationTable.Replace("utf8mb4_0900_ai_ci", "utf8mb4_general_ci");
-
+            // Compatibilité avec les anciens serveurs MySQL comme MySQL 5.1.
+            // On évite utf8mb4 car ce charset n'est pas reconnu sur le serveur du superviseur.
+            scriptCreationTable = scriptCreationTable
+                .Replace("utf8mb4_0900_ai_ci", "latin1_swedish_ci", StringComparison.OrdinalIgnoreCase)
+                .Replace("utf8mb4_general_ci", "latin1_swedish_ci", StringComparison.OrdinalIgnoreCase)
+                .Replace("CHARACTER SET utf8mb4", "CHARACTER SET latin1", StringComparison.OrdinalIgnoreCase)
+                .Replace("DEFAULT CHARSET=utf8mb4", "DEFAULT CHARSET=latin1", StringComparison.OrdinalIgnoreCase)
+                .Replace("CHARSET=utf8mb4", "CHARSET=latin1", StringComparison.OrdinalIgnoreCase)
+                .Replace("COLLATE=utf8mb4_0900_ai_ci", "COLLATE=latin1_swedish_ci", StringComparison.OrdinalIgnoreCase)
+                .Replace("COLLATE=utf8mb4_general_ci", "COLLATE=latin1_swedish_ci", StringComparison.OrdinalIgnoreCase);
             // Pour éviter les erreurs de création liées aux clés étrangères,
             // on crée d'abord les tables sans contraintes FOREIGN KEY.
             // Exemple : address dépend de city, donc MySQL bloque si city n'existe pas encore.

@@ -28,26 +28,37 @@ namespace SaimDataCopy
                     return;
                 }
 
-                // Sinon, on lance l'application normalement avec l'interface WinForms.
                 ApplicationConfiguration.Initialize();
 
                 await InitialiserBaseAuthentificationAsync();
 
-                AuthentificationController authentificationController = new AuthentificationController();
+                AuthentificationController authentificationController =
+                    new AuthentificationController();
 
-                bool authentificationOk = await AfficherAuthentificationAsync(authentificationController);
+                using AuthentificationForm authentificationForm =
+                    new AuthentificationForm(authentificationController);
 
-                if (!authentificationOk)
+                while (true)
                 {
-                    return;
-                }
+                    bool authentificationOk =
+                        await AfficherAuthentificationAsync(authentificationForm);
 
-                Application.Run(new MainForm());
+                    if (!authentificationOk)
+                    {
+                        return;
+                    }
+
+                    using MainForm mainForm = new MainForm();
+
+                    Application.Run(mainForm);
+
+                    // Quand MainForm se ferme avec X, on revient ici.
+                    // MainForm a déjà déconnecté l'utilisateur.
+                    authentificationForm.PreparerRetourApresDeconnexionDepuisMainForm();
+                }
             }
             catch (Exception ex)
             {
-                // En mode automatique, il ne faut pas afficher de MessageBox,
-                // car le Task Scheduler ne doit pas attendre une action utilisateur.
                 if (EstModeExecutionAutomatique(args))
                 {
                     Environment.ExitCode = 1;
@@ -66,10 +77,9 @@ namespace SaimDataCopy
         }
 
         private static Task<bool> AfficherAuthentificationAsync(
-            AuthentificationController authentificationController)
+            AuthentificationForm authentificationForm)
         {
-            using AuthentificationForm authentificationForm =
-                new AuthentificationForm(authentificationController);
+            authentificationForm.PreparerAffichageAuthentification();
 
             DialogResult resultat = authentificationForm.ShowDialog();
 
@@ -92,22 +102,21 @@ namespace SaimDataCopy
                 new DbContextOptionsBuilder<AuthentificationDbContext>()
                     .UseMySql(
                         chaineConnexionBase,
-                        ServerVersion.AutoDetect(chaineConnexionBase)
+                        AuthentificationConnexionHelper.ObtenirVersionServeurMySql()
                     )
                     .Options;
 
             using AuthentificationDbContext context =
                 new AuthentificationDbContext(options);
 
-            // Crée automatiquement les tables User, Log, PasswordResetCode
             await context.Database.MigrateAsync();
 
-            // Si une base contient déjà des utilisateurs mais aucun Admin,
-            // le premier utilisateur devient Admin.
             await GarantirPresenceAdminAsync(context);
         }
 
-        private static async Task CreerBaseAuthentificationSiInexistanteAsync(string chaineConnexionServeur, string nomBaseAuthentification)
+        private static async Task CreerBaseAuthentificationSiInexistanteAsync(
+            string chaineConnexionServeur,
+            string nomBaseAuthentification)
         {
             using MySqlConnection connexion = new MySqlConnection(chaineConnexionServeur);
 
@@ -115,8 +124,9 @@ namespace SaimDataCopy
 
             using MySqlCommand commande = connexion.CreateCommand();
 
-            // On force latin1 pour éviter les erreurs avec utf8mb4.
-            commande.CommandText ="CREATE DATABASE IF NOT EXISTS `" + nomBaseAuthentification + "` " + "CHARACTER SET latin1 COLLATE latin1_swedish_ci;";
+            commande.CommandText =
+                "CREATE DATABASE IF NOT EXISTS `" + nomBaseAuthentification + "` " +
+                "CHARACTER SET latin1 COLLATE latin1_swedish_ci;";
 
             await commande.ExecuteNonQueryAsync();
         }
@@ -124,16 +134,14 @@ namespace SaimDataCopy
         private static async Task GarantirPresenceAdminAsync(
             AuthentificationDbContext context)
         {
-            // On vérifie s'il existe déjà au moins un compte Admin.
             bool adminExiste = await context.Utilisateurs
-                .AnyAsync(utilisateur => utilisateur.Statut == "Admin");
+                .AnyAsync(utilisateur => utilisateur.Statut.Equals("Admin"));
 
             if (adminExiste)
             {
                 return;
             }
 
-            // Si aucun Admin n'existe, on récupère le premier utilisateur créé.
             var premierUtilisateur = await context.Utilisateurs
                 .OrderBy(utilisateur => utilisateur.Id)
                 .FirstOrDefaultAsync();
@@ -156,8 +164,6 @@ namespace SaimDataCopy
 
         private static async Task LancerExecutionAutomatiqueAsync()
         {
-            // Le Service choisit automatiquement SQL Server ou MySQL
-            // grâce à ExecutionDataProviderFactory.
             ExecutionService executionService = new ExecutionService();
 
             Progress<ExecutionProgressionModel> progression = new Progress<ExecutionProgressionModel>();

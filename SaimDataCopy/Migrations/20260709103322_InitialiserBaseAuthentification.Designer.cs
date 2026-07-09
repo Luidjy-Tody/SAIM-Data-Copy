@@ -12,7 +12,7 @@ using SaimDataCopy.DataAccess;
 namespace SaimDataCopy.Migrations
 {
     [DbContext(typeof(AuthentificationDbContext))]
-    [Migration("20260709075711_InitialiserBaseAuthentification")]
+    [Migration("20260709103322_InitialiserBaseAuthentification")]
     partial class InitialiserBaseAuthentification
     {
         /// <inheritdoc />
@@ -110,14 +110,14 @@ namespace SaimDataCopy.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar(95)");
 
                     b.Property<bool>("EstActif")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Identifiant")
                         .IsRequired()
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar(95)");
 
                     b.Property<string>("MotDePasseHash")
                         .IsRequired()

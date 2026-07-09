@@ -114,6 +114,7 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(messageControl);
             Controls.Add(btnInscription);
             Controls.Add(lienConnexion);
+            ConfigurerNavigationClavier();
         }
 
         public void DefinirStatut(string statut)
@@ -177,6 +178,176 @@ namespace SaimDataCopy.Views.Authentification
         public void ViderMessage()
         {
             messageControl.Effacer();
+        }
+
+        private void ConfigurerNavigationClavier()
+        {
+            txtNomComplet.KeyDown += TxtNomComplet_KeyDown;
+            txtIdentifiant.KeyDown += TxtIdentifiant_KeyDown;
+            txtEmail.KeyDown += TxtEmail_KeyDown;
+            txtMotDePasse.TextBox.KeyDown += TxtMotDePasse_KeyDown;
+            txtConfirmation.TextBox.KeyDown += TxtConfirmation_KeyDown;
+            cboStatut.KeyDown += CboStatut_KeyDown;
+        }
+
+        private void TxtNomComplet_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtNomComplet.Text))
+            {
+                AfficherErreur("Veuillez remplir le nom complet.");
+                txtNomComplet.Focus();
+                return;
+            }
+
+            ViderMessage();
+            txtIdentifiant.Focus();
+        }
+
+        private void TxtIdentifiant_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtIdentifiant.Text))
+            {
+                AfficherErreur("Veuillez remplir le nom d'utilisateur.");
+                txtIdentifiant.Focus();
+                return;
+            }
+
+            ViderMessage();
+            txtEmail.Focus();
+        }
+
+        private void TxtEmail_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
+            {
+                AfficherErreur("Veuillez remplir l'email.");
+                txtEmail.Focus();
+                return;
+            }
+
+            ViderMessage();
+            txtMotDePasse.TextBox.Focus();
+        }
+
+        private void TxtMotDePasse_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtMotDePasse.Texte))
+            {
+                AfficherErreur("Veuillez remplir le mot de passe.");
+                txtMotDePasse.TextBox.Focus();
+                return;
+            }
+
+            ViderMessage();
+            txtConfirmation.TextBox.Focus();
+        }
+
+        private void TxtConfirmation_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtConfirmation.Texte))
+            {
+                AfficherErreur("Veuillez confirmer le mot de passe.");
+                txtConfirmation.TextBox.Focus();
+                return;
+            }
+
+            ViderMessage();
+            cboStatut.Focus();
+        }
+
+        private void CboStatut_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            DemanderInscriptionDepuisClavier();
+        }
+
+        private void DemanderInscriptionDepuisClavier()
+        {
+            if (string.IsNullOrWhiteSpace(txtNomComplet.Text))
+            {
+                AfficherErreur("Veuillez remplir le nom complet.");
+                txtNomComplet.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtIdentifiant.Text))
+            {
+                AfficherErreur("Veuillez remplir le nom d'utilisateur.");
+                txtIdentifiant.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
+            {
+                AfficherErreur("Veuillez remplir l'email.");
+                txtEmail.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtMotDePasse.Texte))
+            {
+                AfficherErreur("Veuillez remplir le mot de passe.");
+                txtMotDePasse.TextBox.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtConfirmation.Texte))
+            {
+                AfficherErreur("Veuillez confirmer le mot de passe.");
+                txtConfirmation.TextBox.Focus();
+                return;
+            }
+
+            if (txtMotDePasse.Texte != txtConfirmation.Texte)
+            {
+                AfficherErreur("Les mots de passe ne correspondent pas.");
+                txtConfirmation.TextBox.Focus();
+                return;
+            }
+
+            ViderMessage();
+            InscriptionDemandee?.Invoke(this, EventArgs.Empty);
         }
     }
 }

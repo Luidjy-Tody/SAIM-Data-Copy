@@ -91,6 +91,8 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(messageControl);
             Controls.Add(btnVerifier);
             Controls.Add(lienRetour);
+            ConfigurerNavigationClavier();
+
         }
 
         private static Label CreerLabel(string texte, int x, int y)
@@ -120,6 +122,65 @@ namespace SaimDataCopy.Views.Authentification
         public void ViderMessage()
         {
             messageControl.Effacer();
+        }
+
+
+        private void ConfigurerNavigationClavier()
+        {
+            txtIdentifiantAdmin.KeyDown += TxtIdentifiantAdmin_KeyDown;
+            txtMotDePasseAdmin.TextBox.KeyDown += TxtMotDePasseAdmin_KeyDown;
+        }
+
+        private void TxtIdentifiantAdmin_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtIdentifiantAdmin.Text))
+            {
+                AfficherErreur("Veuillez remplir l'identifiant ou l'email Admin.");
+                txtIdentifiantAdmin.Focus();
+                return;
+            }
+
+            ViderMessage();
+            txtMotDePasseAdmin.TextBox.Focus();
+        }
+
+        private void TxtMotDePasseAdmin_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            DemanderVerificationAdminDepuisClavier();
+        }
+
+        private void DemanderVerificationAdminDepuisClavier()
+        {
+            if (string.IsNullOrWhiteSpace(txtIdentifiantAdmin.Text))
+            {
+                AfficherErreur("Veuillez remplir l'identifiant ou l'email Admin.");
+                txtIdentifiantAdmin.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtMotDePasseAdmin.Texte))
+            {
+                AfficherErreur("Veuillez remplir le mot de passe Admin.");
+                txtMotDePasseAdmin.TextBox.Focus();
+                return;
+            }
+
+            ViderMessage();
+            VerificationAdminDemandee?.Invoke(this, EventArgs.Empty);
         }
     }
 }

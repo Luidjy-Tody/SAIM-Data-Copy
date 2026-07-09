@@ -13,7 +13,7 @@ namespace SaimDataCopy.DataProviders.Authentification
             DbContextOptions<AuthentificationDbContext> options = new DbContextOptionsBuilder<AuthentificationDbContext>()
                 .UseMySql(
                     chaineConnexion,
-                    ServerVersion.AutoDetect(chaineConnexion)
+                    AuthentificationConnexionHelper.ObtenirVersionServeurMySql()
                 )
                 .Options;
 

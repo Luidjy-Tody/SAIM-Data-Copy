@@ -79,6 +79,7 @@ namespace SaimDataCopy.Views.Authentification
             Controls.Add(messageControl);
             Controls.Add(btnEnvoyer);
             Controls.Add(lienRetour);
+            ConfigurerNavigationClavier();
         }
 
         private static Label CreerLabel(string texte, int x, int y)
@@ -108,6 +109,31 @@ namespace SaimDataCopy.Views.Authentification
         public void ViderMessage()
         {
             messageControl.Effacer();
+        }
+
+        private void ConfigurerNavigationClavier()
+        {
+            txtEmail.KeyDown += TxtEmail_KeyDown;
+        }
+
+        private void TxtEmail_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
+            {
+                AfficherErreur("Veuillez remplir l'email ou l'identifiant.");
+                txtEmail.Focus();
+                return;
+            }
+
+            ViderMessage();
+            EnvoiLienDemande?.Invoke(this, EventArgs.Empty);
         }
     }
 }

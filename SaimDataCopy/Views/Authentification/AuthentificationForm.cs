@@ -2,17 +2,25 @@
 using SaimDataCopy.Controllers.Authentification;
 using SaimDataCopy.Styles.Authentification.Commun;
 using SaimDataCopy.Views.Authentification.Components;
+using System.Runtime.InteropServices;
 
 namespace SaimDataCopy.Views.Authentification
 {
     public class AuthentificationForm : Form
     {
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HTCAPTION = 0x2;
+
         private readonly AuthentificationController _authentificationController;
 
         private readonly Panel fond;
-
         private readonly AuthHeaderControl header;
-        //private readonly AuthFooterControl footer;
 
         private readonly AuthShadowPanel cartePrincipale;
         private readonly Panel panelCarteContenu;
@@ -20,12 +28,13 @@ namespace SaimDataCopy.Views.Authentification
         private readonly IdentificationView identificationView;
         private readonly InscriptionView inscriptionView;
         private readonly MotDePasseOublieView motDePasseOublieView;
+        private readonly AdminVerificationView adminVerificationView;
 
         private readonly IconButton btnReduire;
         private readonly IconButton btnAgrandir;
         private readonly IconButton btnFermer;
+
         private bool creationPremierCompteEnCours;
-        private readonly AdminVerificationView adminVerificationView;
         private bool adminAutoriseInscription;
         private UserControl? pageActuelleControle;
 
@@ -48,9 +57,10 @@ namespace SaimDataCopy.Views.Authentification
                 Dock = DockStyle.Fill
             };
             fond.Paint += Fond_Paint;
+            fond.MouseDown += DeplacerFenetre_MouseDown;
 
             header = new AuthHeaderControl();
-            //footer = new AuthFooterControl();
+            ActiverDeplacementSurControle(header);
 
             cartePrincipale = new AuthShadowPanel
             {
@@ -99,7 +109,10 @@ namespace SaimDataCopy.Views.Authentification
             AuthWindowButtonStyle.Appliquer(btnAgrandir);
             AuthWindowButtonStyle.AppliquerBoutonFermer(btnFermer);
 
-            btnReduire.Click += (s, e) => WindowState = FormWindowState.Minimized;
+            btnReduire.Click += (s, e) =>
+            {
+                WindowState = FormWindowState.Minimized;
+            };
 
             btnAgrandir.Click += (s, e) =>
             {
@@ -116,7 +129,6 @@ namespace SaimDataCopy.Views.Authentification
 
             fond.Controls.Add(header);
             fond.Controls.Add(cartePrincipale);
-            //fond.Controls.Add(footer);
             fond.Controls.Add(btnReduire);
             fond.Controls.Add(btnAgrandir);
             fond.Controls.Add(btnFermer);
@@ -133,7 +145,10 @@ namespace SaimDataCopy.Views.Authentification
                 fond.Invalidate();
             };
 
-            Shown += (s, e) => PositionnerElementsFixes();
+            Shown += (s, e) =>
+            {
+                PositionnerElementsFixes();
+            };
         }
 
         private void Fond_Paint(object? sender, PaintEventArgs e)
@@ -141,14 +156,35 @@ namespace SaimDataCopy.Views.Authentification
             AuthBackgroundStyle.DessinerFond(e.Graphics, fond.ClientRectangle);
         }
 
+        private void DeplacerFenetre_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            if (WindowState == FormWindowState.Maximized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+        }
+
+        private void ActiverDeplacementSurControle(Control controle)
+        {
+            controle.MouseDown += DeplacerFenetre_MouseDown;
+
+            foreach (Control enfant in controle.Controls)
+            {
+                ActiverDeplacementSurControle(enfant);
+            }
+        }
+
         private void BrancherEvenements()
         {
             identificationView.ConnexionDemandee += IdentificationView_ConnexionDemandee;
-
-            identificationView.InscriptionDemandee += (sender, e) =>
-            {
-                AfficherPageInscription();
-            };
 
             identificationView.InscriptionDemandee += async (sender, e) =>
             {
@@ -200,6 +236,25 @@ namespace SaimDataCopy.Views.Authentification
             };
         }
 
+        public void PreparerAffichageAuthentification()
+        {
+            DialogResult = DialogResult.None;
+            AuthentificationReussie = false;
+
+            AfficherPageIdentification();
+        }
+
+        public void PreparerRetourApresDeconnexionDepuisMainForm()
+        {
+            AuthentificationReussie = false;
+            creationPremierCompteEnCours = false;
+            adminAutoriseInscription = false;
+
+            identificationView.ReinitialiserFormulaire();
+            identificationView.AfficherSucces("Déconnexion effectuée.");
+
+            AfficherPageIdentification();
+        }
 
         private void AfficherPageVerificationAdmin()
         {
@@ -207,8 +262,8 @@ namespace SaimDataCopy.Views.Authentification
         }
 
         private async void AdminVerificationView_VerificationAdminDemandee(
-    object? sender,
-    EventArgs e)
+            object? sender,
+            EventArgs e)
         {
             adminVerificationView.ViderMessage();
 
@@ -247,7 +302,6 @@ namespace SaimDataCopy.Views.Authentification
 
             AuthentificationReussie = true;
             DialogResult = DialogResult.OK;
-            Close();
         }
 
         private async void InscriptionView_InscriptionDemandee(object? sender, EventArgs e)
@@ -267,15 +321,18 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
-            string statutCompte = creationPremierCompteEnCours? "Admin" : inscriptionView.Statut;
+            string statutCompte = creationPremierCompteEnCours
+                ? "Admin"
+                : inscriptionView.Statut;
 
-            string messageInscription = await _authentificationController.InscrireEtRetournerMessageAsync(
-                inscriptionView.NomComplet,
-                inscriptionView.Identifiant,
-                inscriptionView.Email,
-                inscriptionView.MotDePasse,
-                statutCompte
-            );
+            string messageInscription =
+                await _authentificationController.InscrireEtRetournerMessageAsync(
+                    inscriptionView.NomComplet,
+                    inscriptionView.Identifiant,
+                    inscriptionView.Email,
+                    inscriptionView.MotDePasse,
+                    statutCompte
+                );
 
             if (messageInscription != "Compte créé avec succès. Vous pouvez vous connecter.")
             {
@@ -298,9 +355,7 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
-            string message = await _authentificationController.DemanderCodeReinitialisationMotDePasseAsync(
-                motDePasseOublieView.Email
-            );
+            string message = await _authentificationController.DemanderCodeReinitialisationMotDePasseAsync(motDePasseOublieView.Email);
 
             if (message.StartsWith("Erreur", StringComparison.OrdinalIgnoreCase))
             {
@@ -360,13 +415,11 @@ namespace SaimDataCopy.Views.Authentification
                 return;
             }
 
-            // Header fixe.
             header.Location = new Point(
                 (ClientSize.Width - header.Width) / 2,
                 22
             );
 
-            // Zone disponible entre le header et le bas de la fenêtre.
             int topDisponible = header.Bottom + 25;
             int bottomDisponible = ClientSize.Height - 35;
             int hauteurDisponible = bottomDisponible - topDisponible;
@@ -376,7 +429,6 @@ namespace SaimDataCopy.Views.Authentification
 
             cartePrincipale.Location = new Point(xCarte, yCarte);
 
-            // Boutons fenêtre fixes.
             btnReduire.Location = new Point(ClientSize.Width - 170, 14);
             btnAgrandir.Location = new Point(ClientSize.Width - 115, 14);
             btnFermer.Location = new Point(ClientSize.Width - 60, 14);
