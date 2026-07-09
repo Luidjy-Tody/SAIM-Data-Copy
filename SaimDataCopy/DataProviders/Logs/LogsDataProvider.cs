@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SaimDataCopy.Helpers;
 using SaimDataCopy.Models.Logs;
 
 namespace SaimDataCopy.DataProviders.Logs
@@ -13,15 +14,9 @@ namespace SaimDataCopy.DataProviders.Logs
 
         public LogsDataProvider()
         {
-            // Dossier Data dans le dossier de l'application.
-            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+            // Le fichier JSON est stocké dans ProgramData pour éviter les erreurs d'accès dans Program Files.
+            string dossierData = CheminApplicationHelper.ObtenirDossierData();
 
-            if (!Directory.Exists(dossierData))
-            {
-                Directory.CreateDirectory(dossierData);
-            }
-
-            // Nouveau fichier demandé pour les paramètres logs.
             _cheminFichier = Path.Combine(dossierData, "logs_parametres.json");
         }
 

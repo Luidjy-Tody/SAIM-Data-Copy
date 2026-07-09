@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SaimDataCopy.Helpers;
 using SaimDataCopy.Models.Historique;
 
 namespace SaimDataCopy.DataProviders.Historique
@@ -11,12 +12,7 @@ namespace SaimDataCopy.DataProviders.Historique
 
         public HistoriqueDataProvider()
         {
-            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-
-            if (!Directory.Exists(dossierData))
-            {
-                Directory.CreateDirectory(dossierData);
-            }
+            string dossierData = CheminApplicationHelper.ObtenirDossierData();
 
             _cheminFichierHistorique = Path.Combine(dossierData, "historique_executions.json");
         }

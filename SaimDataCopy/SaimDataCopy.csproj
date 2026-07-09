@@ -6,7 +6,16 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>database.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\database.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="database.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />

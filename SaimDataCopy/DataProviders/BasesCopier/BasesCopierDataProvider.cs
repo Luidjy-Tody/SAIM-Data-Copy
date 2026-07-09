@@ -25,13 +25,8 @@ namespace SaimDataCopy.DataProviders.BasesCopier
         {
             _configurationDataProvider = configurationDataProvider;
 
-            // Le fichier JSON sera stocké dans le dossier Data de l'application.
-            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-
-            if (!Directory.Exists(dossierData))
-            {
-                Directory.CreateDirectory(dossierData);
-            }
+            // Le fichier JSON est stocké dans ProgramData pour éviter les erreurs d'accès dans Program Files.
+            string dossierData = CheminApplicationHelper.ObtenirDossierData();
 
             _cheminFichierBases = Path.Combine(dossierData, "bases_copier.json");
         }

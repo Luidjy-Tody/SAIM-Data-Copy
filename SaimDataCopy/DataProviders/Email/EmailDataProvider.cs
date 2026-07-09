@@ -16,15 +16,10 @@ namespace SaimDataCopy.DataProviders.Email
 
         public EmailDataProvider()
         {
-            // On met le fichier dans le dossier Data de l'application.
-            string dossierData = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "Data"
-            );
+            // Le fichier JSON est stocké dans ProgramData pour éviter les erreurs d'accès dans Program Files.
+            string dossierData = CheminApplicationHelper.ObtenirDossierData();
 
-            _cheminFichier = Path.Combine(
-                dossierData,
-                "email_parametres.json"
+            _cheminFichier = Path.Combine(dossierData, "email_parametres.json"
             );
         }
 

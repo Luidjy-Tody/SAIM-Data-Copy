@@ -23,12 +23,7 @@ namespace SaimDataCopy.DataProviders.BasesCopier
         {
             _configurationDataProvider = configurationDataProvider;
 
-            string dossierData = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-
-            if (!Directory.Exists(dossierData))
-            {
-                Directory.CreateDirectory(dossierData);
-            }
+            string dossierData = CheminApplicationHelper.ObtenirDossierData();
 
             _cheminFichierBases = Path.Combine(dossierData, "bases_copier.json");
         }

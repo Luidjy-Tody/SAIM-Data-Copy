@@ -7,9 +7,9 @@ namespace SaimDataCopy.Helpers
     {
         // Ton encadreur modifie seulement ces valeurs.
         private const string Serveur = "localhost";
-        private const uint Port = 3308;
+        private const uint Port = 0;
         private const string BaseAuthentification = "saimdatacopy_auth";
-        private const string Utilisateur = "root";
+        private const string Utilisateur = "";
         private const string MotDePasse = "";
 
         public static string ObtenirNomBaseAuthentification()
