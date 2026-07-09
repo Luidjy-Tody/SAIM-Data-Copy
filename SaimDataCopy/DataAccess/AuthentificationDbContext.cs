@@ -19,36 +19,66 @@ namespace SaimDataCopy.DataAccess
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<UtilisateurModel>().ToTable("User");
-            modelBuilder.Entity<LogUtilisateurModel>().ToTable("Log");
+            // Charset compatible avec MySQL 5.1.
+            // On évite utf8mb4 car le serveur de test du superviseur ne le supporte pas.
+            modelBuilder.HasCharSet("latin1");
 
             modelBuilder.Entity<UtilisateurModel>()
-                .HasIndex(u => u.Identifiant)
+                .ToTable("User")
+                .HasCharSet("latin1");
+
+            modelBuilder.Entity<LogUtilisateurModel>()
+                .ToTable("Log")
+                .HasCharSet("latin1");
+
+            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
+                .ToTable("PasswordResetCode")
+                .HasCharSet("latin1");
+
+            modelBuilder.Entity<UtilisateurModel>()
+                .HasIndex(utilisateur => utilisateur.Identifiant)
                 .IsUnique();
 
             modelBuilder.Entity<UtilisateurModel>()
-                .HasIndex(u => u.Email)
+                .HasIndex(utilisateur => utilisateur.Email)
                 .IsUnique();
 
             modelBuilder.Entity<UtilisateurModel>()
-                .Property(u => u.Statut)
+                .Property(utilisateur => utilisateur.Statut)
                 .HasMaxLength(20)
                 .HasDefaultValue("User");
 
+            modelBuilder.Entity<UtilisateurModel>()
+                .Property(utilisateur => utilisateur.DateCreation)
+                .HasColumnType("datetime");
+
+            modelBuilder.Entity<UtilisateurModel>()
+                .Property(utilisateur => utilisateur.DerniereConnexion)
+                .HasColumnType("datetime");
+
             modelBuilder.Entity<LogUtilisateurModel>()
-                .HasOne(l => l.Utilisateur)
+                .HasOne(log => log.Utilisateur)
                 .WithMany()
-                .HasForeignKey(l => l.UtilisateurId)
+                .HasForeignKey(log => log.UtilisateurId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
-                .ToTable("PasswordResetCode");
+            modelBuilder.Entity<LogUtilisateurModel>()
+                .Property(log => log.DateHeure)
+                .HasColumnType("datetime");
 
             modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
                 .HasOne(code => code.Utilisateur)
                 .WithMany()
                 .HasForeignKey(code => code.UtilisateurId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
+                .Property(code => code.DateCreation)
+                .HasColumnType("datetime");
+
+            modelBuilder.Entity<CodeReinitialisationMotDePasseModel>()
+                .Property(code => code.DateExpiration)
+                .HasColumnType("datetime");
         }
     }
 }

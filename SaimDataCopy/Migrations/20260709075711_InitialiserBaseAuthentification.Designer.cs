@@ -12,8 +12,8 @@ using SaimDataCopy.DataAccess;
 namespace SaimDataCopy.Migrations
 {
     [DbContext(typeof(AuthentificationDbContext))]
-    [Migration("20260708133003_AjouterCodesReinitialisationMotDePasse")]
-    partial class AjouterCodesReinitialisationMotDePasse
+    [Migration("20260709075711_InitialiserBaseAuthentification")]
+    partial class InitialiserBaseAuthentification
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -23,6 +23,7 @@ namespace SaimDataCopy.Migrations
                 .HasAnnotation("ProductVersion", "8.0.22")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            MySqlModelBuilderExtensions.HasCharSet(modelBuilder, "latin1");
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("SaimDataCopy.Models.Authentification.CodeReinitialisationMotDePasseModel", b =>
@@ -38,10 +39,10 @@ namespace SaimDataCopy.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DateCreation")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<DateTime>("DateExpiration")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<bool>("EstUtilise")
                         .HasColumnType("tinyint(1)");
@@ -54,6 +55,8 @@ namespace SaimDataCopy.Migrations
                     b.HasIndex("UtilisateurId");
 
                     b.ToTable("PasswordResetCode", (string)null);
+
+                    MySqlEntityTypeBuilderExtensions.HasCharSet(b, "latin1");
                 });
 
             modelBuilder.Entity("SaimDataCopy.Models.Authentification.LogUtilisateurModel", b =>
@@ -69,7 +72,7 @@ namespace SaimDataCopy.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("DateHeure")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Details")
                         .IsRequired()
@@ -87,6 +90,8 @@ namespace SaimDataCopy.Migrations
                     b.HasIndex("UtilisateurId");
 
                     b.ToTable("Log", (string)null);
+
+                    MySqlEntityTypeBuilderExtensions.HasCharSet(b, "latin1");
                 });
 
             modelBuilder.Entity("SaimDataCopy.Models.Authentification.UtilisateurModel", b =>
@@ -98,10 +103,10 @@ namespace SaimDataCopy.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("DateCreation")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<DateTime?>("DerniereConnexion")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -138,6 +143,8 @@ namespace SaimDataCopy.Migrations
                         .IsUnique();
 
                     b.ToTable("User", (string)null);
+
+                    MySqlEntityTypeBuilderExtensions.HasCharSet(b, "latin1");
                 });
 
             modelBuilder.Entity("SaimDataCopy.Models.Authentification.CodeReinitialisationMotDePasseModel", b =>

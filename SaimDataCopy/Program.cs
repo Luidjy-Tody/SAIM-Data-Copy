@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using SaimDataCopy.Controllers.Authentification;
 using SaimDataCopy.Views.Authentification;
 using SaimDataCopy.Helpers;
+using MySqlConnector;
 
 namespace SaimDataCopy
 {
@@ -72,40 +73,57 @@ namespace SaimDataCopy
 
             DialogResult resultat = authentificationForm.ShowDialog();
 
-            bool authentificationOk =
-                resultat == DialogResult.OK &&
-                authentificationForm.AuthentificationReussie;
+            bool authentificationOk = resultat == DialogResult.OK && authentificationForm.AuthentificationReussie;
 
             return Task.FromResult(authentificationOk);
         }
 
         private static async Task InitialiserBaseAuthentificationAsync()
         {
-            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexion();
+            string chaineConnexionServeur = AuthentificationConnexionHelper.ObtenirChaineConnexionServeur();
+
+            string nomBaseAuthentification = AuthentificationConnexionHelper.ObtenirNomBaseAuthentification();
+
+            await CreerBaseAuthentificationSiInexistanteAsync(chaineConnexionServeur, nomBaseAuthentification);
+
+            string chaineConnexionBase = AuthentificationConnexionHelper.ObtenirChaineConnexionBaseAuthentification();
 
             DbContextOptions<AuthentificationDbContext> options =
                 new DbContextOptionsBuilder<AuthentificationDbContext>()
                     .UseMySql(
-                        chaineConnexion,
-                        ServerVersion.AutoDetect(chaineConnexion)
+                        chaineConnexionBase,
+                        ServerVersion.AutoDetect(chaineConnexionBase)
                     )
                     .Options;
 
             using AuthentificationDbContext context =
                 new AuthentificationDbContext(options);
 
-            // Applique les migrations EF Core.
-            // Cette méthode permet de faire évoluer la table User,
-            // par exemple avec la nouvelle colonne Statut.
+            // Crée automatiquement les tables User, Log, PasswordResetCode
             await context.Database.MigrateAsync();
 
+            // Si une base contient déjà des utilisateurs mais aucun Admin,
+            // le premier utilisateur devient Admin.
             await GarantirPresenceAdminAsync(context);
+        }
+
+        private static async Task CreerBaseAuthentificationSiInexistanteAsync(string chaineConnexionServeur, string nomBaseAuthentification)
+        {
+            using MySqlConnection connexion = new MySqlConnection(chaineConnexionServeur);
+
+            await connexion.OpenAsync();
+
+            using MySqlCommand commande = connexion.CreateCommand();
+
+            // On force latin1 pour éviter les erreurs avec utf8mb4.
+            commande.CommandText ="CREATE DATABASE IF NOT EXISTS `" + nomBaseAuthentification + "` " + "CHARACTER SET latin1 COLLATE latin1_swedish_ci;";
+
+            await commande.ExecuteNonQueryAsync();
         }
 
         private static async Task GarantirPresenceAdminAsync(
             AuthentificationDbContext context)
         {
-            // LINQ :
             // On vérifie s'il existe déjà au moins un compte Admin.
             bool adminExiste = await context.Utilisateurs
                 .AnyAsync(utilisateur => utilisateur.Statut == "Admin");
@@ -115,9 +133,7 @@ namespace SaimDataCopy
                 return;
             }
 
-            // LINQ :
             // Si aucun Admin n'existe, on récupère le premier utilisateur créé.
-            // Cela évite de bloquer l'application après l'ajout du système Admin/User.
             var premierUtilisateur = await context.Utilisateurs
                 .OrderBy(utilisateur => utilisateur.Id)
                 .FirstOrDefaultAsync();
@@ -144,11 +160,9 @@ namespace SaimDataCopy
             // grâce à ExecutionDataProviderFactory.
             ExecutionService executionService = new ExecutionService();
 
-            Progress<ExecutionProgressionModel> progression =
-                new Progress<ExecutionProgressionModel>();
+            Progress<ExecutionProgressionModel> progression = new Progress<ExecutionProgressionModel>();
 
-            using CancellationTokenSource cancellationTokenSource =
-                new CancellationTokenSource();
+            using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
             await executionService.LancerCopieAsync(
                 progression,

@@ -1,19 +1,47 @@
-﻿namespace SaimDataCopy.Helpers
+﻿using MySqlConnector;
+
+namespace SaimDataCopy.Helpers
 {
     public static class AuthentificationConnexionHelper
     {
-        private const string VariableEnvironnement = "SAIMDATACOPY_AUTH_CONNECTION";
+        private const string Serveur = "localhost";
+        private const uint Port = 3306;
+        private const string BaseAuthentification = "saimdatacopy_auth";
+        private const string Utilisateur = "";
+        private const string MotDePasse = "";
 
-        public static string ObtenirChaineConnexion()
+        public static string ObtenirNomBaseAuthentification()
         {
-            string? chaineConnexionVariable = Environment.GetEnvironmentVariable(VariableEnvironnement);
+            return BaseAuthentification;
+        }
 
-            if (!string.IsNullOrWhiteSpace(chaineConnexionVariable))
+        public static string ObtenirChaineConnexionServeur()
+        {
+            MySqlConnectionStringBuilder builder = new MySqlConnectionStringBuilder
             {
-                return chaineConnexionVariable.Trim();
-            }
+                Server = Serveur,
+                Port = Port,
+                UserID = Utilisateur,
+                Password = MotDePasse,
+                SslMode = MySqlSslMode.None
+            };
 
-            return "server=localhost;port=3308;database=saimdatacopy_auth;user=root;password=root3308";
+            return builder.ConnectionString;
+        }
+
+        public static string ObtenirChaineConnexionBaseAuthentification()
+        {
+            MySqlConnectionStringBuilder builder = new MySqlConnectionStringBuilder
+            {
+                Server = Serveur,
+                Port = Port,
+                Database = BaseAuthentification,
+                UserID = Utilisateur,
+                Password = MotDePasse,
+                SslMode = MySqlSslMode.None
+            };
+
+            return builder.ConnectionString;
         }
     }
 }

@@ -9,7 +9,9 @@ namespace SaimDataCopy.DataAccess
     {
         public AuthentificationDbContext CreateDbContext(string[] args)
         {
-            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexion();
+            string chaineConnexion =
+                AuthentificationConnexionHelper.ObtenirChaineConnexionBaseAuthentification();
+
             DbContextOptions<AuthentificationDbContext> options =
                 new DbContextOptionsBuilder<AuthentificationDbContext>()
                     .UseMySql(

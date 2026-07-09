@@ -2,14 +2,13 @@
 using SaimDataCopy.DataAccess;
 using SaimDataCopy.Models.Authentification;
 using SaimDataCopy.Helpers;
-
 namespace SaimDataCopy.DataProviders.Authentification
 {
     public class AuthentificationDataProvider : IAuthentificationDataProvider
     {
         private static AuthentificationDbContext CreerContext()
         {
-            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexion();
+            string chaineConnexion = AuthentificationConnexionHelper.ObtenirChaineConnexionBaseAuthentification();
 
             DbContextOptions<AuthentificationDbContext> options = new DbContextOptionsBuilder<AuthentificationDbContext>()
                 .UseMySql(
