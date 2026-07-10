@@ -16,3 +16,8 @@ x86/
 appsettings.Development.json
 
 *.pubxml
+
+publish/
+*.msi
+SQLQuery*.sql
+code.*

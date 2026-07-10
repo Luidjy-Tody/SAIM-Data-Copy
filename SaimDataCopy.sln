@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SaimDataCopy", "SaimDataCopy\SaimDataCopy.csproj", "{D4D6B443-CC41-457D-AFF9-A44C5EDD7031}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "SaimDataCopySetup", "SaimDataCopySetup\SaimDataCopySetup.vdproj", "{8CE07138-91BC-4F5D-ACB8-EB65DE3BE470}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "SaimDataCopySetup", "SaimDataCopySetup\SaimDataCopySetup.vdproj", "{FCEE40C5-F262-457C-9FA1-AD12E292540B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 		{D4D6B443-CC41-457D-AFF9-A44C5EDD7031}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4D6B443-CC41-457D-AFF9-A44C5EDD7031}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4D6B443-CC41-457D-AFF9-A44C5EDD7031}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8CE07138-91BC-4F5D-ACB8-EB65DE3BE470}.Debug|Any CPU.ActiveCfg = Debug
-		{8CE07138-91BC-4F5D-ACB8-EB65DE3BE470}.Release|Any CPU.ActiveCfg = Release
+		{FCEE40C5-F262-457C-9FA1-AD12E292540B}.Debug|Any CPU.ActiveCfg = Debug
+		{FCEE40C5-F262-457C-9FA1-AD12E292540B}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
