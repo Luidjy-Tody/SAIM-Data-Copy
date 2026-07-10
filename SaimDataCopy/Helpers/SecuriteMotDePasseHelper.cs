@@ -98,6 +98,7 @@ namespace SaimDataCopy.Helpers
             }
 
             byte[] sel = Convert.FromBase64String(parties[0]);
+
             byte[] hashEnregistre = Convert.FromBase64String(parties[1]);
 
             byte[] hashSaisi = Rfc2898DeriveBytes.Pbkdf2(motDePasse, sel, 100000, HashAlgorithmName.SHA256, 32);

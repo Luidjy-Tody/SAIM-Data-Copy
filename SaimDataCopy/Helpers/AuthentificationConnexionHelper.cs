@@ -7,7 +7,7 @@ namespace SaimDataCopy.Helpers
     {
         private const string Serveur = "localhost";
         private const uint Port = 3306;
-        private const string BaseAuthentification = "saimdatacopy";
+        private const string BaseAuthentification = "saimdatacopy_auth";
         private const string Utilisateur = "root";
         private const string MotDePasse = "";
 
