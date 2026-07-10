@@ -5,10 +5,9 @@ namespace SaimDataCopy.Helpers
 {
     public static class AuthentificationConnexionHelper
     {
-        // Ton encadreur modifie seulement ces valeurs.
         private const string Serveur = "localhost";
         private const uint Port = 3306;
-        private const string BaseAuthentification = "saimdatacopy_auth";
+        private const string BaseAuthentification = "saimdatacopy";
         private const string Utilisateur = "root";
         private const string MotDePasse = "";
 
