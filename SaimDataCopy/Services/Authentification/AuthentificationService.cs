@@ -137,6 +137,11 @@ namespace SaimDataCopy.Services.Authentification
             email = email.Trim();
             statut = NormaliserStatutUtilisateur(statut);
 
+            if (!EstEmailValide(email))
+            {
+                return "Adresse email invalide.";
+            }
+
             UtilisateurModel? identifiantExistant =
                 await _dataProvider.RecupererUtilisateurParIdentifiantAsync(identifiant);
 
@@ -344,6 +349,58 @@ namespace SaimDataCopy.Services.Authentification
             return securite.Contains("SSL", StringComparison.OrdinalIgnoreCase) ||
                    securite.Contains("TLS", StringComparison.OrdinalIgnoreCase) ||
                    securite.Contains("STARTTLS", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EstEmailValide(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return false;
+            }
+
+            email = email.Trim();
+
+            if (email.Contains(' '))
+            {
+                return false;
+            }
+
+            try
+            {
+                MailAddress adresse = new MailAddress(email);
+
+                if (adresse.Address != email)
+                {
+                    return false;
+                }
+
+                string domaine = adresse.Host;
+
+                if (string.IsNullOrWhiteSpace(domaine))
+                {
+                    return false;
+                }
+
+                if (!domaine.Contains('.'))
+                {
+                    return false;
+                }
+
+                string[] partiesDomaine = domaine.Split('.');
+
+                if (partiesDomaine.Any(partie => string.IsNullOrWhiteSpace(partie)))
+                {
+                    return false;
+                }
+
+                string extension = partiesDomaine.Last();
+
+                return extension.Length >= 2;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static string NormaliserStatutUtilisateur(string statut)
