@@ -118,21 +118,21 @@ namespace SaimDataCopy.Controllers.Email
         {
             return
                 "Serveur SMTP :" + Environment.NewLine +
-                "- Serveur SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ServeurSmtp)) + Environment.NewLine +
-                "- Port SMTP renseigné : " + OuiNon(configuration.Port > 0) + Environment.NewLine +
+                "- Serveur SMTP : " + AfficherValeur(configuration.ServeurSmtp) + Environment.NewLine +
+                "- Port SMTP : " + AfficherPort(configuration.Port) + Environment.NewLine +
                 "- Sécurité : " + AfficherValeur(configuration.Securite) + Environment.NewLine +
-                "- Identifiant SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp)) + Environment.NewLine +
-                "- Mot de passe SMTP renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.MotDePasseSmtp)) + Environment.NewLine +
+                "- Identifiant SMTP : " + AfficherValeur(configuration.IdentifiantSmtp) + Environment.NewLine +
+                "- Mot de passe SMTP : " + AfficherMotDePasse(configuration.MotDePasseSmtp) + Environment.NewLine +
                 Environment.NewLine +
                 "Destinataires :" + Environment.NewLine +
-                "- Expéditeur renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.ExpediteurFrom)) + Environment.NewLine +
-                "- Nombre de destinataires To : " + CompterEmails(configuration.DestinataireTo) + Environment.NewLine +
-                "- Nombre de destinataires CC : " + CompterEmails(configuration.CopieCc) + Environment.NewLine +
-                "- Nombre de destinataires BCC : " + CompterEmails(configuration.CopieCacheeBcc) + Environment.NewLine +
+                "- Expéditeur : " + AfficherValeur(configuration.ExpediteurFrom) + Environment.NewLine +
+                "- Destinataires To : " + AfficherListeEmails(configuration.DestinataireTo) + Environment.NewLine +
+                "- Destinataires CC : " + AfficherListeEmails(configuration.CopieCc) + Environment.NewLine +
+                "- Destinataires BCC : " + AfficherListeEmails(configuration.CopieCacheeBcc) + Environment.NewLine +
                 Environment.NewLine +
                 "Message :" + Environment.NewLine +
-                "- Objet renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.Objet)) + Environment.NewLine +
-                "- Corps renseigné : " + OuiNon(!string.IsNullOrWhiteSpace(configuration.CorpsMessage)) + Environment.NewLine +
+                "- Objet : " + AfficherValeur(configuration.Objet) + Environment.NewLine +
+                "- Corps du message : " + AfficherCorpsMessage(configuration.CorpsMessage) + Environment.NewLine +
                 Environment.NewLine +
                 "Options :" + Environment.NewLine +
                 "- Envoi email activé : " + OuiNon(configuration.ActiverEnvoiEmail) + Environment.NewLine +
@@ -154,17 +154,55 @@ namespace SaimDataCopy.Controllers.Email
             });
         }
 
-        private int CompterEmails(string adresses)
+       
+        private string AfficherPort(int port)
+        {
+            return port > 0 ? port.ToString() : "Non renseigné";
+        }
+
+        private string AfficherMotDePasse(string motDePasse)
+        {
+            return string.IsNullOrWhiteSpace(motDePasse)
+                ? "Non renseigné"
+                : "Renseigné (masqué)";
+        }
+
+        private string AfficherListeEmails(string adresses)
         {
             if (string.IsNullOrWhiteSpace(adresses))
             {
-                return 0;
+                return "Aucun";
             }
 
-            return adresses
+            List<string> emails = adresses
                 .Split(',', ';')
                 .Select(adresse => adresse.Trim())
-                .Count(adresse => !string.IsNullOrWhiteSpace(adresse));
+                .Where(adresse => !string.IsNullOrWhiteSpace(adresse))
+                .ToList();
+
+            if (emails.Count == 0)
+            {
+                return "Aucun";
+            }
+
+            return string.Join(", ", emails);
+        }
+
+        private string AfficherCorpsMessage(string corpsMessage)
+        {
+            if (string.IsNullOrWhiteSpace(corpsMessage))
+            {
+                return "Non renseigné";
+            }
+
+            string messageNettoye = corpsMessage.Trim();
+
+            if (messageNettoye.Length <= 300)
+            {
+                return messageNettoye;
+            }
+
+            return messageNettoye.Substring(0, 300) + "...";
         }
 
         private string AfficherValeur(string valeur)
