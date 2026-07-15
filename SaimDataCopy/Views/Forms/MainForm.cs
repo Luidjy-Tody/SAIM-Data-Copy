@@ -26,6 +26,11 @@ using System.Runtime.InteropServices;
 using SaimDataCopy.Views.Commun;
 using SaimDataCopy.Services.Authentification;
 using SaimDataCopy.Controllers.Authentification;
+using SaimDataCopy.Controllers.EspaceAdmin;
+using SaimDataCopy.DataProviders.EspaceAdmin;
+using SaimDataCopy.Services.EspaceAdmin;
+using SaimDataCopy.Views.EspaceAdmin;
+using SaimDataCopy.Models.Authentification;
 
 
 namespace SaimDataCopy.Views.Forms
@@ -76,6 +81,18 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Historique.
         private HistoriqueController? historiqueController;
+
+        // Page Espace Admin gardée en mémoire.
+        private EspaceAdminView? espaceAdminView;
+
+        // Controller de la page Espace Admin.
+        private EspaceAdminController? espaceAdminController;
+
+        // Bouton actuellement actif dans le menu.
+        private IconButton? boutonMenuActif;
+
+        // Bouton Configuration utilisé au démarrage de l'application.
+        private IconButton? boutonConfigurationMenu;
 
         // Gère l'utilisateur connecté et le verrouillage par inactivité.
         // On utilise une instance unique pour toute l'application.
@@ -314,38 +331,70 @@ namespace SaimDataCopy.Views.Forms
         // Crée tous les boutons du menu gauche.
         private void CreerMenu()
         {
+
+            panelMenu.Controls.Clear();
+
+            // L'Espace Admin est visible uniquement pour un administrateur actif.
+            UtilisateurModel? utilisateurConnecte = sessionUtilisateurService.UtilisateurConnecte;
+
+            bool estAdministrateur = utilisateurConnecte != null && utilisateurConnecte.EstActif &&
+                utilisateurConnecte.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+
+            if (estAdministrateur)
+            {
+                AjouterBoutonMenu("Espace Admin", IconChar.UserShield, () => CreerEspaceAdminView());
+            }
+
+            if (boutonConfigurationMenu != null)
+            {
+                ActiverBoutonMenu(boutonConfigurationMenu);
+            }
+
             AjouterBoutonMenu("Historique", IconChar.Clock, () => CreerHistoriqueView());
             AjouterBoutonMenu("Exécution", IconChar.Play, () => CreerExecutionView());
             AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => CreerLogsView());
             AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => CreerEmailView());
             AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
-            AjouterBoutonMenu("Configuration", IconChar.Cog, () => CreerConfigurationView());
+            boutonConfigurationMenu = AjouterBoutonMenu("Configuration", IconChar.Cog, () => CreerConfigurationView());
+
         }
 
         // Crée un bouton du menu.
-        private void AjouterBoutonMenu(string texte, IconChar icone, Func<UserControl> creerPage)
+        private IconButton AjouterBoutonMenu(string texte, IconChar icone, Func<UserControl> creerPage)
         {
             IconButton bouton = new IconButton();
 
             bouton.Text = texte;
             bouton.IconChar = icone;
 
-            // Style du bouton depuis Styles/MenuButtonStyle.cs.
             MenuButtonStyle.Appliquer(bouton);
 
             bouton.Click += (sender, e) =>
             {
-                // Avant de changer de page, on vérifie si la page actuelle
-                // contient des modifications non enregistrées.
                 if (!VerifierAvantChangementPage())
                 {
                     return;
                 }
 
+                ActiverBoutonMenu(bouton);
                 AfficherPage(creerPage());
             };
 
             panelMenu.Controls.Add(bouton);
+
+            return bouton;
+        }
+
+        private void ActiverBoutonMenu(IconButton boutonSelectionne)
+        {
+            if (boutonMenuActif != null)
+            {
+                MenuButtonStyle.AppliquerEtatNormal(boutonMenuActif);
+            }
+
+            boutonMenuActif = boutonSelectionne;
+
+            MenuButtonStyle.AppliquerEtatActif(boutonMenuActif);
         }
 
         // Crée la View Configuration et son Controller une seule fois.
@@ -364,6 +413,22 @@ namespace SaimDataCopy.Views.Forms
             }
 
             return configurationView;
+        }
+
+        private UserControl CreerEspaceAdminView()
+        {
+            if (espaceAdminView == null)
+            {
+                espaceAdminView = new EspaceAdminView();
+
+                EspaceAdminDataProvider espaceAdminDataProvider = new EspaceAdminDataProvider();
+
+                EspaceAdminService espaceAdminService = new EspaceAdminService(espaceAdminDataProvider);
+
+                espaceAdminController = new EspaceAdminController(espaceAdminView, espaceAdminService);
+            }
+
+            return espaceAdminView;
         }
 
         // Quand le mode global change dans Configuration,
@@ -605,6 +670,8 @@ namespace SaimDataCopy.Views.Forms
                 LogsView => "Page actuelle : Paramètres Logs",
                 ExecutionView => "Page actuelle : Exécution",
                 HistoriqueView => "Page actuelle : Historique",
+                EspaceAdminView => "Page actuelle : Espace Admin",
+
                 _ => "Prêt"
             };
         }
@@ -672,6 +739,16 @@ namespace SaimDataCopy.Views.Forms
                     MessageBox.Show(
                         "La page Historique ne possède pas de paramètres à enregistrer.",
                         "Information",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                    break;
+
+
+                case EspaceAdminView:
+                    MessageBox.Show(
+                        "Utilisez le formulaire de l'Espace Admin pour enregistrer un utilisateur.",
+                        "Espace Admin",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
                     );

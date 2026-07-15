@@ -54,7 +54,29 @@ namespace SaimDataCopy.Styles
             btnEnregistrerParametres.FlatStyle = FlatStyle.Flat;
             btnEnregistrerParametres.FlatAppearance.BorderSize = 0;
         }
+
+
+        public static void AppliquerEtatNormal(IconButton bouton)
+        {
+            bouton.BackColor = GrisMenu;
+            bouton.ForeColor = TexteNormal;
+            bouton.IconColor = IconeNormale;
+
+            bouton.FlatAppearance.BorderSize = 0;
+            bouton.FlatAppearance.BorderColor = GrisMenu;
+        }
+
+        public static void AppliquerEtatActif(IconButton bouton)
+        {
+            bouton.BackColor = Color.FromArgb(225, 236, 252);
+            bouton.ForeColor = BleuPrincipal;
+            bouton.IconColor = BleuPrincipal;
+
+            bouton.FlatAppearance.BorderSize = 0;
+        }
     }
+
+
 
     // Classe qui contient le design du label "Prêt" dans la barre du bas.
     public static class MenuLabelStyle
@@ -77,6 +99,10 @@ namespace SaimDataCopy.Styles
             lblStatus.TextAlign = ContentAlignment.MiddleLeft;
         }
 
+
     }
+
+
+
 
 }

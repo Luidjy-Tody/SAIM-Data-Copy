@@ -1,11 +1,12 @@
 ﻿using SaimDataCopy.DataProviders.Authentification;
-using SaimDataCopy.Models.Authentification;
-using SaimDataCopy.Helpers;
 using SaimDataCopy.DataProviders.Email;
+using SaimDataCopy.Helpers;
+using SaimDataCopy.Models.Authentification;
 using SaimDataCopy.Models.Email;
 using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
+
 namespace SaimDataCopy.Services.Authentification
 {
     public class AuthentificationService : IAuthentificationService
@@ -14,8 +15,10 @@ namespace SaimDataCopy.Services.Authentification
 
         public UtilisateurModel? UtilisateurConnecte { get; private set; }
 
-        public AuthentificationService()
-            : this(new AuthentificationDataProvider())
+        // Administrateur ayant validé l'ouverture du formulaire d'inscription.
+        public UtilisateurModel? AdministrateurAyantAutoriseInscription { get; private set; }
+
+        public AuthentificationService() : this(new AuthentificationDataProvider())
         {
         }
 
@@ -33,16 +36,14 @@ namespace SaimDataCopy.Services.Authentification
 
             identifiantOuEmail = identifiantOuEmail.Trim();
 
-            UtilisateurModel? utilisateur =
-                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+            UtilisateurModel? utilisateur = await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
 
             if (utilisateur == null || !utilisateur.EstActif)
             {
                 return false;
             }
 
-            bool motDePasseCorrect =
-                SecuriteMotDePasseHelper.VerifierMotDePasse(motDePasse, utilisateur.MotDePasseHash);
+            bool motDePasseCorrect = SecuriteMotDePasseHelper.VerifierMotDePasse(motDePasse, utilisateur.MotDePasseHash);
 
             if (!motDePasseCorrect)
             {
@@ -50,6 +51,7 @@ namespace SaimDataCopy.Services.Authentification
             }
 
             utilisateur.DerniereConnexion = DateTime.Now;
+
             await _dataProvider.ModifierUtilisateurAsync(utilisateur);
 
             UtilisateurConnecte = utilisateur;
@@ -66,37 +68,40 @@ namespace SaimDataCopy.Services.Authentification
 
         public async Task<bool> VerifierAuthentificationAdminAsync(string identifiantOuEmail, string motDePasse)
         {
-            if (string.IsNullOrWhiteSpace(identifiantOuEmail) ||
-                string.IsNullOrWhiteSpace(motDePasse))
+            AdministrateurAyantAutoriseInscription = null;
+
+            if (string.IsNullOrWhiteSpace(identifiantOuEmail) || string.IsNullOrWhiteSpace(motDePasse))
             {
                 return false;
             }
 
             identifiantOuEmail = identifiantOuEmail.Trim();
 
-            UtilisateurModel? utilisateur =
-                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+            UtilisateurModel? utilisateur = await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
 
             if (utilisateur == null || !utilisateur.EstActif)
             {
                 return false;
             }
 
-            bool estAdmin =
-                utilisateur.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+            bool estAdministrateur = utilisateur.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase);
 
-            if (!estAdmin)
+            if (!estAdministrateur)
             {
                 return false;
             }
 
-            bool motDePasseCorrect =
-                SecuriteMotDePasseHelper.VerifierMotDePasse(
-                    motDePasse,
-                    utilisateur.MotDePasseHash
-                );
+            bool motDePasseCorrect = SecuriteMotDePasseHelper.VerifierMotDePasse(motDePasse, utilisateur.MotDePasseHash);
 
-            return motDePasseCorrect;
+            if (!motDePasseCorrect)
+            {
+                return false;
+            }
+
+            // Cet utilisateur sera enregistré comme auteur de la création du compte.
+            AdministrateurAyantAutoriseInscription = utilisateur;
+
+            return true;
         }
 
         public async Task<bool> InscrireAsync(
@@ -106,23 +111,17 @@ namespace SaimDataCopy.Services.Authentification
             string motDePasse,
             string statut)
         {
-            string message = await InscrireEtRetournerMessageAsync(
-                nomComplet,
-                identifiant,
-                email,
-                motDePasse,
-                statut
-            );
+            string message = await InscrireEtRetournerMessageAsync(nomComplet, identifiant, email, motDePasse, statut);
 
             return message == "Compte créé avec succès. Vous pouvez vous connecter.";
         }
 
         public async Task<string> InscrireEtRetournerMessageAsync(
-    string nomComplet,
-    string identifiant,
-    string email,
-    string motDePasse,
-    string statut)
+            string nomComplet,
+            string identifiant,
+            string email,
+            string motDePasse,
+            string statut)
         {
             if (string.IsNullOrWhiteSpace(nomComplet) ||
                 string.IsNullOrWhiteSpace(identifiant) ||
@@ -134,7 +133,7 @@ namespace SaimDataCopy.Services.Authentification
 
             nomComplet = nomComplet.Trim();
             identifiant = identifiant.Trim();
-            email = email.Trim();
+            email = email.Trim().ToLowerInvariant();
             statut = NormaliserStatutUtilisateur(statut);
 
             if (!EstEmailValide(email))
@@ -142,21 +141,23 @@ namespace SaimDataCopy.Services.Authentification
                 return "Adresse email invalide.";
             }
 
-            UtilisateurModel? identifiantExistant =
-                await _dataProvider.RecupererUtilisateurParIdentifiantAsync(identifiant);
+            UtilisateurModel? identifiantExistant = await _dataProvider.RecupererUtilisateurParIdentifiantAsync(identifiant);
 
             if (identifiantExistant != null)
             {
                 return "Cet identifiant existe déjà.";
             }
 
-            UtilisateurModel? emailExistant =
-                await _dataProvider.RecupererUtilisateurParEmailAsync(email);
+            UtilisateurModel? emailExistant = await _dataProvider.RecupererUtilisateurParEmailAsync(email);
 
             if (emailExistant != null)
             {
                 return "Cet email existe déjà.";
             }
+
+            // Permet de distinguer la création du premier compte
+            // d'une création autorisée par un administrateur existant.
+            bool existaitDejaUnUtilisateur = await _dataProvider.ExisteAuMoinsUnUtilisateurAsync();
 
             UtilisateurModel utilisateur = new UtilisateurModel
             {
@@ -165,18 +166,49 @@ namespace SaimDataCopy.Services.Authentification
                 Email = email,
                 MotDePasseHash = SecuriteMotDePasseHelper.HasherMotDePasse(motDePasse),
                 DateCreation = DateTime.Now,
+                DerniereConnexion = null,
                 EstActif = true,
                 Statut = statut
             };
 
             await _dataProvider.AjouterUtilisateurAsync(utilisateur);
 
-            await AjouterLogAsync(
-                utilisateur.Id,
-                utilisateur.Identifiant,
-                "Inscription",
-                "Nouveau compte utilisateur créé avec le statut : " + statut + "."
-            );
+            UtilisateurModel? administrateurCreateur = AdministrateurAyantAutoriseInscription;
+
+            if (administrateurCreateur != null)
+            {
+                // L'auteur du log est l'administrateur qui a créé le compte.
+                await AjouterLogAsync(
+                    administrateurCreateur.Id,
+                    administrateurCreateur.Identifiant,
+                    "Création utilisateur",
+                    "Compte \"" + utilisateur.Identifiant + "\" créé avec le statut " + utilisateur.Statut + "."
+                );
+            }
+            else if (!existaitDejaUnUtilisateur)
+            {
+                // Cas spécial : création du tout premier compte de l'application.
+                await AjouterLogAsync(
+                    utilisateur.Id,
+                    utilisateur.Identifiant,
+                    "Initialisation utilisateur",
+                    "Premier compte \"" + utilisateur.Identifiant + "\" créé avec le statut " + utilisateur.Statut + "."
+                );
+            }
+            else
+            {
+                // Sécurité de secours : ce cas ne devrait normalement pas arriver,
+                // car les inscriptions suivantes doivent être autorisées par un Admin.
+                await AjouterLogAsync(
+                    null,
+                    "Système",
+                    "Création utilisateur",
+                    "Compte \"" + utilisateur.Identifiant + "\" créé avec le statut " + utilisateur.Statut + ", sans administrateur identifié."
+                );
+            }
+
+            // L'autorisation ne doit servir que pour une seule création.
+            AdministrateurAyantAutoriseInscription = null;
 
             return "Compte créé avec succès. Vous pouvez vous connecter.";
         }
@@ -190,11 +222,9 @@ namespace SaimDataCopy.Services.Authentification
 
             identifiantOuEmail = identifiantOuEmail.Trim();
 
-            UtilisateurModel? utilisateur =
-                await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
+            UtilisateurModel? utilisateur = await _dataProvider.RecupererUtilisateurParIdentifiantOuEmailAsync(identifiantOuEmail);
 
-            // On retourne un message neutre pour ne pas afficher clairement
-            // si un compte existe ou non.
+            // Message neutre pour ne pas indiquer publiquement si le compte existe.
             if (utilisateur == null || !utilisateur.EstActif)
             {
                 return "Si un compte actif correspond à cette information, un code de réinitialisation a été envoyé par email.";
@@ -204,23 +234,18 @@ namespace SaimDataCopy.Services.Authentification
 
             await _dataProvider.MarquerCodesUtilisateurCommeUtilisesAsync(utilisateur.Id);
 
-            CodeReinitialisationMotDePasseModel codeReinitialisation =
-                new CodeReinitialisationMotDePasseModel
-                {
-                    UtilisateurId = utilisateur.Id,
-                    CodeHash = SecuriteMotDePasseHelper.HasherMotDePasse(code),
-                    DateCreation = DateTime.Now,
-                    DateExpiration = DateTime.Now.AddMinutes(10),
-                    EstUtilise = false
-                };
+            CodeReinitialisationMotDePasseModel codeReinitialisation = new CodeReinitialisationMotDePasseModel
+            {
+                UtilisateurId = utilisateur.Id,
+                CodeHash = SecuriteMotDePasseHelper.HasherMotDePasse(code),
+                DateCreation = DateTime.Now,
+                DateExpiration = DateTime.Now.AddMinutes(10),
+                EstUtilise = false
+            };
 
             await _dataProvider.AjouterCodeReinitialisationAsync(codeReinitialisation);
 
-            bool emailEnvoye = EnvoyerCodeReinitialisationParEmail(
-                utilisateur,
-                code,
-                out string messageErreurEmail
-            );
+            bool emailEnvoye = EnvoyerCodeReinitialisationParEmail(utilisateur, code, out string messageErreurEmail);
 
             if (!emailEnvoye)
             {
@@ -281,19 +306,13 @@ namespace SaimDataCopy.Services.Authentification
                     Environment.NewLine +
                     "SaimDataCopy";
 
-                using SmtpClient client = new SmtpClient(
-                    configuration.ServeurSmtp,
-                    configuration.Port
-                );
+                using SmtpClient client = new SmtpClient(configuration.ServeurSmtp, configuration.Port);
 
                 client.EnableSsl = SecuriteEmailAvecSsl(configuration.Securite);
 
                 if (!string.IsNullOrWhiteSpace(configuration.IdentifiantSmtp))
                 {
-                    client.Credentials = new NetworkCredential(
-                        configuration.IdentifiantSmtp,
-                        configuration.MotDePasseSmtp
-                    );
+                    client.Credentials = new NetworkCredential(configuration.IdentifiantSmtp, configuration.MotDePasseSmtp);
                 }
 
                 client.Send(mail);
@@ -303,6 +322,7 @@ namespace SaimDataCopy.Services.Authentification
             catch (Exception ex)
             {
                 messageErreur = ex.Message;
+
                 return false;
             }
         }
@@ -314,28 +334,33 @@ namespace SaimDataCopy.Services.Authentification
             if (!configuration.ActiverEnvoiEmail)
             {
                 message = "l'envoi email est désactivé dans les paramètres.";
+
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(configuration.ServeurSmtp))
             {
                 message = "le serveur SMTP n'est pas renseigné.";
+
                 return false;
             }
 
             if (configuration.Port <= 0)
             {
                 message = "le port SMTP est invalide.";
+
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(configuration.ExpediteurFrom))
             {
                 message = "l'adresse expéditeur n'est pas renseignée.";
+
                 return false;
             }
 
             message = string.Empty;
+
             return true;
         }
 
@@ -376,12 +401,7 @@ namespace SaimDataCopy.Services.Authentification
 
                 string domaine = adresse.Host;
 
-                if (string.IsNullOrWhiteSpace(domaine))
-                {
-                    return false;
-                }
-
-                if (!domaine.Contains('.'))
+                if (string.IsNullOrWhiteSpace(domaine) || !domaine.Contains('.'))
                 {
                     return false;
                 }
@@ -412,12 +432,9 @@ namespace SaimDataCopy.Services.Authentification
 
             statut = statut.Trim();
 
-            if (statut.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Admin";
-            }
-
-            return "User";
+            return statut.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+                ? "Admin"
+                : "User";
         }
 
         public async Task<bool> ExisteAuMoinsUnUtilisateurAsync()
