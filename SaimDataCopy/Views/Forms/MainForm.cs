@@ -31,6 +31,12 @@ using SaimDataCopy.DataProviders.EspaceAdmin;
 using SaimDataCopy.Services.EspaceAdmin;
 using SaimDataCopy.Views.EspaceAdmin;
 using SaimDataCopy.Models.Authentification;
+using SaimDataCopy.Views.JournalActivite;
+using SaimDataCopy.DataProviders.JournalActivite;
+using SaimDataCopy.Services.JournalActivite;
+using SaimDataCopy.Controllers.JournalActivite;
+
+
 
 
 namespace SaimDataCopy.Views.Forms
@@ -87,6 +93,12 @@ namespace SaimDataCopy.Views.Forms
 
         // Controller de la page Espace Admin.
         private EspaceAdminController? espaceAdminController;
+
+        // Page Journal d'activité gardée en mémoire.
+        private JournalActiviteView? journalActiviteView;
+
+        // Controller de la page Journal d'activité.
+        private JournalActiviteController? journalActiviteController;
 
         // Bouton actuellement actif dans le menu.
         private IconButton? boutonMenuActif;
@@ -328,21 +340,39 @@ namespace SaimDataCopy.Views.Forms
             SendMessage(Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
         }
 
+        private bool UtilisateurConnecteEstAdministrateurActif()
+        {
+            UtilisateurModel? utilisateurConnecte =
+                sessionUtilisateurService.UtilisateurConnecte;
+
+            return utilisateurConnecte != null &&
+                   utilisateurConnecte.EstActif &&
+                   utilisateurConnecte.Statut.Equals(
+                       "Admin",
+                       StringComparison.OrdinalIgnoreCase
+                   );
+        }
+
         // Crée tous les boutons du menu gauche.
         private void CreerMenu()
         {
-
             panelMenu.Controls.Clear();
 
-            // L'Espace Admin est visible uniquement pour un administrateur actif.
-            UtilisateurModel? utilisateurConnecte = sessionUtilisateurService.UtilisateurConnecte;
-
-            bool estAdministrateur = utilisateurConnecte != null && utilisateurConnecte.EstActif &&
-                utilisateurConnecte.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+            bool estAdministrateur = UtilisateurConnecteEstAdministrateurActif();
 
             if (estAdministrateur)
             {
-                AjouterBoutonMenu("Espace Admin", IconChar.UserShield, () => CreerEspaceAdminView());
+                AjouterBoutonMenu(
+                    "Espace Admin",
+                    IconChar.UserShield,
+                    () => CreerEspaceAdminView()
+                );
+
+                AjouterBoutonMenu(
+                    "Journal d'activité",
+                    IconChar.ListCheck,
+                    () => CreerJournalActiviteView()
+                );
             }
 
             if (boutonConfigurationMenu != null)
@@ -350,13 +380,42 @@ namespace SaimDataCopy.Views.Forms
                 ActiverBoutonMenu(boutonConfigurationMenu);
             }
 
-            AjouterBoutonMenu("Historique", IconChar.Clock, () => CreerHistoriqueView());
-            AjouterBoutonMenu("Exécution", IconChar.Play, () => CreerExecutionView());
-            AjouterBoutonMenu("Paramètres Logs", IconChar.FileAlt, () => CreerLogsView());
-            AjouterBoutonMenu("Paramètres Email", IconChar.Envelope, () => CreerEmailView());
-            AjouterBoutonMenu("Bases à copier", IconChar.Database, () => CreerBasesCopierView());
-            boutonConfigurationMenu = AjouterBoutonMenu("Configuration", IconChar.Cog, () => CreerConfigurationView());
+            AjouterBoutonMenu( "Historique",
+                IconChar.Clock,
+                () => CreerHistoriqueView()
+            );
 
+            AjouterBoutonMenu(
+                "Exécution",
+                IconChar.Play,
+                () => CreerExecutionView()
+            );
+
+            AjouterBoutonMenu(
+                "Paramètres Logs",
+                IconChar.FileAlt,
+                () => CreerLogsView()
+            );
+
+            AjouterBoutonMenu(
+                "Paramètres Email",
+                IconChar.Envelope,
+                () => CreerEmailView()
+            );
+
+            AjouterBoutonMenu(
+                "Bases à copier",
+                IconChar.Database,
+                () => CreerBasesCopierView()
+            );
+
+            boutonConfigurationMenu = AjouterBoutonMenu(
+                "Configuration",
+                IconChar.Cog,
+                () => CreerConfigurationView()
+            );
+
+            
         }
 
         // Crée un bouton du menu.
@@ -431,6 +490,65 @@ namespace SaimDataCopy.Views.Forms
             return espaceAdminView;
         }
 
+
+        private UserControl CreerJournalActiviteView()
+        {
+            if (!UtilisateurConnecteEstAdministrateurActif())
+            {
+                return CreerPageAccesRefuse();
+            }
+
+            if (journalActiviteView == null)
+            {
+                journalActiviteView = new JournalActiviteView();
+
+                JournalActiviteDataProvider journalActiviteDataProvider =
+                    new JournalActiviteDataProvider();
+
+                JournalActiviteService journalActiviteService =
+                    new JournalActiviteService(journalActiviteDataProvider);
+
+                journalActiviteController =
+                    new JournalActiviteController(
+                        journalActiviteView,
+                        journalActiviteService
+                    );
+            }
+
+            return journalActiviteView;
+        }
+
+        private static UserControl CreerPageAccesRefuse()
+        {
+            UserControl pageAccesRefuse = new UserControl
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
+
+            Label lblTitre = new Label
+            {
+                Text = "Accès refusé",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(170, 45, 45),
+                Location = new Point(35, 35)
+            };
+
+            Label lblMessage = new Label
+            {
+                Text = "Cette page est réservée aux administrateurs actifs.",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Location = new Point(38, 85)
+            };
+
+            pageAccesRefuse.Controls.Add(lblTitre);
+            pageAccesRefuse.Controls.Add(lblMessage);
+
+            return pageAccesRefuse;
+        }
         // Quand le mode global change dans Configuration,
         // on met à jour la page Bases à copier si elle a déjà été créée.
         private void ConfigurationController_ModeCopieGlobalModifie(string modeCopieGlobal)
@@ -671,6 +789,8 @@ namespace SaimDataCopy.Views.Forms
                 ExecutionView => "Page actuelle : Exécution",
                 HistoriqueView => "Page actuelle : Historique",
                 EspaceAdminView => "Page actuelle : Espace Admin",
+                JournalActiviteView => "Page actuelle : Journal d'activité",
+
 
                 _ => "Prêt"
             };
