@@ -7,6 +7,7 @@
     <UseWindowsForms>True</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <ApplicationIcon>database.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
