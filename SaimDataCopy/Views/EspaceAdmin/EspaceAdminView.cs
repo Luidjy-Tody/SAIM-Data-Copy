@@ -16,6 +16,8 @@ namespace SaimDataCopy.Views.EspaceAdmin
         public event EventHandler? RechercheUtilisateursDemandee;
         public event EventHandler? NouvelUtilisateurDemande;
         public event Action<int>? ModificationUtilisateurDemandee;
+        public event Action<int>? ActivationUtilisateurDemandee;
+        public event Action<int>? SuppressionUtilisateurDemandee;
         public event EventHandler? EnregistrementUtilisateurDemande;
         public event EventHandler? AnnulationFormulaireDemandee;
 
@@ -58,6 +60,12 @@ namespace SaimDataCopy.Views.EspaceAdmin
         private readonly Label lblToast;
         private readonly System.Windows.Forms.Timer timerToast;
 
+        private readonly Image iconeModifier;
+        private readonly Image iconeActiver;
+        private readonly Image iconeDesactiver;
+        private readonly Image iconeSupprimer;
+        private readonly Label lblInfoBulleAction;
+
         public EspaceAdminView()
         {
             EspaceAdminStyle.AppliquerPage(this);
@@ -98,6 +106,12 @@ namespace SaimDataCopy.Views.EspaceAdmin
             panelToast = new Panel();
             lblToast = new Label();
             timerToast = new System.Windows.Forms.Timer();
+            lblInfoBulleAction = new Label();
+
+            iconeModifier = IconChar.PenToSquare.ToBitmap(Color.FromArgb(30, 96, 190), 18);
+            iconeActiver = IconChar.UserCheck.ToBitmap(Color.FromArgb(45, 130, 70), 18);
+            iconeDesactiver = IconChar.UserSlash.ToBitmap(Color.FromArgb(180, 90, 20), 18);
+            iconeSupprimer = IconChar.Trash.ToBitmap(Color.FromArgb(180, 45, 45), 18);
 
             ConstruireInterface();
         }
@@ -252,10 +266,27 @@ namespace SaimDataCopy.Views.EspaceAdmin
             EspaceAdminStyle.AppliquerTableauUtilisateurs(dgvUtilisateurs);
 
             ConfigurerColonnesUtilisateurs();
+            ConfigurerInfoBulleActions();
 
             carteUtilisateurs.Controls.Add(lblTitre);
             carteUtilisateurs.Controls.Add(zoneFiltres);
             carteUtilisateurs.Controls.Add(dgvUtilisateurs);
+            carteUtilisateurs.Controls.Add(lblInfoBulleAction);
+
+            lblInfoBulleAction.BringToFront();
+        }
+
+        private void ConfigurerInfoBulleActions()
+        {
+            lblInfoBulleAction.AutoSize = false;
+            lblInfoBulleAction.Height = 30;
+            lblInfoBulleAction.BackColor = Color.FromArgb(45, 45, 48);
+            lblInfoBulleAction.ForeColor = Color.White;
+            lblInfoBulleAction.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            lblInfoBulleAction.TextAlign = ContentAlignment.MiddleCenter;
+            lblInfoBulleAction.Padding = new Padding(8, 0, 8, 0);
+            lblInfoBulleAction.BorderStyle = BorderStyle.FixedSingle;
+            lblInfoBulleAction.Visible = false;
         }
 
         private void ConstruireToast()
@@ -371,79 +402,111 @@ namespace SaimDataCopy.Views.EspaceAdmin
         {
             dgvUtilisateurs.Columns.Clear();
 
+            dgvUtilisateurs.AllowUserToResizeColumns = false;
+            dgvUtilisateurs.AllowUserToResizeRows = false;
+
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Id",
                 HeaderText = "Id",
-                FillWeight = 35
+                FillWeight = 35,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "NomComplet",
                 HeaderText = "Nom complet",
-                FillWeight = 110
+                FillWeight = 100,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Identifiant",
                 HeaderText = "Identifiant",
-                FillWeight = 80
+                FillWeight = 80,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Email",
                 HeaderText = "Email",
-                FillWeight = 145
+                FillWeight = 100,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Statut",
                 HeaderText = "Statut",
-                FillWeight = 60
+                FillWeight = 60,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Etat",
                 HeaderText = "État",
-                FillWeight = 55
+                FillWeight = 55,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
-
             {
                 Name = "DateCreation",
                 HeaderText = "Date création",
-                FillWeight = 80
+                FillWeight = 80,
+                Resizable = DataGridViewTriState.False
             });
 
             dgvUtilisateurs.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "DerniereConnexion",
                 HeaderText = "Dernière connexion",
-                FillWeight = 110
+                FillWeight = 80,
+                Resizable = DataGridViewTriState.False
             });
 
-            dgvUtilisateurs.CellFormatting += DgvUtilisateurs_CellFormatting;
-
-
-            DataGridViewButtonColumn colonneModifier = new DataGridViewButtonColumn
+            DataGridViewTextBoxColumn colonneActions = new DataGridViewTextBoxColumn
             {
-                Name = "Modifier",
+                Name = "Actions",
                 HeaderText = "Actions",
-                Text = "Modifier",
-                UseColumnTextForButtonValue = true,
-                FillWeight = 70
+                Width = 130,
+                MinimumWidth = 125,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                Resizable = DataGridViewTriState.False,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
             };
 
-            dgvUtilisateurs.Columns.Add(colonneModifier);
+            colonneActions.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            colonneActions.DefaultCellStyle.NullValue = null;
 
-            dgvUtilisateurs.CellContentClick += DgvUtilisateurs_CellContentClick;
+            dgvUtilisateurs.Columns.Add(colonneActions);
+
+            dgvUtilisateurs.DefaultCellStyle.SelectionBackColor = Color.FromArgb(225, 235, 250);
+            dgvUtilisateurs.DefaultCellStyle.SelectionForeColor = Color.Black;
+
+
+            dgvUtilisateurs.CellFormatting -= DgvUtilisateurs_CellFormatting;
+            dgvUtilisateurs.CellPainting -= DgvUtilisateurs_CellPainting;
+            dgvUtilisateurs.CellMouseClick -= DgvUtilisateurs_CellMouseClick;
+            dgvUtilisateurs.MouseMove -= DgvUtilisateurs_MouseMove;
+            dgvUtilisateurs.MouseLeave -= DgvUtilisateurs_MouseLeave;
+
+            dgvUtilisateurs.CellFormatting += DgvUtilisateurs_CellFormatting;
+            dgvUtilisateurs.CellPainting += DgvUtilisateurs_CellPainting;
+            dgvUtilisateurs.CellMouseClick += DgvUtilisateurs_CellMouseClick;
+            dgvUtilisateurs.MouseMove += DgvUtilisateurs_MouseMove;
+            dgvUtilisateurs.MouseLeave += DgvUtilisateurs_MouseLeave;
         }
+
+
+
+
+
 
         public void AfficherUtilisateurs(List<UtilisateurModel> utilisateurs)
         {
@@ -451,11 +514,10 @@ namespace SaimDataCopy.Views.EspaceAdmin
 
             foreach (UtilisateurModel utilisateur in utilisateurs)
             {
-                string derniereConnexion = utilisateur.DerniereConnexion.HasValue
-                    ? utilisateur.DerniereConnexion.Value.ToString("dd/MM/yyyy HH:mm")
+                string derniereConnexion = utilisateur.DerniereConnexion.HasValue ? utilisateur.DerniereConnexion.Value.ToString("dd/MM/yyyy HH:mm")
                     : "Jamais";
 
-                dgvUtilisateurs.Rows.Add(
+                int indexLigne = dgvUtilisateurs.Rows.Add(
                     utilisateur.Id,
                     utilisateur.NomComplet,
                     utilisateur.Identifiant,
@@ -463,12 +525,295 @@ namespace SaimDataCopy.Views.EspaceAdmin
                     utilisateur.Statut,
                     utilisateur.EstActif ? "Actif" : "Inactif",
                     utilisateur.DateCreation.ToString("dd/MM/yyyy"),
-                    derniereConnexion
-                );
+                    derniereConnexion);
+
+                DataGridViewRow ligne = dgvUtilisateurs.Rows[indexLigne];
+
+                ligne.Cells["Actions"].Tag = utilisateur.EstActif;
+
+
             }
+
 
             btnRechercherUtilisateurs.Enabled = true;
         }
+
+        private static (Rectangle modifier, Rectangle activation, Rectangle supprimer) ObtenirZonesActions(Rectangle cellule)
+        {
+            const int tailleIcone = 18;
+            const int espacement = 14;
+
+            int largeurTotale = tailleIcone * 3 + espacement * 2;
+            int positionX = cellule.Left + (cellule.Width - largeurTotale) / 2;
+            int positionY = cellule.Top + (cellule.Height - tailleIcone) / 2;
+
+            Rectangle zoneModifier = new Rectangle(
+                positionX,
+                positionY,
+                tailleIcone,
+                tailleIcone
+            );
+
+            Rectangle zoneActivation = new Rectangle(
+                positionX + tailleIcone + espacement,
+                positionY,
+                tailleIcone,
+                tailleIcone
+            );
+
+            Rectangle zoneSupprimer = new Rectangle(
+                positionX + (tailleIcone + espacement) * 2,
+                positionY,
+                tailleIcone,
+                tailleIcone
+            );
+
+            return (zoneModifier, zoneActivation, zoneSupprimer);
+        }
+
+        private void DgvUtilisateurs_MouseMove(object? sender, MouseEventArgs e)
+        {
+            DataGridView.HitTestInfo zoneSurvolee = dgvUtilisateurs.HitTest(e.X, e.Y);
+
+            if (zoneSurvolee.RowIndex < 0 ||
+                zoneSurvolee.ColumnIndex < 0 ||
+                dgvUtilisateurs.Columns[zoneSurvolee.ColumnIndex].Name != "Actions")
+            {
+                MasquerInfoBulleAction();
+                return;
+            }
+
+            Rectangle rectangleCellule = dgvUtilisateurs.GetCellDisplayRectangle(
+                zoneSurvolee.ColumnIndex,
+                zoneSurvolee.RowIndex,
+                false
+            );
+
+            (
+                Rectangle zoneModifier,
+                Rectangle zoneActivation,
+                Rectangle zoneSupprimer
+            ) = ObtenirZonesActions(rectangleCellule);
+
+            Point positionSourisDansTableau = new Point(e.X, e.Y);
+            string texteAction = string.Empty;
+
+            if (zoneModifier.Contains(positionSourisDansTableau))
+            {
+                texteAction = "Modifier l'utilisateur";
+            }
+            else if (zoneActivation.Contains(positionSourisDansTableau))
+            {
+                object? valeurEtat = dgvUtilisateurs
+                    .Rows[zoneSurvolee.RowIndex]
+                    .Cells["Etat"]
+                    .Value;
+
+                bool estActif = string.Equals(
+                    valeurEtat?.ToString(),
+                    "Actif",
+                    StringComparison.OrdinalIgnoreCase
+                );
+
+                texteAction = estActif
+                    ? "Désactiver l'utilisateur"
+                    : "Activer l'utilisateur";
+            }
+            else if (zoneSupprimer.Contains(positionSourisDansTableau))
+            {
+                texteAction = "Supprimer l'utilisateur";
+            }
+
+            if (string.IsNullOrWhiteSpace(texteAction))
+            {
+                MasquerInfoBulleAction();
+                return;
+            }
+
+            dgvUtilisateurs.Cursor = Cursors.Hand;
+            AfficherInfoBulleAction(texteAction, e.X, e.Y);
+        }
+
+        private void AfficherInfoBulleAction(string texte, int positionXDansTableau, int positionYDansTableau)
+        {
+            lblInfoBulleAction.Text = texte;
+
+            Size tailleTexte = TextRenderer.MeasureText(
+                texte,
+                lblInfoBulleAction.Font
+            );
+
+            lblInfoBulleAction.Width = tailleTexte.Width + 24;
+            lblInfoBulleAction.Height = 30;
+
+            Point positionDansCarte = carteUtilisateurs.PointToClient(
+                dgvUtilisateurs.PointToScreen(
+                    new Point(
+                        positionXDansTableau + 15,
+                        positionYDansTableau + 20
+                    )
+                )
+            );
+
+            int positionX = positionDansCarte.X;
+            int positionY = positionDansCarte.Y;
+
+            if (positionX + lblInfoBulleAction.Width > carteUtilisateurs.ClientSize.Width - 5)
+            {
+                positionX = carteUtilisateurs.ClientSize.Width - lblInfoBulleAction.Width - 10;
+            }
+
+            if (positionY + lblInfoBulleAction.Height > carteUtilisateurs.ClientSize.Height - 5)
+            {
+                positionY = positionDansCarte.Y - lblInfoBulleAction.Height - 10;
+            }
+
+            lblInfoBulleAction.Location = new Point(
+                Math.Max(5, positionX),
+                Math.Max(5, positionY)
+            );
+
+            lblInfoBulleAction.Visible = true;
+            lblInfoBulleAction.BringToFront();
+        }
+
+        private void DgvUtilisateurs_MouseLeave(object? sender, EventArgs e)
+        {
+            MasquerInfoBulleAction();
+        }
+
+        private void MasquerInfoBulleAction()
+        {
+            dgvUtilisateurs.Cursor = Cursors.Default;
+            lblInfoBulleAction.Visible = false;
+        }
+
+        private void DgvUtilisateurs_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            {
+                return;
+            }
+
+            if (dgvUtilisateurs.Columns[e.ColumnIndex].Name != "Actions")
+            {
+                return;
+            }
+
+            e.Paint(
+                e.CellBounds,
+                DataGridViewPaintParts.Background |
+                DataGridViewPaintParts.Border |
+                DataGridViewPaintParts.SelectionBackground
+            );
+
+            Graphics? graphics = e.Graphics;
+
+            if (graphics == null)
+            {
+                return;
+            }
+
+            int tailleIcone = 18;
+            int espacement = 14;
+            int largeurTotale = tailleIcone * 3 + espacement * 2;
+            int xDepart = e.CellBounds.Left + (e.CellBounds.Width - largeurTotale) / 2;
+            int y = e.CellBounds.Top + (e.CellBounds.Height - tailleIcone) / 2;
+
+            object? valeurEtat = dgvUtilisateurs.Rows[e.RowIndex].Cells["Etat"].Value;
+
+            bool estActif = string.Equals(
+                valeurEtat?.ToString(),
+                "Actif",
+                StringComparison.OrdinalIgnoreCase
+            );
+
+            graphics.DrawImage(
+                iconeModifier,
+                new Rectangle(xDepart, y, tailleIcone, tailleIcone)
+            );
+
+            graphics.DrawImage(
+                estActif ? iconeDesactiver : iconeActiver,
+                new Rectangle(
+                    xDepart + tailleIcone + espacement,
+                    y,
+                    tailleIcone,
+                    tailleIcone
+                )
+            );
+
+            graphics.DrawImage(
+                iconeSupprimer,
+                new Rectangle(
+                    xDepart + (tailleIcone + espacement) * 2,
+                    y,
+                    tailleIcone,
+                    tailleIcone
+                )
+            );
+
+            e.Handled = true;
+        }
+
+        private void DgvUtilisateurs_CellMouseClick(
+    object? sender,
+    DataGridViewCellMouseEventArgs e)
+        {
+            if (e.RowIndex < 0 ||
+                e.ColumnIndex < 0 ||
+                dgvUtilisateurs.Columns[e.ColumnIndex].Name != "Actions")
+            {
+                return;
+            }
+
+            object? valeurId =
+                dgvUtilisateurs.Rows[e.RowIndex].Cells["Id"].Value;
+
+            if (valeurId == null ||
+                !int.TryParse(valeurId.ToString(), out int idUtilisateur))
+            {
+                return;
+            }
+
+            Rectangle rectangleCellule =
+                dgvUtilisateurs.GetCellDisplayRectangle(
+                    e.ColumnIndex,
+                    e.RowIndex,
+                    false
+                );
+
+            Point positionClic = new Point(
+                rectangleCellule.Left + e.X,
+                rectangleCellule.Top + e.Y
+            );
+
+            (
+                Rectangle zoneModifier,
+                Rectangle zoneActivation,
+                Rectangle zoneSupprimer
+            ) = ObtenirZonesActions(rectangleCellule);
+
+            if (zoneModifier.Contains(positionClic))
+            {
+                ModificationUtilisateurDemandee?.Invoke(idUtilisateur);
+                return;
+            }
+
+            if (zoneActivation.Contains(positionClic))
+            {
+                ActivationUtilisateurDemandee?.Invoke(idUtilisateur);
+                return;
+            }
+
+            if (zoneSupprimer.Contains(positionClic))
+            {
+                SuppressionUtilisateurDemandee?.Invoke(idUtilisateur);
+            }
+        }
+
+
+
 
         public void AfficherChargementUtilisateurs()
         {
@@ -872,22 +1217,7 @@ namespace SaimDataCopy.Views.EspaceAdmin
             carteFormulaire.Controls.Add(comboBox);
         }
 
-        private void DgvUtilisateurs_CellContentClick(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0 || dgvUtilisateurs.Columns[e.ColumnIndex].Name != "Modifier")
-            {
-                return;
-            }
 
-            object? valeurId = dgvUtilisateurs.Rows[e.RowIndex].Cells["Id"].Value;
-
-            if (valeurId == null || !int.TryParse(valeurId.ToString(), out int idUtilisateur))
-            {
-                return;
-            }
-
-            ModificationUtilisateurDemandee?.Invoke(idUtilisateur);
-        }
 
         public void AfficherFormulaireCreation()
         {

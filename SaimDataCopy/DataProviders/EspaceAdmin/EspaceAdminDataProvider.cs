@@ -83,6 +83,40 @@ namespace SaimDataCopy.DataProviders.EspaceAdmin
                 .ToListAsync();
         }
 
+        public async Task ActiverDesactiverUtilisateurAsync(int idUtilisateur, bool estActif)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            UtilisateurModel? utilisateur = await context.Utilisateurs
+                .FirstOrDefaultAsync(utilisateur => utilisateur.Id == idUtilisateur);
+
+            if (utilisateur == null)
+            {
+                return;
+            }
+
+            utilisateur.EstActif = estActif;
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task SupprimerUtilisateurAsync(int idUtilisateur)
+        {
+            using AuthentificationDbContext context = CreerContext();
+
+            UtilisateurModel? utilisateur = await context.Utilisateurs
+                .FirstOrDefaultAsync(utilisateur => utilisateur.Id == idUtilisateur);
+
+            if (utilisateur == null)
+            {
+                return;
+            }
+
+            context.Utilisateurs.Remove(utilisateur);
+
+            await context.SaveChangesAsync();
+        }
+
         public async Task<UtilisateurModel?> RecupererUtilisateurParIdAsync(int idUtilisateur)
         {
             using AuthentificationDbContext context = CreerContext();

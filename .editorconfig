@@ -1,0 +1,39 @@
+root = true
+
+[*.cs]
+
+# Méthode pouvant être static
+dotnet_diagnostic.CA1822.severity = none
+
+# Type de retour plus précis proposé pour les performances
+dotnet_diagnostic.CA1859.severity = none
+
+# Proposition StringComparison sur Contains et Equals
+dotnet_diagnostic.CA1862.severity = none
+
+# Initialisation d'objet simplifiable
+dotnet_diagnostic.IDE0017.severity = none
+
+# Initialisation de collection simplifiable
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+
+# Expression new simplifiable
+dotnet_diagnostic.IDE0090.severity = none
+
+# Proposition switch expression
+dotnet_diagnostic.IDE0066.severity = none
+
+# Proposition primary constructor
+dotnet_diagnostic.IDE0290.severity = none
+
+# Paramètre inutilisé
+dotnet_diagnostic.IDE0060.severity = none
+
+# Champ privé assigné mais jamais relu
+dotnet_diagnostic.IDE0052.severity = none
+
+# Proposition LibraryImport au lieu de DllImport
+dotnet_diagnostic.SYSLIB1054.severity = none

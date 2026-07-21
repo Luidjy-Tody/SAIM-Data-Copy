@@ -283,5 +283,82 @@ namespace SaimDataCopy.Services.EspaceAdmin
 
             return nombreAdministrateursActifs <= 1;
         }
+
+        public async Task<ResultatOperationUtilisateurModel> ActiverDesactiverUtilisateurAsync(int idUtilisateur)
+        {
+            UtilisateurModel? utilisateur = await espaceAdminDataProvider.RecupererUtilisateurParIdAsync(idUtilisateur);
+
+            if (utilisateur == null)
+            {
+                return CreerResultat(false, "Utilisateur introuvable.");
+            }
+
+            UtilisateurModel? utilisateurConnecte = sessionUtilisateurService.UtilisateurConnecte;
+
+            if (utilisateurConnecte != null && utilisateurConnecte.Id == utilisateur.Id)
+            {
+                return CreerResultat(false, "Vous ne pouvez pas modifier l'état de votre propre compte.");
+            }
+
+            if (utilisateur.EstActif &&
+                utilisateur.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase) &&
+                await EstDernierAdministrateurActifAsync(utilisateur))
+            {
+                return CreerResultat(false, "Il doit rester au moins un administrateur actif.");
+            }
+
+            bool nouvelEtat = !utilisateur.EstActif;
+
+            await espaceAdminDataProvider.ActiverDesactiverUtilisateurAsync(utilisateur.Id, nouvelEtat);
+
+            await AjouterLogAdministrationAsync(
+                nouvelEtat ? "Activation utilisateur" : "Désactivation utilisateur",
+                $"Compte \"{utilisateur.Identifiant}\" {(nouvelEtat ? "activé" : "désactivé")}."
+            );
+
+            return CreerResultat(
+                true,
+                nouvelEtat
+                    ? "Utilisateur activé avec succès."
+                    : "Utilisateur désactivé avec succès."
+            );
+        }
+
+        public async Task<ResultatOperationUtilisateurModel> SupprimerUtilisateurAsync(int idUtilisateur)
+        {
+            UtilisateurModel? utilisateur = await espaceAdminDataProvider.RecupererUtilisateurParIdAsync(idUtilisateur);
+
+            if (utilisateur == null)
+            {
+                return CreerResultat(false, "Utilisateur introuvable.");
+            }
+
+            UtilisateurModel? utilisateurConnecte = sessionUtilisateurService.UtilisateurConnecte;
+
+            if (utilisateurConnecte != null && utilisateurConnecte.Id == utilisateur.Id)
+            {
+                return CreerResultat(false, "Vous ne pouvez pas supprimer votre propre compte.");
+            }
+
+            if (utilisateur.EstActif &&
+                utilisateur.Statut.Equals("Admin", StringComparison.OrdinalIgnoreCase) &&
+                await EstDernierAdministrateurActifAsync(utilisateur))
+            {
+                return CreerResultat(false, "Il doit rester au moins un administrateur actif.");
+            }
+
+            string identifiantUtilisateurSupprime = utilisateur.Identifiant;
+            string statutUtilisateurSupprime = utilisateur.Statut;
+            bool etatUtilisateurSupprime = utilisateur.EstActif;
+
+            await espaceAdminDataProvider.SupprimerUtilisateurAsync(utilisateur.Id);
+
+            await AjouterLogAdministrationAsync(
+                "Suppression utilisateur",
+                $"Compte \"{identifiantUtilisateurSupprime}\" supprimé. Statut : {statutUtilisateurSupprime}. État avant suppression : {(etatUtilisateurSupprime ? "Actif" : "Inactif")}."
+            );
+
+            return CreerResultat(true, "Utilisateur supprimé avec succès.");
+        }
     }
 }
